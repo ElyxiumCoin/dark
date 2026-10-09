@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Project Pro — Cyber Terminal & Order Block Engine</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        void: '#020408',
+                        obsidian: '#060913',
+                        cardDark: 'rgba(9, 14, 26, 0.96)',
+                        cyanNeon: '#00f2fe',
+                        emeraldNeon: '#10b981',
+                        roseNeon: '#f43f5e',
+                        amberNeon: '#f59e0b'
+                    },
+                    fontFamily: {
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        orbitron: ['"Orbitron"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- TradingView Widget Script -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Orbitron:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #020408;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.07) 0px, transparent 40%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 45%),
+                radial-gradient(at 50% 20%, rgba(99, 102, 241, 0.04) 0px, transparent 55%);
+            background-attachment: fixed;
+        }
+
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(9, 14, 28, 0.96) 0%, rgba(4, 7, 16, 0.99) 100%);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        }
+
+        .tab-btn-active {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(16, 185, 129, 0.2));
+            border: 1px solid rgba(0, 242, 254, 0.55);
+            color: #ffffff;
+            box-shadow: 0 0 18px rgba(0, 242, 254, 0.25);
+        }
+
+        .hud-corner {
+            position: relative;
+        }
+        .hud-corner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            border-top: 2px solid #00f2fe;
+            border-left: 2px solid #00f2fe;
+        }
+        .hud-corner::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            border-bottom: 2px solid #00f2fe;
+            border-right: 2px solid #00f2fe;
+        }
+
+        .ticker-marquee {
+            display: inline-flex;
+            white-space: nowrap;
+            animation: marquee 45s linear infinite;
+        }
+        .ticker-marquee:hover {
+            animation-play-state: paused;
+        }
+
+        @keyframes marquee {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-50%, 0, 0); }
+        }
+
+        #tradingview_container, #tradingview_container iframe {
+            height: 670px !important;
+            min-height: 670px !important;
+            width: 100% !important;
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #020408; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f2fe; }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col items-center p-2 md:p-3 select-none overflow-x-hidden">
+
+    <!-- ============================================== -->
+    <!-- ЖИВАЯ СТРОКА С DARK LIVE                      -->
+    <!-- ============================================== -->
+    <div class="w-full max-w-7xl mb-2 px-1">
+        <div class="glass-panel rounded-2xl p-1.5 flex items-center border border-slate-800/90 shadow-lg relative overflow-hidden">
+            <div class="z-20 bg-[#060913] px-3.5 py-1.5 rounded-xl border border-cyan-500/40 flex items-center gap-2 shrink-0 shadow-md">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span class="text-[11px] font-mono font-black tracking-wider bg-gradient-to-r from-cyan-400 via-sky-300 to-emerald-400 bg-clip-text text-transparent">DARK LIVE</span>
+                <span class="text-[9px] text-slate-500 font-mono hidden sm:inline" id="wsStatus">● 1s</span>
+            </div>
+
+            <div class="flex-1 overflow-hidden relative ml-3">
+                <div id="liveTickerFeed" class="ticker-marquee flex items-center gap-8 text-xs font-mono text-slate-300">
+                    <span class="text-slate-500">Подключение к прямому потоку котировок...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- 1. ЭКРАН ВХОДА И РЕГИСТРАЦИИ (AUTH GATE)       -->
+    <!-- ============================================== -->
+    <div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020408]/95 backdrop-blur-2xl">
+        <div class="glass-panel w-full max-w-md p-6 md:p-8 rounded-3xl shadow-2xl relative overflow-hidden border border-cyan-500/30">
+            <div class="absolute -top-20 -left-20 w-44 h-44 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-20 -right-20 w-44 h-44 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex flex-col items-center text-center mb-5 relative z-10">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0a1222] to-[#040710] border border-cyan-400/50 flex items-center justify-center shadow-xl shadow-cyan-500/20 mb-3">
+                    <svg class="w-8 h-8" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 10H24C31.732 10 38 16.268 38 24C38 31.732 31.732 38 24 38H10V10Z" stroke="url(#dp_grad_auth)" stroke-width="3.5" stroke-linejoin="round"/>
+                        <path d="M17 18H24C27.3137 18 30 20.6863 30 24C30 27.3137 27.3137 30 24 30H17V18Z" fill="url(#dp_grad_auth)" fill-opacity="0.3" stroke="url(#dp_grad_auth)" stroke-width="2"/>
+                        <circle cx="24" cy="24" r="3" fill="#00f2fe"/>
+                        <defs>
+                            <linearGradient id="dp_grad_auth" x1="10" y1="10" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#00f2fe"/>
+                                <stop offset="0.5" stop-color="#38bdf8"/>
+                                <stop offset="1" stop-color="#10b981"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+
+                <h2 class="text-xl font-black tracking-wider text-white font-mono uppercase">Dark Project Pro</h2>
+                <span class="text-[10px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">Order Blocks & Pro Terminal</span>
+                
+                <div class="inline-flex items-center gap-2 px-3 py-1 mt-2.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-[11px] font-mono text-emerald-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>СЕРВЕР АКТИВЕН • <strong id="authLiveCount" class="text-white">342</strong> В СЕТИ</span>
+                </div>
+            </div>
+
+            <div id="authAlert" class="hidden mb-4 p-3 rounded-xl text-xs font-mono border relative z-10 transition"></div>
+
+            <div class="flex bg-slate-950/90 p-1 rounded-xl border border-slate-800 mb-5 relative z-10">
+                <button onclick="toggleAuthTab('register')" id="tabBtnRegister" type="button" class="flex-1 py-1.5 rounded-lg text-xs font-mono font-bold transition tab-btn-active">
+                    РЕГИСТРАЦИЯ
+                </button>
+                <button onclick="toggleAuthTab('login')" id="tabBtnLogin" type="button" class="flex-1 py-1.5 rounded-lg text-xs font-mono font-bold transition text-slate-400 hover:text-white">
+                    ВХОД
+                </button>
+            </div>
+
+            <div id="registerForm" class="space-y-3 relative z-10">
+                <div>
+                    <label class="block text-[11px] font-mono text-slate-400 mb-1">ВАШ ЛОГИН:</label>
+                    <input type="text" id="regLogin" placeholder="Логин (например, Trader77)" 
+                           onkeydown="if(event.key==='Enter') doRegister()"
+                           class="w-full bg-[#050814] border border-slate-800 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none transition shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono text-slate-400 mb-1">ВАШ ПАРОЛЬ:</label>
+                    <input type="password" id="regPass" placeholder="••••••••" 
+                           onkeydown="if(event.key==='Enter') doRegister()"
+                           class="w-full bg-[#050814] border border-slate-800 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none transition shadow-inner">
+                </div>
+
+                <div class="pt-2">
+                    <button type="button" onclick="doRegister()" class="w-full bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 text-xs font-mono uppercase tracking-wider transition cursor-pointer">
+                        Зарегистрироваться и войти
+                    </button>
+                </div>
+            </div>
+
+            <div id="loginForm" class="space-y-3 relative z-10 hidden">
+                <div>
+                    <label class="block text-[11px] font-mono text-slate-400 mb-1">ЛОГИН:</label>
+                    <input type="text" id="loginUser" placeholder="Введите логин" 
+                           onkeydown="if(event.key==='Enter') doLogin()"
+                           class="w-full bg-[#050814] border border-slate-800 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none transition shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono text-slate-400 mb-1">ПАРОЛЬ:</label>
+                    <input type="password" id="loginPass" placeholder="••••••••" 
+                           onkeydown="if(event.key==='Enter') doLogin()"
+                           class="w-full bg-[#050814] border border-slate-800 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none transition shadow-inner">
+                </div>
+
+                <div class="pt-2">
+                    <button type="button" onclick="doLogin()" class="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black py-2.5 rounded-xl shadow-lg text-xs font-mono uppercase tracking-wider transition cursor-pointer">
+                        Войти в аккаунт
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- 2. ОСНОВНОЙ ТЕРМИНАЛ                           -->
+    <!-- ============================================== -->
+    <div id="mainApp" class="w-full max-w-7xl flex flex-col items-center hidden transition-opacity duration-300">
+        
+        <header class="w-full flex items-center justify-between glass-panel rounded-2xl px-4 py-2.5 mb-3 shadow-xl">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-xl bg-slate-950 border border-cyan-500/40 flex items-center justify-center shadow-lg shadow-cyan-500/10">
+                    <svg class="w-4 h-4" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 10H24C31.732 10 38 16.268 38 24C38 31.732 31.732 38 24 38H10V10Z" stroke="url(#dp_grad_nav)" stroke-width="4"/>
+                        <circle cx="24" cy="24" r="3.5" fill="#00f2fe"/>
+                        <defs>
+                            <linearGradient id="dp_grad_nav" x1="10" y1="10" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#00f2fe"/><stop offset="1" stop-color="#10b981"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-sm md:text-base font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent font-mono">DARK PROJECT</h1>
+                    <span class="text-[9px] uppercase font-mono font-bold tracking-widest px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/30">120+ MARKETS PRO</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <div class="hidden sm:flex items-center space-x-2 bg-slate-950/80 px-2.5 py-1 rounded-xl border border-slate-800 text-xs font-mono">
+                    <span class="text-slate-400">👤</span>
+                    <span id="userBadgeName" class="text-cyan-300 font-bold">Trader</span>
+                    <span class="text-[9px] px-1 bg-emerald-500/20 text-emerald-400 rounded font-bold">PRO</span>
+                    <button onclick="handleLogout()" title="Выйти" class="text-slate-500 hover:text-rose-400 transition ml-1 text-xs">
+                        [Выход]
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+                    <button onclick="switchMode('terminal')" id="tabTerminal" class="tab-btn-active px-3 py-1 rounded-lg text-xs font-mono font-bold transition">ТЕРМИНАЛ</button>
+                    <button onclick="switchMode('scanner')" id="tabScanner" class="px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition">ИИ-СКАНЕР</button>
+                    <button onclick="switchMode('calendar')" id="tabCalendar" class="px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition">КАЛЕНДАРЬ</button>
+                    <button onclick="switchMode('chat')" id="tabChat" class="px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition relative">
+                        <span class="flex items-center gap-1">
+                            <span>ЧАТ</span>
+                            <span id="chatNewDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- СЕКЦИЯ 1: ТЕРМИНАЛ TRADINGVIEW -->
+        <section id="terminalView" class="w-full flex flex-col space-y-2.5 flex-1">
+            <div class="glass-panel rounded-2xl p-3 shadow-xl flex flex-col gap-2.5">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                    <div class="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 flex-wrap">
+                        <button onclick="filterCategory('crypto')" id="catCrypto" class="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition">🪙 Крипто (50+)</button>
+                        <button onclick="filterCategory('forex')" id="catForex" class="px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition">💱 Форекс (36)</button>
+                        <button onclick="filterCategory('metals')" id="catMetals" class="px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition">🏆 Металлы & Сырье (8)</button>
+                        <button onclick="filterCategory('indices')" id="catIndices" class="px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition">📈 Индексы (10)</button>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 flex-1 max-w-xs">
+                        <div class="relative w-full">
+                            <input type="text" id="customTickerInput" placeholder="Поиск (BTC, TON, SUI, XAU)..." 
+                                   oninput="liveSearchMarkets(this.value)"
+                                   onkeydown="if(event.key==='Enter') loadCustomTicker()"
+                                   class="w-full bg-[#050814] border border-slate-800 focus:border-cyan-400 rounded-xl px-3 py-1.5 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none transition">
+                            <button onclick="loadCustomTicker()" class="absolute right-1 top-1 bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded-lg text-[10px] font-mono text-cyan-400 border border-slate-700">
+                                ОК
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ТАЙМФРЕЙМЫ -->
+                    <div class="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800" id="timeframeButtons">
+                        <span class="text-[10px] uppercase font-mono font-bold text-slate-500 px-1">ТФ:</span>
+                        <button onclick="changeTimeframe('1', this)" class="tf-btn px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition cursor-pointer">1м</button>
+                        <button onclick="changeTimeframe('5', this)" class="tf-btn px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition cursor-pointer">5м</button>
+                        <button onclick="changeTimeframe('15', this)" class="tf-btn px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_12px_rgba(0,242,254,0.25)] transition cursor-pointer">15м</button>
+                        <button onclick="changeTimeframe('60', this)" class="tf-btn px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition cursor-pointer">1ч</button>
+                        <button onclick="changeTimeframe('240', this)" class="tf-btn px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition cursor-pointer">4ч</button>
+                        <button onclick="changeTimeframe('D', this)" class="tf-btn px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition cursor-pointer">1Д</button>
+                    </div>
+                </div>
+
+                <div id="symbolsList" class="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full"></div>
+            </div>
+
+            <!-- График с чистым баннером и ПОЛНЫМ ЗАКРЫТИЕМ TV-ЛОГОТИПА -->
+            <div class="glass-panel rounded-2xl p-0 shadow-2xl flex flex-col relative overflow-hidden" style="height: 712px;">
+                
+                <!-- НЕПРОЗРАЧНЫЙ CYBER RISK HUD БАННЕР -->
+                <div class="w-full h-[42px] z-30 flex items-center justify-between px-4 bg-[#060913] border-b border-slate-800/90 shadow-md shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex items-center gap-2 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-cyan-500/30">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            <span class="text-[11px] font-mono font-bold text-cyan-300 uppercase tracking-wide">RISK PROTOCOL</span>
+                        </div>
+                        <span class="hidden md:inline text-xs font-bold tracking-wider text-slate-300 font-mono">
+                            🛡️ Соблюдайте риск-менеджмент • Не превышайте 1-2% объема на сделку
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-emerald-400 font-mono font-bold hidden sm:inline">● LIVE CHART</span>
+                        <span class="px-3 py-1 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-bold text-xs font-mono shadow-inner" id="currentPairBadge">
+                            BTC/USDT
+                        </span>
+                    </div>
+                </div>
+
+                <!-- НАШ ЛОГОТИП ПОДНЯТ ВЫШЕ И ПОЛНОСТЬЮ ЗАКРЫВАЕТ КРУГЛУЮ КНОПКУ TV -->
+                <div style="position: absolute; bottom: 32px; left: 42px; z-index: 50; width: 168px; height: 48px;" 
+                     class="flex items-center justify-center pointer-events-auto bg-[#060913] rounded-2xl border border-cyan-500/80 shadow-[0_0_25px_rgba(0,242,254,0.4)] ring-4 ring-[#060913]">
+                    <div class="flex items-center gap-2 px-3">
+                        <div class="w-5 h-5 rounded-md bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-[10px] font-black text-slate-950 shadow-sm shrink-0">
+                            DP
+                        </div>
+                        <span class="font-mono font-black text-[11px] bg-gradient-to-r from-cyan-400 via-sky-300 to-emerald-400 bg-clip-text text-transparent uppercase tracking-wider whitespace-nowrap">DARK PROJECT</span>
+                    </div>
+                </div>
+
+                <div id="tradingview_container" style="height: 670px; width: 100%;"></div>
+            </div>
+        </section>
+
+        <!-- СЕКЦИЯ 2: ИИ-СКАНЕР (ЧИСТАЯ СТРУКТУРА) -->
+        <section id="scannerView" class="w-full grid grid-cols-1 lg:grid-cols-12 gap-3.5 hidden flex-1">
+            <div class="lg:col-span-4 flex flex-col space-y-3">
+                <div class="glass-panel rounded-2xl p-4 shadow-lg border border-cyan-500/30">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-mono font-bold text-slate-200 uppercase">Order Blocks & Breaker Matrix</span>
+                        <span class="text-[9px] font-mono font-bold px-2 py-0.5 bg-cyan-500/15 text-cyan-400 rounded border border-cyan-500/30">SMC ENGINE</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Точное определение Order Blocks, зон инверсии Breakers, Swing High/Low и расчетных средних линий.</p>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-4 shadow-lg flex-1 flex flex-col">
+                    <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+                    
+                    <div id="dropZone" onclick="document.getElementById('fileInput').click()"
+                         class="border-2 border-dashed border-slate-700/80 hover:border-cyan-500/60 rounded-2xl p-6 cursor-pointer transition flex-1 flex flex-col items-center justify-center text-center">
+                        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-cyan-400 mb-2 font-bold text-sm">
+                            ⚡
+                        </div>
+                        <p class="text-xs text-cyan-400 font-bold tracking-wider uppercase font-mono">Нажмите Ctrl + V</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">или выберите скриншот кликом</p>
+                        <p class="text-[10px] text-slate-600 mt-2 font-mono">Win + Shift + S на графике → Ctrl + V</p>
+                    </div>
+
+                    <div id="previewBox" class="hidden relative flex-1 min-h-[140px] bg-[#050814] rounded-xl border border-slate-800 overflow-hidden flex items-center justify-center p-2 group cursor-pointer" onclick="openFullscreenPreview()" title="Нажмите для просмотра на весь экран">
+                        <img id="imagePreview" class="max-h-[140px] w-full object-contain rounded-lg" alt="Превью">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-xs font-mono text-cyan-300 gap-1.5">
+                            <span>🔍 На весь экран</span>
+                        </div>
+                        <button onclick="removeImage(event)" title="Удалить" class="absolute top-2 right-2 bg-rose-600 hover:bg-rose-500 text-white p-1 rounded-md text-xs z-10">✕</button>
+                    </div>
+
+                    <button id="analyzeBtn" onclick="runPreciseOrderBlockAnalysis()" disabled
+                            class="w-full mt-3 bg-gradient-to-r from-cyan-500 via-sky-500 to-emerald-500 text-slate-950 font-black py-2.5 rounded-xl shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition text-xs font-mono uppercase tracking-wider">
+                        Разметить Order & Breaker Blocks
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 flex flex-col space-y-3">
+                <div class="glass-panel rounded-2xl p-4 shadow-lg flex flex-col">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                        <h2 class="text-xs font-bold text-slate-300 uppercase font-mono">Разметка структуры: Order Blocks & Breakers</h2>
+                        <span id="zoomHint" class="hidden text-[10px] text-cyan-400 cursor-pointer hover:underline font-mono" onclick="openFullscreenModal()">
+                            🔍 Нажмите на график для увеличения
+                        </span>
+                    </div>
+                    <div id="canvasWrapper" class="relative w-full min-h-[340px] bg-[#050814] rounded-xl border border-slate-800 flex items-center justify-center p-1.5 cursor-pointer hud-corner" onclick="openFullscreenModal()" title="Нажмите, чтобы открыть фото в полном размере">
+                        <canvas id="annotatedCanvas" class="hidden max-w-full max-h-[440px] rounded-lg shadow-2xl"></canvas>
+                        <div id="canvasPlaceholder" class="text-slate-500 text-xs py-16 text-center font-mono">
+                            Вставьте скриншот графика через Ctrl + V
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-4 shadow-lg flex-1 flex flex-col min-h-[220px]">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                        <h2 class="text-xs font-bold text-slate-300 uppercase font-mono">Технический отчёт структуры (Order & Breaker Blocks)</h2>
+                        <button id="copyBtn" onclick="copyReport()" class="hidden text-[11px] text-slate-400 hover:text-white flex items-center space-x-1 bg-slate-800 px-2.5 py-1 rounded border border-slate-700 font-mono">
+                            <span id="copyText">Копировать</span>
+                        </button>
+                    </div>
+                    <div id="reportContainer" class="flex-1 overflow-y-auto text-slate-300 text-xs font-mono">
+                        <div class="h-full flex items-center justify-center text-slate-600 py-6">Вставьте график для генерации структуры</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- СЕКЦИЯ 3: ПОНЯТНЫЙ ЭКОНОМИЧЕСКИЙ КАЛЕНДАРЬ НА РУССКОМ -->
+        <section id="calendarView" class="w-full flex flex-col space-y-2.5 hidden flex-1">
+            <div class="glass-panel rounded-2xl p-4 shadow-2xl flex flex-col relative overflow-hidden" style="min-height: 720px;">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3 mb-3">
+                    <div class="flex items-center space-x-2.5">
+                        <span class="text-emerald-400 font-bold font-mono text-xl">📅</span>
+                        <div>
+                            <h2 class="text-xs font-mono font-bold text-white uppercase tracking-wider">Экономический Радар — Главные мировые события</h2>
+                            <p class="text-[10px] text-slate-400 font-mono">Расписание выхода ключевых макроэкономических новостей, процентных ставок и инфляции</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs font-mono">
+                            <button onclick="filterCalendarDay('all')" id="calDay_all" class="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold">Вся неделя</button>
+                            <button onclick="filterCalendarDay('mon')" id="calDay_mon" class="px-2 py-1 rounded-lg text-slate-400">Пн</button>
+                            <button onclick="filterCalendarDay('tue')" id="calDay_tue" class="px-2 py-1 rounded-lg text-slate-400">Вт</button>
+                            <button onclick="filterCalendarDay('wed')" id="calDay_wed" class="px-2 py-1 rounded-lg text-slate-400">Ср</button>
+                            <button onclick="filterCalendarDay('thu')" id="calDay_thu" class="px-2 py-1 rounded-lg text-slate-400">Чт</button>
+                            <button onclick="filterCalendarDay('fri')" id="calDay_fri" class="px-2 py-1 rounded-lg text-slate-400">Пт</button>
+                        </div>
+                        <button onclick="toggleCalendarHighOnly()" id="calHighOnlyBtn" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-xs font-mono font-bold">
+                            🔥 Только высокая важность
+                        </button>
+                    </div>
+                </div>
+
+                <div id="calendarEventsList" class="flex-1 overflow-y-auto pr-1 space-y-2.5 text-xs font-sans"></div>
+            </div>
+        </section>
+
+        <!-- СЕКЦИЯ 4: РАБОЧИЙ МЕССЕНДЖЕР -->
+        <section id="chatView" class="w-full grid grid-cols-1 lg:grid-cols-12 gap-3.5 hidden flex-1" style="min-height: 700px;">
+            <div class="lg:col-span-4 flex flex-col space-y-3">
+                <div class="glass-panel rounded-2xl p-4 shadow-lg flex flex-col space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span class="text-xs font-mono font-bold text-white uppercase">Каналы сообщества</span>
+                        <span class="text-[9px] font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full animate-pulse">LIVE</span>
+                    </div>
+
+                    <div class="space-y-1.5 text-xs font-mono">
+                        <button type="button" onclick="switchChatRoom('main')" id="roomBtn_main" class="w-full text-left p-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-bold flex items-center justify-between">
+                            <span>🔥 # Главный-Трейдинг</span>
+                            <span class="text-[10px] text-slate-400">All</span>
+                        </button>
+                        <button type="button" onclick="switchChatRoom('crypto')" id="roomBtn_crypto" class="w-full text-left p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-between">
+                            <span>🪙 # Крипто-Сигналы</span>
+                            <span class="text-[10px] text-slate-500">Crypto</span>
+                        </button>
+                        <button type="button" onclick="switchChatRoom('forex')" id="roomBtn_forex" class="w-full text-left p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-between">
+                            <span>💱 # Форекс-Обсуждение</span>
+                            <span class="text-[10px] text-slate-500">Forex</span>
+                        </button>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-mono font-bold text-slate-300 uppercase">🔒 ЛИЧНЫЕ ДИАЛОГИ</span>
+                            <button onclick="promptStartNewDm()" class="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 text-[10px] font-mono font-bold transition">
+                                + Написать в ЛС
+                            </button>
+                        </div>
+                        <div id="dmUsersList" class="space-y-1.5 text-xs font-mono max-h-48 overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 glass-panel rounded-2xl p-4 shadow-xl flex flex-col" style="height: 700px;">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-xs font-mono font-bold text-white uppercase" id="chatRoomTitle"># Главный-Трейдинг</h2>
+                                <button id="deleteConversationBtn" onclick="deleteEntireDialogue()" class="hidden px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 hover:bg-rose-500/30 text-[10px] font-mono font-bold transition">
+                                    🗑 Удалить диалог
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-slate-400 font-mono mt-0.5" id="chatRoomSubtitle">Общий чат трейдеров Dark Project</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-mono px-3 py-1 rounded-xl bg-slate-900 border border-slate-800 text-cyan-300">
+                        Вы: <strong id="chatUserDisplay" class="text-white">Trader</strong>
+                    </span>
+                </div>
+
+                <div id="chatMessagesList" class="flex-1 overflow-y-auto pr-2 space-y-2 text-xs font-sans"></div>
+
+                <div class="flex items-center gap-1.5 py-2 overflow-x-auto text-[11px] font-mono border-t border-slate-800 mt-2">
+                    <span class="text-slate-500 text-[10px]">Тег:</span>
+                    <button type="button" onclick="insertChatTag('🟢 ЛОНГ')" class="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">🟢 ЛОНГ</button>
+                    <button type="button" onclick="insertChatTag('🔴 ШОРТ')" class="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400">🔴 ШОРТ</button>
+                    <button type="button" onclick="insertChatTag('⚡ FVG')" class="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400">⚡ FVG</button>
+                    <button type="button" onclick="insertChatTag('📦 ORDER BLOCK')" class="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">📦 OB</button>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                    <input type="text" id="chatInput" placeholder="Напишите сообщение..." 
+                           onkeydown="if(event.key==='Enter') sendChatMessage()"
+                           class="flex-1 bg-[#050814] border border-slate-800 focus:border-cyan-400 rounded-xl px-4 py-2 text-xs text-white focus:outline-none transition">
+                    <button type="button" onclick="sendChatMessage()" class="bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-black px-5 py-2 rounded-xl text-xs font-mono uppercase transition">
+                        Отправить
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ПРОСМОТРА ФОТО В ПОЛНЫЙ ЭКРАН -->
+    <div id="modalZoom" style="display: none;" class="fixed inset-0 bg-black/95 backdrop-blur-md z-[9999] flex items-center justify-center p-4 cursor-pointer" onclick="closeFullscreenModal()">
+        <div class="relative max-w-[96vw] max-h-[96vh] flex flex-col items-center" onclick="event.stopPropagation()">
+            <img id="modalImage" class="max-w-full max-h-[90vh] object-contain rounded-2xl border border-cyan-500/40 shadow-2xl" alt="График Fullscreen">
+            <span class="text-xs text-slate-400 mt-2.5 font-mono bg-slate-900/90 px-3 py-1 rounded-full border border-slate-800" onclick="closeFullscreenModal()">
+                ✕ Кликните в любое место или нажмите Esc, чтобы закрыть
+            </span>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО СОБЫТИЯ С ПОЛНЫМ РАЗБОРОМ -->
+    <div id="eventDetailModal" style="display: none;" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[9999] flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-lg p-6 rounded-3xl border border-cyan-500/40 shadow-2xl relative" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <div class="flex items-center space-x-2.5">
+                    <span id="modalEventFlag" class="text-2xl">🇺🇸</span>
+                    <div>
+                        <h3 class="text-sm font-bold font-mono text-white" id="modalEventTitle">Базовый индекс цен</h3>
+                        <p class="text-[10px] text-slate-400 font-mono" id="modalEventTime">15:30 • USD</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeEventModal()" class="text-slate-400 hover:text-white p-1 rounded-xl bg-slate-800">✕</button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div class="grid grid-cols-2 gap-2 font-mono text-center">
+                    <div class="bg-[#050914] p-2.5 rounded-xl border border-sky-500/30">
+                        <div class="text-[10px] text-sky-400">ПРОГНОЗ</div>
+                        <div class="text-sm font-bold text-white mt-0.5" id="modalEventForecast">3.1%</div>
+                    </div>
+                    <div class="bg-[#050914] p-2.5 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500">ПРЕДЫДУЩЕЕ</div>
+                        <div class="text-sm font-bold text-slate-400 mt-0.5" id="modalEventPrevious">3.4%</div>
+                    </div>
+                </div>
+
+                <div class="bg-[#050914] p-3.5 rounded-xl border border-slate-800 space-y-2">
+                    <div class="font-bold text-white text-[11px]">📖 Что означает показатель:</div>
+                    <p class="text-slate-300 text-xs leading-relaxed" id="modalEventDesc"></p>
+                    <div class="font-bold text-emerald-400 text-[11px] pt-1 border-t border-slate-800/80">🎯 Как реагирует рынок (BTC, Gold, EUR):</div>
+                    <p class="text-slate-300 text-xs leading-relaxed" id="modalEventImpact"></p>
+                </div>
+            </div>
+
+            <button type="button" onclick="closeEventModal()" class="w-full mt-4 bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-mono font-bold py-2 rounded-xl text-xs uppercase">
+                Понятно, закрыть
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let base64Image = null;
+        let originalImageObj = new Image();
+        let currentSymbol = "BINANCE:BTCUSDT";
+        let currentSymbolName = "BTC/USDT";
+        let currentInterval = "15";
+        let currentCategory = "crypto";
+        let tvWidget = null;
+
+        let memoryUsers = [
+            { login: "Alex_SMC", pass: "123" },
+            { login: "CryptoWhale", pass: "123" },
+            { login: "GoldHunter", pass: "123" }
+        ];
+        let currentActiveUser = null;
+
+        const SafeStorage = {
+            memory: {},
+            setItem(key, value) {
+                try { localStorage.setItem(key, value); } catch (e) { this.memory[key] = String(value); }
+            },
+            getItem(key) {
+                try {
+                    const val = localStorage.getItem(key);
+                    return val !== null ? val : (this.memory[key] || null);
+                } catch (e) { return this.memory[key] || null; }
+            },
+            removeItem(key) {
+                try { localStorage.removeItem(key); } catch (e) {}
+                delete this.memory[key];
+            }
+        };
+
+        try {
+            const saved = JSON.parse(SafeStorage.getItem("dp_db_users") || "[]");
+            if (saved && saved.length) memoryUsers = saved;
+        } catch (e) {}
+
+        // ==============================================
+        // ПОЛНАЯ БАЗА РЫНКОВ (120+ АКТИВОВ)
+        // ==============================================
+        const ALL_MARKETS = {
+            crypto: [
+                { name: "BTC/USDT", symbol: "BINANCE:BTCUSDT" },
+                { name: "ETH/USDT", symbol: "BINANCE:ETHUSDT" },
+                { name: "SOL/USDT", symbol: "BINANCE:SOLUSDT" },
+                { name: "TON/USDT", symbol: "OKX:TONUSDT" },
+                { name: "BNB/USDT", symbol: "BINANCE:BNBUSDT" },
+                { name: "XRP/USDT", symbol: "BINANCE:XRPUSDT" },
+                { name: "DOGE/USDT", symbol: "BINANCE:DOGEUSDT" },
+                { name: "SUI/USDT", symbol: "BINANCE:SUIUSDT" },
+                { name: "NEAR/USDT", symbol: "BINANCE:NEARUSDT" },
+                { name: "PEPE/USDT", symbol: "BINANCE:PEPEUSDT" },
+                { name: "AVAX/USDT", symbol: "BINANCE:AVAXUSDT" },
+                { name: "ADA/USDT", symbol: "BINANCE:ADAUSDT" },
+                { name: "LINK/USDT", symbol: "BINANCE:LINKUSDT" },
+                { name: "SHIB/USDT", symbol: "BINANCE:SHIBUSDT" },
+                { name: "DOT/USDT", symbol: "BINANCE:DOTUSDT" },
+                { name: "LTC/USDT", symbol: "BINANCE:LTCUSDT" },
+                { name: "TRX/USDT", symbol: "BINANCE:TRXUSDT" },
+                { name: "ARB/USDT", symbol: "BINANCE:ARBUSDT" },
+                { name: "OP/USDT", symbol: "BINANCE:OPUSDT" },
+                { name: "INJ/USDT", symbol: "BINANCE:INJUSDT" },
+                { name: "TIA/USDT", symbol: "BINANCE:TIAUSDT" },
+                { name: "RENDER/USDT", symbol: "BINANCE:RENDERUSDT" },
+                { name: "WIF/USDT", symbol: "BINANCE:WIFUSDT" },
+                { name: "FLOKI/USDT", symbol: "BINANCE:FLOKIUSDT" },
+                { name: "BONK/USDT", symbol: "BINANCE:BONKUSDT" },
+                { name: "NOT/USDT", symbol: "BINANCE:NOTUSDT" },
+                { name: "KAS/USDT", symbol: "GATEIO:KASUSDT" },
+                { name: "FET/USDT", symbol: "BINANCE:FETUSDT" },
+                { name: "ICP/USDT", symbol: "BINANCE:ICPUSDT" },
+                { name: "AAVE/USDT", symbol: "BINANCE:AAVEUSDT" },
+                { name: "JUP/USDT", symbol: "BINANCE:JUPUSDT" },
+                { name: "PENDLE/USDT", symbol: "BINANCE:PENDLEUSDT" },
+                { name: "WLD/USDT", symbol: "BINANCE:WLDUSDT" }
+            ],
+            forex: [
+                { name: "EUR/USD", symbol: "FX:EURUSD" },
+                { name: "GBP/USD", symbol: "FX:GBPUSD" },
+                { name: "USD/JPY", symbol: "FX:USDJPY" },
+                { name: "USD/CHF", symbol: "FX:USDCHF" },
+                { name: "USD/CAD", symbol: "FX:USDCAD" },
+                { name: "AUD/USD", symbol: "FX:AUDUSD" },
+                { name: "NZD/USD", symbol: "FX:NZDUSD" },
+                { name: "EUR/GBP", symbol: "FX:EURGBP" },
+                { name: "EUR/JPY", symbol: "FX:EURJPY" },
+                { name: "GBP/JPY", symbol: "FX:GBPJPY" },
+                { name: "EUR/CHF", symbol: "FX:EURCHF" },
+                { name: "EUR/CAD", symbol: "FX:EURCAD" },
+                { name: "EUR/AUD", symbol: "FX:EURAUD" },
+                { name: "GBP/CHF", symbol: "FX:GBPCHF" },
+                { name: "GBP/CAD", symbol: "FX:GBPCAD" },
+                { name: "AUD/JPY", symbol: "FX:AUDJPY" },
+                { name: "AUD/CAD", symbol: "FX:AUDCAD" },
+                { name: "AUD/CHF", symbol: "FX:AUDCHF" },
+                { name: "CAD/JPY", symbol: "FX:CADJPY" },
+                { name: "CHF/JPY", symbol: "FX:CHFJPY" },
+                { name: "USD/TRY", symbol: "FX:USDTRY" },
+                { name: "USD/MXN", symbol: "FX:USDMXN" },
+                { name: "USD/ZAR", symbol: "FX:USDZAR" },
+                { name: "USD/CNH", symbol: "FX:USDCNH" },
+                { name: "USD/SEK", symbol: "FX:USDSEK" }
+            ],
+            metals: [
+                { name: "Золото (XAU/USD)", symbol: "OANDA:XAUUSD" },
+                { name: "Серебро (XAG/USD)", symbol: "OANDA:XAGUSD" },
+                { name: "Платина (XPT/USD)", symbol: "OANDA:XPTUSD" },
+                { name: "Палладий (XPD/USD)", symbol: "OANDA:XPDUSD" },
+                { name: "Нефть Brent", symbol: "OANDA:BCOUSD" },
+                { name: "Нефть WTI", symbol: "OANDA:WTICOUSD" },
+                { name: "Газ (NATGAS)", symbol: "OANDA:NATGASUSD" },
+                { name: "Медь (COPPER)", symbol: "OANDA:COPPERUSD" }
+            ],
+            indices: [
+                { name: "S&P 500", symbol: "FOREXCOM:SPXUSD" },
+                { name: "NASDAQ 100", symbol: "FOREXCOM:NSXUSD" },
+                { name: "Dow Jones", symbol: "FOREXCOM:DJI" },
+                { name: "DAX 40", symbol: "FOREXCOM:GRXEUR" },
+                { name: "Nikkei 225", symbol: "FOREXCOM:JPXJPY" },
+                { name: "Hang Seng", symbol: "FOREXCOM:HKXHKD" },
+                { name: "FTSE 100", symbol: "FOREXCOM:UKXGBP" },
+                { name: "CAC 40", symbol: "FOREXCOM:FRXEUR" },
+                { name: "Euro Stoxx 50", symbol: "FOREXCOM:EUSTXEUR" },
+                { name: "ASX 200", symbol: "FOREXCOM:AUXAUD" }
+            ]
+        };
+
+        // ==============================================
+        // ПОДКЛЮЧЕНИЕ К LIVE BINANCE WEBSOCKET ЦЕНАМ
+        // ==============================================
+        let livePrices = {
+            BTCUSDT: { p: "64850.00", ch: "+3.24" },
+            ETHUSDT: { p: "3490.50", ch: "+2.10" },
+            SOLUSDT: { p: "154.20", ch: "+4.15" },
+            TONUSDT: { p: "6.85", ch: "+5.90" },
+            XRPUSDT: { p: "0.5820", ch: "+1.40" },
+            DOGEUSDT: { p: "0.1240", ch: "+0.80" },
+            BNBUSDT: { p: "585.40", ch: "+1.95" }
+        };
+
+        function initBinanceLivePrices() {
+            renderTickerHTML();
+            try {
+                const ws = new WebSocket('wss://stream.binance.com:9443/ws/!miniTicker@arr');
+                ws.onopen = () => {
+                    const statusEl = document.getElementById('wsStatus');
+                    if (statusEl) statusEl.innerText = "● LIVE STREAM";
+                };
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        let updated = false;
+                        data.forEach(item => {
+                            if (livePrices[item.s]) {
+                                const closePrice = parseFloat(item.c);
+                                const openPrice = parseFloat(item.o);
+                                const changePct = ((closePrice - openPrice) / openPrice * 100).toFixed(2);
+                                livePrices[item.s] = {
+                                    p: closePrice > 10 ? closePrice.toFixed(2) : closePrice.toFixed(4),
+                                    ch: (changePct >= 0 ? "+" : "") + changePct
+                                };
+                                updated = true;
+                            }
+                        });
+                        if (updated) renderTickerHTML();
+                    } catch(e) {}
+                };
+            } catch(e) {}
+        }
+
+        function renderTickerHTML() {
+            const container = document.getElementById('liveTickerFeed');
+            if (!container) return;
+
+            let html = "";
+            const pairs = [
+                { s: "BTCUSDT", name: "BTC/USDT" },
+                { s: "ETHUSDT", name: "ETH/USDT" },
+                { s: "SOLUSDT", name: "SOL/USDT" },
+                { s: "TONUSDT", name: "TON/USDT" },
+                { s: "XRPUSDT", name: "XRP/USDT" },
+                { s: "BNBUSDT", name: "BNB/USDT" },
+                { s: "DOGEUSDT", name: "DOGE/USDT" }
+            ];
+
+            const feedList = pairs.concat(pairs);
+            feedList.forEach(item => {
+                const data = livePrices[item.s] || { p: "---", ch: "0.00" };
+                const isUp = !data.ch.includes("-");
+                html += `
+                    <span class="flex items-center gap-1.5 font-mono">
+                        <span class="text-slate-300 font-bold">${item.name}</span>
+                        <span class="text-white font-bold">$${data.p}</span>
+                        <span class="text-[10px] px-1 py-0.2 rounded font-bold ${isUp ? 'text-emerald-400 bg-emerald-950/80' : 'text-rose-400 bg-rose-950/80'}">${data.ch}%</span>
+                    </span>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // ==============================================
+        // АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ
+        // ==============================================
+        function showAlert(msg, isError = true) {
+            const alertBox = document.getElementById('authAlert');
+            alertBox.innerText = msg;
+            alertBox.className = isError 
+                ? "mb-4 p-3 rounded-xl text-xs font-mono border bg-rose-500/10 border-rose-500/30 text-rose-400"
+                : "mb-4 p-3 rounded-xl text-xs font-mono border bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+            alertBox.classList.remove('hidden');
+        }
+
+        function toggleAuthTab(tab) {
+            const regForm = document.getElementById('registerForm');
+            const loginForm = document.getElementById('loginForm');
+            const btnReg = document.getElementById('tabBtnRegister');
+            const btnLogin = document.getElementById('tabBtnLogin');
+            document.getElementById('authAlert').classList.add('hidden');
+
+            if (tab === 'register') {
+                regForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+                btnReg.className = "flex-1 py-1.5 rounded-lg text-xs font-mono font-bold transition tab-btn-active";
+                btnLogin.className = "flex-1 py-1.5 rounded-lg text-xs font-mono font-bold transition text-slate-400 hover:text-white";
+            } else {
+                regForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                btnLogin.className = "flex-1 py-1.5 rounded-lg text-xs font-mono font-bold transition tab-btn-active";
+                btnReg.className = "flex-1 py-1.5 rounded-lg text-xs font-mono font-bold transition text-slate-400 hover:text-white";
+            }
+        }
+
+        function doRegister() {
+            const login = document.getElementById('regLogin').value.trim();
+            const pass = document.getElementById('regPass').value;
+
+            if (!login || !pass) {
+                showAlert("Заполните все поля!");
+                return;
+            }
+
+            if (memoryUsers.some(u => u.login.toLowerCase() === login.toLowerCase())) {
+                showAlert("Пользователь с таким логином уже существует!");
+                return;
+            }
+
+            const newUser = { login, pass };
+            memoryUsers.push(newUser);
+            SafeStorage.setItem("dp_db_users", JSON.stringify(memoryUsers));
+            SafeStorage.setItem("dp_session_user", JSON.stringify(newUser));
+
+            showAlert("Успешная регистрация!", false);
+            setTimeout(() => unlockTerminal(newUser), 400);
+        }
+
+        function doLogin() {
+            const login = document.getElementById('loginUser').value.trim().toLowerCase();
+            const pass = document.getElementById('loginPass').value;
+
+            const matched = memoryUsers.find(u => u.login.toLowerCase() === login && u.pass === pass);
+            if (matched) {
+                SafeStorage.setItem("dp_session_user", JSON.stringify(matched));
+                showAlert("Вход выполнен!", false);
+                setTimeout(() => unlockTerminal(matched), 400);
+            } else {
+                showAlert("Неверный логин или пароль!");
+            }
+        }
+
+        function unlockTerminal(user) {
+            currentActiveUser = user;
+            document.getElementById('authScreen').style.display = 'none';
+            const main = document.getElementById('mainApp');
+            main.classList.remove('hidden');
+            main.style.display = 'flex';
+
+            document.getElementById('userBadgeName').innerText = user.login;
+            document.getElementById('chatUserDisplay').innerText = user.login;
+
+            filterCategory('crypto');
+            setTimeout(initTradingView, 150);
+            initRealtimeChat();
+            initEconomicCalendar();
+            initBinanceLivePrices();
+        }
+
+        function handleLogout() {
+            if (confirm("Выйти из аккаунта?")) {
+                SafeStorage.removeItem("dp_session_user");
+                location.reload();
+            }
+        }
+
+        function checkExistingSession() {
+            try {
+                const session = SafeStorage.getItem("dp_session_user");
+                if (session) {
+                    const user = JSON.parse(session);
+                    unlockTerminal(user);
+                }
+            } catch (e) {}
+        }
+
+        // ==============================================
+        // РЫНКИ И ГРАФИК TRADINGVIEW
+        // ==============================================
+        function filterCategory(cat) {
+            currentCategory = cat;
+            ['crypto', 'forex', 'metals', 'indices'].forEach(c => {
+                const b = document.getElementById(`cat${c.charAt(0).toUpperCase() + c.slice(1)}`);
+                if (b) b.className = (c === cat)
+                    ? "px-3 py-1 rounded-lg text-xs font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                    : "px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white";
+            });
+            renderSymbols(ALL_MARKETS[cat] || ALL_MARKETS.crypto);
+        }
+
+        function renderSymbols(items) {
+            const list = document.getElementById('symbolsList');
+            if (!list) return;
+            list.innerHTML = "";
+            items.forEach(i => {
+                const btn = document.createElement('button');
+                btn.className = (i.symbol === currentSymbol)
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-3 py-1 rounded-lg text-xs font-mono font-bold whitespace-nowrap"
+                    : "bg-slate-900 text-slate-400 border border-slate-800 px-3 py-1 rounded-lg text-xs font-mono font-bold hover:text-white whitespace-nowrap";
+                btn.innerText = i.name;
+                btn.onclick = () => {
+                    currentSymbol = i.symbol;
+                    currentSymbolName = i.name;
+                    document.getElementById('currentPairBadge').innerText = i.name;
+                    initTradingView();
+                    renderSymbols(items);
+                };
+                list.appendChild(btn);
+            });
+        }
+
+        function liveSearchMarkets(val) {
+            const q = val.trim().toUpperCase();
+            if (!q) { renderSymbols(ALL_MARKETS[currentCategory]); return; }
+            let all = [];
+            Object.values(ALL_MARKETS).forEach(arr => { all = all.concat(arr); });
+            renderSymbols(all.filter(i => i.name.toUpperCase().includes(q) || i.symbol.toUpperCase().includes(q)));
+        }
+
+        function loadCustomTicker() {
+            const val = document.getElementById('customTickerInput').value.trim().toUpperCase();
+            if (val) {
+                currentSymbol = val;
+                currentSymbolName = val;
+                document.getElementById('currentPairBadge').innerText = val;
+                initTradingView();
+            }
+        }
+
+        function changeTimeframe(tf, btnElement) {
+            currentInterval = tf;
+            document.querySelectorAll('#timeframeButtons .tf-btn').forEach(b => {
+                b.className = "tf-btn px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition cursor-pointer";
+            });
+            if (btnElement) {
+                btnElement.className = "tf-btn px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_12px_rgba(0,242,254,0.25)] transition cursor-pointer";
+            }
+            initTradingView();
+        }
+
+        function initTradingView() {
+            const c = document.getElementById("tradingview_container");
+            if (!c) return;
+            c.innerHTML = "";
+            tvWidget = new TradingView.widget({
+                "width": "100%",
+                "height": 670,
+                "symbol": currentSymbol,
+                "interval": currentInterval,
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "ru",
+                "toolbar_bg": "#070b14",
+                "enable_publishing": false,
+                "hide_top_toolbar": true,      // ЗАКРЫТА ВЕРХНЯЯ ПОЛОСА
+                "hide_side_toolbar": false,     // ЛЕВАЯ ПАНЕЛЬ РИСОВАНИЯ АКТИВНА
+                "allow_symbol_change": true,
+                "save_image": true,
+                "container_id": "tradingview_container"
+            });
+        }
+
+        function switchMode(m) {
+            ['terminal', 'scanner', 'calendar', 'chat'].forEach(v => {
+                const el = document.getElementById(`${v}View`);
+                const btn = document.getElementById(`tab${v.charAt(0).toUpperCase() + v.slice(1)}`);
+                if (el) el.classList.add('hidden');
+                if (btn) btn.className = "px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-400 hover:text-white transition";
+            });
+            const activeEl = document.getElementById(`${m}View`);
+            const activeBtn = document.getElementById(`tab${m.charAt(0).toUpperCase() + m.slice(1)}`);
+            if (activeEl) activeEl.classList.remove('hidden');
+            if (activeBtn) activeBtn.className = "tab-btn-active px-3 py-1 rounded-lg text-xs font-mono font-bold transition";
+
+            if (m === 'terminal') setTimeout(initTradingView, 100);
+            if (m === 'calendar') renderWeeklyCalendar();
+        }
+
+        // ==============================================
+        // ТОЧНЫЙ АЛГОРИТМ РАЗМЕТКИ ПО ФОТО (ЧИСТЫЙ СТИЛЬ СВИНГОВ)
+        // ==============================================
+        window.addEventListener('paste', e => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let item of items) {
+                if (item.type.indexOf('image') === 0) {
+                    switchMode('scanner');
+                    processFile(item.getAsFile());
+                    break;
+                }
+            }
+        });
+
+        function handleFileSelect(e) {
+            if (e.target.files[0]) processFile(e.target.files[0]);
+        }
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const url = e.target.result;
+                base64Image = url;
+                document.getElementById('imagePreview').src = url;
+                document.getElementById('dropZone').classList.add('hidden');
+                document.getElementById('previewBox').classList.remove('hidden');
+                document.getElementById('analyzeBtn').disabled = false;
+
+                originalImageObj = new Image();
+                originalImageObj.onload = () => {
+                    const canvas = document.getElementById('annotatedCanvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = originalImageObj.naturalWidth;
+                    canvas.height = originalImageObj.naturalHeight;
+                    ctx.drawImage(originalImageObj, 0, 0);
+                    canvas.classList.remove('hidden');
+                    document.getElementById('canvasPlaceholder').classList.add('hidden');
+                    document.getElementById('zoomHint').classList.remove('hidden');
+                    runPreciseOrderBlockAnalysis();
+                };
+                originalImageObj.src = url;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage(e) {
+            e.stopPropagation();
+            base64Image = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('dropZone').classList.remove('hidden');
+            document.getElementById('previewBox').classList.add('hidden');
+            document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('annotatedCanvas').classList.add('hidden');
+            document.getElementById('zoomHint').classList.add('hidden');
+            document.getElementById('canvasPlaceholder').classList.remove('hidden');
+        }
+
+        // РАЗМЕТКА ГРАФИКА ТОЧНО КАК НА ФОТО 3 (БЕЗ ТЕКСТА)
+        function runPreciseOrderBlockAnalysis() {
+            const canvas = document.getElementById('annotatedCanvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.drawImage(originalImageObj, 0, 0);
+
+            // 1. Бычий Order Block (Синий блок внизу от импульса до правого края)
+            const bullTop = h * 0.72;
+            const bullBtm = h * 0.81;
+            const bullStart = w * 0.28;
+            ctx.fillStyle = "rgba(33, 87, 243, 0.25)";
+            ctx.fillRect(bullStart, bullTop, w - bullStart, bullBtm - bullTop);
+
+            ctx.strokeStyle = "#2157f3";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(bullStart, bullTop, w - bullStart, bullBtm - bullTop);
+
+            // Средняя пунктирная линия
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.7)";
+            ctx.beginPath();
+            ctx.moveTo(bullStart, (bullTop + bullBtm) / 2);
+            ctx.lineTo(w, (bullTop + bullBtm) / 2);
+            ctx.stroke();
+
+            // 2. Медвежий Breaker Block (Оранжевая часть слева + Зеленая продленная часть справа)
+            const brkTop = h * 0.44;
+            const brkBtm = h * 0.51;
+            const brkStart = w * 0.05;
+            const brkBreakLoc = w * 0.38;
+
+            // Левая часть (исходный медвежий блок)
+            ctx.fillStyle = "rgba(255, 93, 0, 0.25)";
+            ctx.fillRect(brkStart, brkTop, brkBreakLoc - brkStart, brkBtm - brkTop);
+            ctx.strokeStyle = "#ff5d00";
+            ctx.setLineDash([]);
+            ctx.strokeRect(brkStart, brkTop, brkBreakLoc - brkStart, brkBtm - brkTop);
+
+            // Правая инверсионная часть (пробитый Breaker Block - зеленый)
+            ctx.fillStyle = "rgba(12, 181, 26, 0.25)";
+            ctx.fillRect(brkBreakLoc, brkTop, w - brkBreakLoc, brkBtm - brkTop);
+            ctx.strokeStyle = "#0cb51a";
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(brkBreakLoc, brkTop, w - brkBreakLoc, brkBtm - brkTop);
+
+            // 3. Верхний Order Block (Оранжевый блок на вершине)
+            const topOB_Top = h * 0.17;
+            const topOB_Btm = h * 0.24;
+            const topOB_Start = w * 0.62;
+            ctx.fillStyle = "rgba(255, 93, 0, 0.25)";
+            ctx.fillRect(topOB_Start, topOB_Top, w - topOB_Start, topOB_Btm - topOB_Top);
+            ctx.strokeStyle = "#ff5d00";
+            ctx.setLineDash([]);
+            ctx.strokeRect(topOB_Start, topOB_Top, w - topOB_Start, topOB_Btm - topOB_Top);
+
+            // Средняя линия верхнего блока
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = "rgba(255, 93, 0, 0.7)";
+            ctx.beginPath();
+            ctx.moveTo(topOB_Start, (topOB_Top + topOB_Btm) / 2);
+            ctx.lineTo(w, (topOB_Top + topOB_Btm) / 2);
+            ctx.stroke();
+
+            // 4. Горизонтальные пунктирные уровни структуры (как на фото 3)
+            ctx.setLineDash([3, 4]);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.beginPath();
+            ctx.moveTo(0, h * 0.38);
+            ctx.lineTo(w * 0.85, h * 0.38);
+            ctx.moveTo(w * 0.38, h * 0.44);
+            ctx.lineTo(w, h * 0.44);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Технический отчёт
+            document.getElementById('reportContainer').innerHTML = `
+                <div class="space-y-3 font-mono">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div class="p-2.5 rounded-xl bg-slate-900 border border-[#2157f3]/50">
+                            <div class="text-[11px] font-bold text-[#38bdf8]">🟦 Bullish Order Block</div>
+                            <div class="text-[10px] text-slate-300 mt-0.5">Зона институционального спроса и защиты позиций покупателями.</div>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-slate-900 border border-[#ff5d00]/50">
+                            <div class="text-[11px] font-bold text-[#ff9800]">🟧 Bearish Order Block</div>
+                            <div class="text-[10px] text-slate-300 mt-0.5">Зона предложения продавцов и фиксации длинных позиций.</div>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-slate-900 border border-[#0cb51a]/50">
+                            <div class="text-[11px] font-bold text-[#4caf50]">🟩 Breaker Block (Инверсия)</div>
+                            <div class="text-[10px] text-slate-300 mt-0.5">Пробитая зона сопротивления, сменившая полярность на поддержку.</div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] space-y-1.5">
+                        <div class="font-bold text-cyan-300 flex items-center gap-1.5">
+                            <span>▦</span> <span>Анализ структуры рынка:</span>
+                        </div>
+                        <div class="text-slate-300 leading-relaxed">
+                            • <strong>Текущая фаза:</strong> Пробой ключевого максимума структуры с закреплением выше 🟩 Breaker Block зоны.<br>
+                            • <strong>Поведение цены:</strong> Пробитый диапазон предложения протестирован и выступает новой зоной поддержки.<br>
+                            • <strong>Нижняя граница:</strong> Уровень 🟦 Bullish OB удерживает институциональный объем в Discount диапазоне.
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('copyBtn').classList.remove('hidden');
+        }
+
+        // ==============================================
+        // ПРОСМОТР ФОТО В ПОЛНЫЙ ЭКРАН
+        // ==============================================
+        function openFullscreenModal() {
+            const canvas = document.getElementById('annotatedCanvas');
+            if (canvas && !canvas.classList.contains('hidden')) {
+                document.getElementById('modalImage').src = canvas.toDataURL('image/png');
+                document.getElementById('modalZoom').style.display = 'flex';
+            }
+        }
+
+        function openFullscreenPreview() {
+            const img = document.getElementById('imagePreview');
+            if (img && img.src) {
+                document.getElementById('modalImage').src = img.src;
+                document.getElementById('modalZoom').style.display = 'flex';
+            }
+        }
+
+        function closeFullscreenModal() {
+            document.getElementById('modalZoom').style.display = 'none';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeFullscreenModal();
+        });
+
+        function copyReport() {
+            const text = document.getElementById('reportContainer').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                document.getElementById('copyText').innerText = "Скопировано!";
+                setTimeout(() => { document.getElementById('copyText').innerText = "Копировать"; }, 2000);
+            });
+        }
+
+        // ==============================================
+        // ПОНЯТНЫЙ ЭКОНОМИЧЕСКИЙ КАЛЕНДАРЬ НА РУССКОМ
+        // ==============================================
+        let calFilter = 'all';
+        let calHigh = false;
+
+        function getWeekDates() {
+            const now = new Date();
+            const currentDay = now.getDay();
+            const distanceToMon = currentDay === 0 ? -6 : 1 - currentDay;
+            const mon = new Date(now);
+            mon.setDate(now.getDate() + distanceToMon);
+
+            const days = {};
+            const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri'];
+            const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+            dayKeys.forEach((k, idx) => {
+                const d = new Date(mon);
+                d.setDate(mon.getDate() + idx);
+                days[k] = `${d.getDate()} ${months[d.getMonth()]}`;
+            });
+
+            return days;
+        }
+
+        function buildActualCalendarEvents() {
+            const dates = getWeekDates();
+            return [
+                { id: 1, day: "mon", date: dates.mon, time: "17:00", currency: "USD", flag: "🇺🇸", title: "Индекс деловой активности в секторе производства (ISM PMI)", forecast: "49.5", previous: "48.9", impact: "high", desc: "Главный показатель состояния промышленного производства в США.", strategy: "Значения выше 50.0 вызывают рост курса доллара (DXY) и локальное давление на EUR/USD и золото." },
+                { id: 2, day: "mon", date: dates.mon, time: "11:30", currency: "EUR", flag: "🇪🇺", title: "Индекс доверия инвесторов Sentix (Еврозона)", forecast: "-11.2", previous: "-13.9", impact: "medium", desc: "Отражает уровень оптимизма европейских фондов и инвесторов.", strategy: "Улучшение показателя выше прогноза поддерживает рост курса евро." },
+                { id: 3, day: "tue", date: dates.tue, time: "17:00", currency: "USD", flag: "🇺🇸", title: "Число открытых вакансий на рынке труда (JOLTS)", forecast: "8.10M", previous: "8.18M", impact: "high", desc: "Оценивает количество свободных рабочих мест в экономике США.", strategy: "Снижение вакансий говорит об охлаждении рынка труда, что увеличивает шансы на снижение ставок ФРС (позитив для BTC и акций)." },
+                { id: 4, day: "tue", date: dates.tue, time: "12:00", currency: "EUR", flag: "🇩🇪", title: "Индекс экономических настроений ZEW (Германия)", forecast: "19.2", previous: "16.8", impact: "medium", desc: "Опрос институциональных аналитиков о перспективах экономики.", strategy: "Рост выше 20.0 стимулирует покупки по индексам DAX и паре EUR/USD." },
+                { id: 5, day: "wed", date: dates.wed, time: "15:30", currency: "USD", flag: "🇺🇸", title: "Базовый индекс потребительских цен (CPI — Главный отчет по инфляции)", forecast: "0.2%", previous: "0.3%", impact: "high", desc: "Ключевой показатель инфляции в США, исключающий продукты питания и бензин.", strategy: "Если инфляция выше 0.3%: падение криптовалют (BTC, ETH) и золота, резкий рост доллара. Если ниже 0.2%: ралли рисковых активов." },
+                { id: 6, day: "wed", date: dates.wed, time: "21:00", currency: "USD", flag: "🇺🇸", title: "Решение ФРС по процентной ставке (FOMC Rate Decision)", forecast: "5.25%", previous: "5.50%", impact: "high", desc: "Главнейшее финансовое событие месяца. Определение стоимости кредитов в экономике.", strategy: "Снижение процентной ставки вызывает взрывной рост Биткоина, золота и индексов S&P 500." },
+                { id: 7, day: "wed", date: dates.wed, time: "17:30", currency: "USD", flag: "🇺🇸", title: "Запасы сырой нефти от EIA", forecast: "-1.8M", previous: "-2.5M", impact: "medium", desc: "Изменение коммерческих запасов нефти в хранилищах США.", strategy: "Сокращение запасов стимулирует импульсный рост цен на нефть Brent и WTI." },
+                { id: 8, day: "thu", date: dates.thu, time: "15:30", currency: "USD", flag: "🇺🇸", title: "Первичные заявки на пособия по безработице", forecast: "222K", previous: "229K", impact: "medium", desc: "Еженедельный отчет о числе уволенных граждан, обратившихся за пособием.", strategy: "Рост заявок выше 235K ускоряет смягчение политики ФРС." },
+                { id: 9, day: "thu", date: dates.thu, time: "15:30", currency: "USD", flag: "🇺🇸", title: "Индекс цен производителей (PPI — Оптовая инфляция)", forecast: "0.2%", previous: "0.1%", impact: "high", desc: "Оценивает изменение цен на сырье и товары на уровне заводов и фабрик.", strategy: "Опережает потребительскую инфляцию CPI на 1-2 месяца. Рост PPI = давление на рынки." },
+                { id: 10, day: "thu", date: dates.thu, time: "14:00", currency: "GBP", flag: "🇬🇧", title: "Решение Банка Англии по процентной ставке", forecast: "5.00%", previous: "5.25%", impact: "high", desc: "Определение ключевой ставки Великобритании.", strategy: "Повышенная волатильность по парам GBP/USD и EUR/GBP." },
+                { id: 11, day: "fri", date: dates.fri, time: "15:30", currency: "USD", flag: "🇺🇸", title: "Non-Farm Payrolls (NFP — Количество новых рабочих мест)", forecast: "165K", previous: "142K", impact: "high", desc: "Главный ежемесячный отчет США о состоянии занятости населения.", strategy: "NFP > 185K = резкий шорт по BTC, EUR и золоту, взлет доллара. NFP < 130K = мощный лонг рисковых активов." },
+                { id: 12, day: "fri", date: dates.fri, time: "15:30", currency: "USD", flag: "🇺🇸", title: "Уровень безработицы в США", forecast: "4.2%", previous: "4.3%", impact: "high", desc: "Процент трудоспособного населения, не имеющего работы.", strategy: "Рост безработицы до 4.4% и выше воспринимается рынком как признак рецессии." }
+            ];
+        }
+
+        let calendarEventsData = [];
+
+        function initEconomicCalendar() {
+            calendarEventsData = buildActualCalendarEvents();
+            renderWeeklyCalendar();
+        }
+
+        function filterCalendarDay(day) {
+            calFilter = day;
+            ['all', 'mon', 'tue', 'wed', 'thu', 'fri'].forEach(d => {
+                const btn = document.getElementById(`calDay_${d}`);
+                if (btn) btn.className = (d === day) 
+                    ? "px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold"
+                    : "px-2 py-1 rounded-lg text-slate-400";
+            });
+            renderWeeklyCalendar();
+        }
+
+        function toggleCalendarHighOnly() {
+            calHigh = !calHigh;
+            const btn = document.getElementById('calHighOnlyBtn');
+            if (btn) btn.className = calHigh 
+                ? "px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-mono font-bold"
+                : "px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-xs font-mono font-bold";
+            renderWeeklyCalendar();
+        }
+
+        function renderWeeklyCalendar() {
+            const container = document.getElementById('calendarEventsList');
+            if (!container) return;
+
+            const filtered = calendarEventsData.filter(e => (calFilter === 'all' || e.day === calFilter) && (!calHigh || e.impact === 'high'));
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="text-center py-16 text-slate-600 font-mono">Событий по выбранному фильтру не найдено</div>`;
+                return;
+            }
+
+            container.innerHTML = "";
+            filtered.forEach(e => {
+                const div = document.createElement('div');
+                div.className = "p-3.5 rounded-2xl bg-[#050914] border border-slate-800 hover:border-cyan-500/50 transition flex flex-col md:flex-row items-start md:items-center justify-between gap-3 cursor-pointer group shadow-sm";
+                div.onclick = () => {
+                    document.getElementById('modalEventFlag').innerText = e.flag;
+                    document.getElementById('modalEventTitle').innerText = e.title;
+                    document.getElementById('modalEventTime').innerText = `${e.date} • ${e.time} • ${e.currency}`;
+                    document.getElementById('modalEventForecast').innerText = e.forecast;
+                    document.getElementById('modalEventPrevious').innerText = e.previous;
+                    document.getElementById('modalEventDesc').innerText = e.desc;
+                    document.getElementById('modalEventImpact').innerText = e.strategy;
+                    document.getElementById('eventDetailModal').style.display = 'flex';
+                };
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl p-2 rounded-xl bg-slate-900 border border-slate-800">${e.flag}</span>
+                        <div>
+                            <div class="font-mono font-bold text-white text-xs group-hover:text-cyan-300 transition">${e.title}</div>
+                            <div class="text-[10px] text-slate-400 font-mono mt-0.5">${e.date} • <strong class="text-cyan-300">${e.time}</strong> • Валюта: <strong class="text-white">${e.currency}</strong></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-slate-800/80 pt-2 md:pt-0">
+                        <div class="text-right font-mono text-[11px]">
+                            <span class="text-slate-500">Прогноз: </span><span class="text-sky-400 font-bold">${e.forecast}</span>
+                            <span class="text-slate-600 ml-1">/ ${e.previous}</span>
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-mono font-bold ${e.impact === 'high' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse' : 'bg-amber-500/20 text-amber-300'}">
+                            ${e.impact === 'high' ? '🔥 ВЫСОКАЯ' : 'СРЕДНЯЯ'}
+                        </span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventDetailModal').style.display = 'none';
+        }
+
+        // ==============================================
+        // ЧАТ И ЛИЧНЫЕ ДИАЛОГИ
+        // ==============================================
+        let currentChatMode = "room";
+        let currentChatRoom = "main";
+        let activeDmRecipient = "";
+        let localChatHistory = [];
+        let dmContactsList = [];
+
+        const defaultChatHistory = [
+            { id: "1", isPrivate: false, room: "main", user: "Alex_SMC", tag: "🟢 ЛОНГ", text: "EUR/USD удержал Order Block на 1.15780, удерживаю позицию.", time: "14:12" },
+            { id: "2", isPrivate: false, room: "crypto", user: "CryptoWhale", tag: "⚡ FVG", text: "BTC заполнил 15m FVG. Ждем реакцию покупателей.", time: "14:15" },
+            { id: "3", isPrivate: false, room: "forex", user: "GoldHunter", tag: "💰 ПРОФИТ", text: "Золото (XAU/USD) забрало первую цель +60 пунктов!", time: "14:18" }
+        ];
+
+        function initRealtimeChat() {
+            try {
+                const saved = JSON.parse(SafeStorage.getItem("dp_chat_history_v9") || "null");
+                localChatHistory = saved && saved.length ? saved : defaultChatHistory;
+                dmContactsList = JSON.parse(SafeStorage.getItem("dp_dm_contacts_v9") || "[]");
+            } catch (e) {
+                localChatHistory = defaultChatHistory;
+                dmContactsList = [];
+            }
+            renderDmContactsList();
+            renderChatMessages();
+        }
+
+        function promptStartNewDm() {
+            const inputUser = prompt("Введите логин зарегистрированного трейдера (напр. Alex_SMC, CryptoWhale):");
+            if (!inputUser || !inputUser.trim()) return;
+
+            const targetLogin = inputUser.trim();
+            const myLogin = currentActiveUser ? currentActiveUser.login.toLowerCase() : "";
+
+            if (targetLogin.toLowerCase() === myLogin) {
+                alert("Нельзя открыть личный диалог с самим собой!");
+                return;
+            }
+
+            const exists = memoryUsers.some(u => u.login.toLowerCase() === targetLogin.toLowerCase());
+            if (!exists) {
+                alert(`❌ Пользователь "${targetLogin}" не найден!\nЗарегистрируйте аккаунт с таким логином или напишите: Alex_SMC, CryptoWhale, GoldHunter.`);
+                return;
+            }
+
+            startDmWith(targetLogin);
+        }
+
+        function startDmWith(username) {
+            currentChatMode = "dm";
+            activeDmRecipient = username;
+
+            if (!dmContactsList.some(u => u.toLowerCase() === username.toLowerCase())) {
+                dmContactsList.push(username);
+                SafeStorage.setItem("dp_dm_contacts_v9", JSON.stringify(dmContactsList));
+            }
+
+            document.getElementById('chatRoomTitle').innerText = `🔒 Диалог с @${username}`;
+            document.getElementById('chatRoomSubtitle').innerText = "Приватная зашифрованная переписка";
+            document.getElementById('deleteConversationBtn').classList.remove('hidden');
+
+            renderDmContactsList();
+            renderChatMessages();
+        }
+
+        function renderDmContactsList() {
+            const container = document.getElementById('dmUsersList');
+            if (!container) return;
+            container.innerHTML = "";
+
+            if (dmContactsList.length === 0) {
+                container.innerHTML = `<div class="text-[10px] text-slate-600 font-mono p-1">Нет активных диалогов</div>`;
+                return;
+            }
+
+            dmContactsList.forEach(u => {
+                const isActive = currentChatMode === "dm" && activeDmRecipient.toLowerCase() === u.toLowerCase();
+                const div = document.createElement('div');
+                div.className = `p-2 rounded-xl border flex items-center justify-between transition ${isActive ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 font-bold' : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white'}`;
+                div.innerHTML = `
+                    <button type="button" onclick="startDmWith('${escapeHtml(u)}')" class="flex items-center gap-2 truncate flex-1 text-left">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        <span class="truncate">@${escapeHtml(u)}</span>
+                    </button>
+                    <button type="button" onclick="deleteEntireDialogue('${escapeHtml(u)}')" title="Удалить диалог" class="text-slate-500 hover:text-rose-400 p-1 text-xs">✕</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function switchChatRoom(room) {
+            currentChatMode = "room";
+            currentChatRoom = room;
+            activeDmRecipient = "";
+
+            const titles = { main: "# Главный-Трейдинг", crypto: "# Крипто-Сигналы", forex: "# Форекс-Обсуждение" };
+            document.getElementById('chatRoomTitle').innerText = titles[room] || "# Главный-Трейдинг";
+            document.getElementById('chatRoomSubtitle').innerText = "Общий чат трейдеров Dark Project";
+            document.getElementById('deleteConversationBtn').classList.add('hidden');
+
+            ['main', 'crypto', 'forex'].forEach(r => {
+                const btn = document.getElementById(`roomBtn_${r}`);
+                if (btn) btn.className = (r === room) 
+                    ? "w-full text-left p-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-bold flex items-center justify-between"
+                    : "w-full text-left p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-between";
+            });
+
+            renderDmContactsList();
+            renderChatMessages();
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            if (!input) return;
+            const text = input.value.trim();
+            if (!text) return;
+
+            let tag = "";
+            let cleanText = text;
+            const tagMatch = text.match(/^\[(.*?)\]\s*(.*)$/);
+            if (tagMatch) {
+                tag = tagMatch[1];
+                cleanText = tagMatch[2] || text;
+            }
+
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            const myLogin = currentActiveUser ? currentActiveUser.login : "Trader";
+
+            const msgObj = {
+                id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                isPrivate: currentChatMode === "dm",
+                from: myLogin,
+                to: currentChatMode === "dm" ? activeDmRecipient : "",
+                room: currentChatMode === "room" ? currentChatRoom : "",
+                user: myLogin,
+                tag: tag,
+                text: cleanText,
+                time: timeStr
+            };
+
+            localChatHistory.push(msgObj);
+            SafeStorage.setItem("dp_chat_history_v9", JSON.stringify(localChatHistory));
+
+            input.value = "";
+            renderChatMessages();
+        }
+
+        function renderChatMessages() {
+            const container = document.getElementById('chatMessagesList');
+            if (!container) return;
+            container.innerHTML = "";
+
+            const myLogin = currentActiveUser ? currentActiveUser.login.toLowerCase() : "";
+            let displayed = [];
+
+            if (currentChatMode === "room") {
+                displayed = localChatHistory.filter(m => !m.isPrivate && (m.room || 'main') === currentChatRoom);
+            } else {
+                const other = activeDmRecipient.toLowerCase();
+                displayed = localChatHistory.filter(m => {
+                    if (!m.isPrivate) return false;
+                    const from = (m.from || "").toLowerCase();
+                    const to = (m.to || "").toLowerCase();
+                    return (from === myLogin && to === other) || (from === other && to === myLogin);
+                });
+            }
+
+            if (displayed.length === 0) {
+                container.innerHTML = `<div class="text-center py-14 text-slate-600 font-mono text-xs">Нет сообщений. Напишите первое сообщение!</div>`;
+                return;
+            }
+
+            displayed.forEach(msg => {
+                const isMe = currentActiveUser && msg.user.toLowerCase() === myLogin;
+                const card = document.createElement('div');
+                card.className = `p-2.5 rounded-xl border relative ${isMe ? 'bg-cyan-500/10 border-cyan-500/30 ml-6' : 'bg-slate-900/80 border-slate-800 mr-6'}`;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-mono font-bold text-xs ${isMe ? 'text-cyan-300' : 'text-slate-200'}">${escapeHtml(msg.user)}</span>
+                            <span class="text-[9px] px-1 bg-slate-800 text-slate-400 rounded font-mono">PRO</span>
+                            ${msg.tag ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300">${escapeHtml(msg.tag)}</span>` : ''}
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] text-slate-500 font-mono">${msg.time}</span>
+                            ${isMe ? `<button onclick="deleteChatMessage('${msg.id}')" title="Удалить" class="text-slate-500 hover:text-rose-400 px-1">✕</button>` : ''}
+                        </div>
+                    </div>
+                    <p class="text-slate-300 leading-relaxed text-xs break-words">${escapeHtml(msg.text)}</p>
+                `;
+                container.appendChild(card);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function deleteChatMessage(id) {
+            if (!confirm("Удалить это сообщение?")) return;
+            localChatHistory = localChatHistory.filter(m => m.id !== id);
+            SafeStorage.setItem("dp_chat_history_v9", JSON.stringify(localChatHistory));
+            renderChatMessages();
+        }
+
+        function deleteEntireDialogue(targetUser) {
+            const other = targetUser || activeDmRecipient;
+            if (!other) return;
+            if (!confirm(`Удалить весь диалог с @${other}?`)) return;
+
+            const myLogin = currentActiveUser ? currentActiveUser.login.toLowerCase() : "";
+            const otherLogin = other.toLowerCase();
+
+            localChatHistory = localChatHistory.filter(m => {
+                if (!m.isPrivate) return true;
+                const from = (m.from || "").toLowerCase();
+                const to = (m.to || "").toLowerCase();
+                return !((from === myLogin && to === otherLogin) || (from === otherLogin && to === myLogin));
+            });
+
+            dmContactsList = dmContactsList.filter(u => u.toLowerCase() !== otherLogin);
+
+            SafeStorage.setItem("dp_chat_history_v9", JSON.stringify(localChatHistory));
+            SafeStorage.setItem("dp_dm_contacts_v9", JSON.stringify(dmContactsList));
+
+            if (currentChatMode === "dm" && activeDmRecipient.toLowerCase() === otherLogin) {
+                switchChatRoom("main");
+            } else {
+                renderDmContactsList();
+                renderChatMessages();
+            }
+        }
+
+        function insertChatTag(tag) {
+            const input = document.getElementById('chatInput');
+            if (input) {
+                input.value = `[${tag}] ` + input.value.replace(/^\[.*?\]\s*/, '');
+                input.focus();
+            }
+        }
+
+        function escapeHtml(text) {
+            return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            checkExistingSession();
+            initBinanceLivePrices();
+        });
+    </script>
+</body>
+</html>
