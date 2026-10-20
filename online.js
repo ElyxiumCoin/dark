@@ -45,6 +45,7 @@
     if (!account || !serverState) return;
     try {
       backup(account);
+      localStorage.setItem('zona_cloud_owner',account);
       localStorage.setItem(SAVE,JSON.stringify(serverState));
       localStorage.setItem(keys(account).revision,String(rev));
       localStorage.setItem(keys(account).dirty,'0');
@@ -101,6 +102,7 @@
         const latest=await call('/api/me');
         rev=latest.revision;
         serverState=latest.gameState;
+        localStorage.setItem('zona_cloud_owner',account);
         conflicted=false;active=true;dirty=true;currentSeq++;
         choices.replaceChildren();
         await upload();
@@ -108,6 +110,45 @@
       } catch(e) { conflicted=true;active=false;say('Ошибка: '+e.message,true); }
     });
     choices.append(cloud,local);
+  }
+  function confirmFirstImport() {
+    // A legacy local save has no verified Telegram owner. Never assign it silently.
+    conflicted=true; active=false;
+    if(!choices) return;
+    choices.replaceChildren();
+    choices.className='zchoices';
+    const prompt=document.createElement('p');
+    prompt.textContent='Найден прежний прогресс на этом устройстве. Перенести его в ваш Telegram-аккаунт? Не подтверждайте, если сохранение принадлежит другому игроку.';
+    const yes=document.createElement('button');
+    yes.textContent='Да, перенести мой прогресс';
+    yes.addEventListener('click',async () => {
+      yes.disabled=true;
+      try {
+        backup(account);
+        const latest=await call('/api/me');
+        rev=latest.revision; serverState=latest.gameState;
+        if(serverState) {
+          showChoices('В облаке появился прогресс. Выберите нужное сохранение.');
+          return;
+        }
+        localStorage.setItem('zona_cloud_owner',account);
+        choices.replaceChildren();
+        conflicted=false; active=true; dirty=true; currentSeq++;
+        await upload();
+        loadRank();
+      } catch(e) {
+        conflicted=true; active=false;
+        say('Перенос остановлен: '+e.message+'. Местное сохранение не удалено.',true);
+        yes.disabled=false;
+      }
+    });
+    const later=document.createElement('button');
+    later.textContent='Пока не переносить';
+    later.addEventListener('click',() => {
+      choices.replaceChildren();
+      say('Местный прогресс не изменён. Для переноса заново откройте игру.',true);
+    });
+    choices.append(prompt,yes,later);
   }
   const sorts={score:'Общий',level:'Уровень',kills:'Убийства',gram:'GRAM'};
   function setupUI() {
@@ -176,8 +217,13 @@
       const k=keys(account);
       const known=Number(localStorage.getItem(k.revision)||0);
       const locallyChanged=localStorage.getItem(k.dirty)==='1';
-      localStorage.setItem('zona_cloud_owner',account);
       const local=readSave();
+      if(!serverState && local && !previous) {
+        confirmFirstImport();
+        say('Подтвердите перенос прежнего сохранения во вкладке «Рейтинг».',true);
+        loadRank();
+        return;
+      }
       if(serverState && known!==rev && local) {
         showChoices('Есть два сохранения: на устройстве и в облаке. Ничего не удалено.');
         say('Выберите нужный прогресс перед синхронизацией.',true);return;
@@ -188,6 +234,7 @@
         say('Выберите сохранение во вкладке «Рейтинг».',true);return;
       }
       active=true;
+      localStorage.setItem('zona_cloud_owner',account);
       const current=gameInstance()?.state;
       if(serverState && current && JSON.stringify(current)!==JSON.stringify(serverState)) {
         if(known===rev || locallyChanged)markDirty();
