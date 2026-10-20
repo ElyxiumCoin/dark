@@ -1,0 +1,12 @@
+{
+  "name": "zona-z-telegram-online",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Telegram Mini App verified players, PostgreSQL saves and leaderboard",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --check server.js && node --check auth.js && node --test tests/*.test.js"
+  },
+  "engines": {"node": ">=20"},
+  "dependencies": {"dotenv": "^16.6.1", "express": "^4.21.2", "pg": "^8.15.6"}
+}
