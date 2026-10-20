@@ -1,0 +1,12 @@
+{
+  "name": "zona-z-telegram-backend",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {"node": ">=20"},
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "check": "node --check server.js && node --check auth.js && node --test"
+  },
+  "dependencies": {"dotenv": "^16.6.1", "express": "^4.21.2", "pg": "^8.15.6"}
+}
