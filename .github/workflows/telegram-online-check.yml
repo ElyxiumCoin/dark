@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'backend/**'
+      - 'online.js'
       - '.github/workflows/telegram-online-check.yml'
   workflow_dispatch:
 permissions:
@@ -20,5 +21,7 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Check syntax and Telegram signatures
+      - name: Check online client syntax
+        run: node --check ../online.js
+      - name: Check API syntax and Telegram signatures
         run: npm run check
