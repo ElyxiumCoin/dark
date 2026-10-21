@@ -6,7 +6,10 @@ function verifyTelegramInitData(raw, token, now=Math.floor(Date.now()/1000)) {
   for(const k of ['hash','auth_date','user']) if(p.getAll(k).length!==1) throw Error('invalid_telegram_data');
   const received=p.get('hash');
   if(!/^[a-f0-9]{64}$/i.test(received||'')) throw Error('invalid_telegram_data');
-  const check=[...p.entries()].filter(([k])=>k!=='hash'&&k!=='signature')
+  // Telegram bot-token HMAC signs all parameters except hash. In particular, the
+  // newer `signature` parameter IS part of this data-check-string. Excluding it
+  // is only correct for the separate Ed25519 third-party verification scheme.
+  const check=[...p.entries()].filter(([k])=>k!=='hash')
     .sort(([a],[b])=>a<b?-1:a>b?1:0).map(([k,v])=>k+'='+v).join('\n');
   const secret=crypto.createHmac('sha256','WebAppData').update(token).digest();
   const hash=crypto.createHmac('sha256',secret).update(check).digest();
