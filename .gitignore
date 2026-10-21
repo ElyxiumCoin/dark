@@ -1,0 +1,7 @@
+# Never commit Telegram tokens, database credentials or dependencies
+.env
+.env.*
+!.env.example
+node_modules/
+backend/node_modules/
+*.log

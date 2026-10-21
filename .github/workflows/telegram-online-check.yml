@@ -1,0 +1,27 @@
+name: Telegram Online API checks
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'online.js'
+      - '.github/workflows/telegram-online-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Check online client syntax
+        run: node --check ../online.js
+      - name: Check API syntax and Telegram signatures
+        run: npm run check
