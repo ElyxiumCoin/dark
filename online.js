@@ -94,8 +94,20 @@
     choices.replaceChildren();
     choices.className='zchoices';
     const title=document.createElement('p');title.textContent=message;choices.appendChild(title);
+    // Clearly distinguish the player's original GitHub save from an older
+    // ZONA Z TEST cloud save belonging to the same Telegram account.
+    const describe=(state)=>state && typeof state==='object'
+      ? String(state.name||'Сталкер').slice(0,30)+' · уровень '+Number(state.level||1)
+      : 'нет сохранения';
+    const compare=document.createElement('p');
+    compare.textContent='На этом устройстве: '+describe(parse(readSave()))+
+      ' | В облаке: '+describe(serverState);
+    choices.appendChild(compare);
+    const caution=document.createElement('p');
+    caution.textContent='Ничего не меняется автоматически. Загрузка облачного заменит местное сохранение на этом устройстве; перенос местного обновит облачный прогресс.';
+    choices.appendChild(caution);
     const cloud=document.createElement('button');cloud.textContent='Загрузить облачное';cloud.disabled=!serverState;cloud.addEventListener('click',copyCloud);
-    const local=document.createElement('button');local.textContent='Оставить местное';
+    const local=document.createElement('button');local.textContent='Перенести местное в облако';
     local.addEventListener('click',async () => {
       try {
         backup(account);
@@ -109,7 +121,12 @@
         if(conflicted) showChoices('Данные изменились ещё раз. Выберите нужную версию.');
       } catch(e) { conflicted=true;active=false;say('Ошибка: '+e.message,true); }
     });
-    choices.append(cloud,local);
+    const later=document.createElement('button');later.textContent='Пока ничего не менять';
+    later.addEventListener('click',()=>{
+      choices.replaceChildren();
+      say('Сохранения не изменены. Для выбора повторно откройте игру.',true);
+    });
+    choices.append(cloud,local,later);
   }
   function confirmFirstImport() {
     // A legacy local save has no verified Telegram owner. Never assign it silently.
