@@ -117,6 +117,34 @@ test('conflicting cloud save is never silently copied over local progress',async
   assert.equal(h.data.get('zona_cloud_owner'),undefined);
 });
 
+test('existing test cloud account does not silently override a higher local GitHub save',async()=>{
+  const githubSave={name:'Ветеран основной игры',level:79,rubles:999999,tracker:{kills:876,searches:120},inventory:['artifact-x']};
+  const testCloud={name:'Новый тестовый персонаж',level:1,rubles:0};
+  const h=harness({localState:githubSave,cloudState:testCloud,cloudRevision:4});
+  await h.settle();
+  assert.equal(h.posts.length,0,'never upload without explicit consent');
+  assert.deepEqual(JSON.parse(h.data.get('zona_z_save_v10')),githubSave,'old progress stays intact');
+  assert.deepEqual(JSON.parse(h.data.get('zona_cloud_legacy_backup_123')),githubSave,'snapshot exists before any choice');
+  assert.equal(h.data.get('zona_cloud_owner'),undefined,'ownership stays unset before choice');
+  assert.ok(h.findButton('Загрузить облачное'),'explicit cloud choice appears');
+  assert.ok(h.findButton('Оставить местное'),'explicit local choice appears');
+});
+
+test('main-game online candidate has HTTPS API configured without credentials',()=>{
+  const config=fs.readFileSync(path.join(__dirname,'../../online-config.js'),'utf8');
+  assert.match(config,/window\.ZONA_API_URL\s*=\s*'https:\/\/zona-z-api-staging\.onrender\.com'/);
+  assert.doesNotMatch(config,/(?:postgres(?:ql)?:\/\/|BOT_TOKEN\s*=|DATABASE_URL\s*=)/);
+});
+
+test('candidate page loads Telegram verification before the cloud adapter',()=>{
+  const page=fs.readFileSync(path.join(__dirname,'../../index.html'),'utf8');
+  const sdk=page.lastIndexOf('https://telegram.org/js/telegram-web-app.js');
+  const cfg=page.lastIndexOf('src="online-config.js"');
+  const adapter=page.lastIndexOf('src="online.js"');
+  assert.ok(sdk>=0 && cfg>sdk && adapter>cfg,'SDK, API configuration and adapter scripts must load in order');
+  assert.match(page,/id="tab-leaderboard"/);
+});
+
 test('leaderboard UI initializes after game construction, removing old placeholder',async()=>{
   const h=harness();
   await h.settle();
