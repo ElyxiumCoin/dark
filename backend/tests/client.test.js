@@ -138,7 +138,7 @@ test('existing test cloud account does not silently override a higher local GitH
 
 test('main-game online candidate has HTTPS API configured without credentials',()=>{
   const config=fs.readFileSync(path.join(__dirname,'../../online-config.js'),'utf8');
-  assert.match(config,/window\.ZONA_API_URL\s*=\s*'https:\/\/zona-z-api-staging\.onrender\.com'/);
+  assert.match(config,/window\.ZONA_API_URL\s*=\s*'https:\/\/zona-z-api-main\.onrender\.com'/);
   assert.doesNotMatch(config,/(?:postgres(?:ql)?:\/\/|BOT_TOKEN\s*=|DATABASE_URL\s*=)/);
 });
 
