@@ -8,6 +8,7 @@ async function main() {
   const sourceUrl=process.env.DATABASE_URL;
   if(!url || !sourceUrl) {
     console.warn('[neon-migration] Skipped: one or more URLs not configured.');
+    if(process.env.ZONA_DB_TARGET==='neon')process.exitCode=1;
     return;
   }
   const source=new Pool({connectionString:sourceUrl,max:2});
@@ -18,8 +19,12 @@ async function main() {
     const code=['migration_verification_failed','revision_mismatch'].includes(e.message)
       ? e.message : /^[A-Z0-9_]{4,10}$/.test(e.code||'') ? e.code : 'copy_failed';
     console.warn('[neon-migration] Copy not verified: '+code+'. Source DB still used.');
+    if(process.env.ZONA_DB_TARGET==='neon')process.exitCode=1;
   } finally {
     await source.end();
   }
 }
-main().catch(()=>console.warn('[neon-migration] Copy unsuccessful; source unchanged.'));
+main().catch(()=>{
+  console.warn('[neon-migration] Copy unsuccessful; source unchanged.');
+  if(process.env.ZONA_DB_TARGET==='neon')process.exitCode=1;
+});
