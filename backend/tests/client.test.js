@@ -127,7 +127,13 @@ test('existing test cloud account does not silently override a higher local GitH
   assert.deepEqual(JSON.parse(h.data.get('zona_cloud_legacy_backup_123')),githubSave,'snapshot exists before any choice');
   assert.equal(h.data.get('zona_cloud_owner'),undefined,'ownership stays unset before choice');
   assert.ok(h.findButton('Загрузить облачное'),'explicit cloud choice appears');
-  assert.ok(h.findButton('Оставить местное'),'explicit local choice appears');
+  assert.ok(h.findButton('Перенести местное в облако'),'clearly labeled local upload appears');
+  const postpone=h.findButton('Пока ничего не менять');
+  assert.ok(postpone,'player can keep both saves unchanged');
+  postpone.listeners.click();
+  await h.settle();
+  assert.equal(h.posts.length,0,'postponing never sends a save');
+  assert.deepEqual(JSON.parse(h.data.get('zona_z_save_v10')),githubSave);
 });
 
 test('main-game online candidate has HTTPS API configured without credentials',()=>{
