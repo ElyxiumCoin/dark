@@ -155,6 +155,8 @@ async function reportBotIdentity() {
 }
 async function start(){
   await pool.query(await fs.readFile(path.join(__dirname,'schema.sql'),'utf8'));
+  // Log only the selected database label, never its URL or credentials.
+  console.log('[zona-database] Active target: '+dbTarget);
   app.listen(Number(process.env.PORT)||3000,'0.0.0.0',()=>console.log('ZONA Z API online'));
   void reportBotIdentity();
 }
