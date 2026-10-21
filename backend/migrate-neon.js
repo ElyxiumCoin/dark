@@ -30,13 +30,19 @@ async function mirrorStagingPlayers(sourcePool,targetUrl){
       await client.query('COMMIT');
     } catch(e) { await client.query('ROLLBACK');throw e; }
     finally {client.release();}
-    const res=await target.query('SELECT telegram_id::text AS telegram_id,revision::text AS revision FROM zona_players');
-    const rows=new Map(res.rows.map(r=>[r.telegram_id,r.revision]));
-    const matched=old.rows.every(r=>rows.has(String(r.telegram_id)) &&
-      BigInt(rows.get(String(r.telegram_id)))>=BigInt(r.revision));
-    if(!matched)throw Error('revision_mismatch');
-    console.log('[neon-migration] Non-destructive copy verified; source rows='+old.rowCount+
-      ', target rows='+res.rowCount+'.');
+    // Verify every source row's revision and full JSON save without displaying any
+    // player details in logs. The source remains unchanged throughout this copy.
+    const res=await target.query('SELECT '+columns.join(',')+' FROM zona_players ORDER BY telegram_id');
+    const rows=new Map(res.rows.map(r=>[String(r.telegram_id),r]));
+    const {isDeepStrictEqual}=require('node:util');
+    const same=old.rows.every(source=>{
+      const destination=rows.get(String(source.telegram_id));
+      if(!destination || !isDeepStrictEqual(destination,source))return false;
+      return true;
+    });
+    if(!same)throw Error('migration_verification_failed');
+    console.log('[neon-migration] Verified complete source rows='+old.rowCount+
+      ', target rows='+res.rowCount+'. Source unchanged.');
   } finally {await target.end();}
 }
 module.exports={mirrorStagingPlayers};
