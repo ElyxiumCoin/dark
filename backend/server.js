@@ -33,7 +33,12 @@ app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400) return res.status(400).json({error:'Неверный JSON'});
   next(err);
 });
-const pool = new Pool({connectionString:process.env.DATABASE_URL, max:10});
+const dbTarget=process.env.ZONA_DB_TARGET || 'render';
+if(!['render','neon'].includes(dbTarget))throw new Error('Unknown database target');
+if(dbTarget==='neon' && !process.env.MIGRATION_NEON_URL)
+  throw new Error('Neon target selected but MIGRATION_NEON_URL is missing');
+const databaseUrl=dbTarget==='neon' ? process.env.MIGRATION_NEON_URL : process.env.DATABASE_URL;
+const pool = new Pool({connectionString:databaseUrl, max:10});
 const int = (v, lo, hi) => Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Math.trunc(Number(v)))) : lo;
 const money = (v, hi) => Number.isFinite(Number(v)) ? Math.round(Math.max(0, Math.min(hi, Number(v))) * 100)/100 : 0;
 const safeText = (v, n, fallback) => typeof v === 'string' ? (v.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,n) || fallback) : fallback;
@@ -76,7 +81,7 @@ async function authenticate(req, res, next) {
   }
 }
 app.get('/api/health',async(req,res,next)=>{
-  try { await pool.query('SELECT 1');res.json({ok:true}); }catch(e){next(e);}
+  try { await pool.query('SELECT 1');res.json({ok:true,database:dbTarget}); }catch(e){next(e);}
 });
 app.get('/api/me',authenticate,async(req,res,next)=>{
   try {
