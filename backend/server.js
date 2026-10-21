@@ -6,7 +6,8 @@ const express = require('express');
 const { Pool } = require('pg');
 const { verifyTelegramInitData } = require('./auth');
 
-if (!process.env.BOT_TOKEN || !process.env.DATABASE_URL) {
+const botToken = String(process.env.BOT_TOKEN || '').trim();
+if (!botToken || !process.env.DATABASE_URL) {
   throw new Error('Configure BOT_TOKEN and DATABASE_URL in your private hosting environment');
 }
 const app = express();
@@ -58,7 +59,7 @@ async function authenticate(req, res, next) {
   try {
     const header=req.get('authorization')||'';
     if(!header.startsWith('tma ')) return res.status(401).json({error:'Откройте игру через Telegram Mini App'});
-    const user=verifyTelegramInitData(header.slice(4), process.env.BOT_TOKEN);
+    const user=verifyTelegramInitData(header.slice(4), botToken);
     req.telegramUser=user;
     await pool.query(`INSERT INTO zona_players(telegram_id,telegram_username,telegram_name,game_name)
       VALUES($1,$2,$3,$3) ON CONFLICT(telegram_id) DO UPDATE SET
@@ -66,8 +67,11 @@ async function authenticate(req, res, next) {
         telegram_name=EXCLUDED.telegram_name,last_seen_at=NOW()`,[user.id,user.username,user.name]);
     next();
   } catch(e) {
-    if (['invalid_telegram_data','invalid_telegram_signature','invalid_telegram_user','telegram_session_expired'].includes(e.message))
+    if (['invalid_telegram_data','invalid_telegram_signature','invalid_telegram_user','telegram_session_expired'].includes(e.message)) {
+      // Only a fixed error code is logged. Never log initData, hash, Telegram ID, or token.
+      console.warn('[telegram-auth] '+e.message);
       return res.status(401).json({error:'Telegram не подтвердил вход. Закройте Mini App и откройте снова.'});
+    }
     next(e);
   }
 }
@@ -131,9 +135,23 @@ app.use((err,req,res,next)=>{
   console.error(err);
   if(!res.headersSent)res.status(500).json({error:'Ошибка сервера. Попробуйте позднее.'});
 });
+async function reportBotIdentity() {
+  // Telegram getMe returns the public username of the bot represented by BOT_TOKEN.
+  // Log only that username (or a generic failure); never the token or request URL.
+  try {
+    const response=await fetch('https://api.telegram.org/bot'+botToken+'/getMe', {signal:AbortSignal.timeout(7000)});
+    if(!response.ok) { console.warn('[telegram-bot] getMe rejected (HTTP '+response.status+')');return; }
+    const data=await response.json();
+    const username=data?.result?.username;
+    if(data.ok && typeof username==='string' && /^[A-Za-z0-9_]{5,32}$/.test(username))
+      console.log('[telegram-bot] Auth configured for @'+username);
+    else console.warn('[telegram-bot] getMe returned no valid bot username');
+  } catch(_) { console.warn('[telegram-bot] Could not check public bot username'); }
+}
 async function start(){
   await pool.query(await fs.readFile(path.join(__dirname,'schema.sql'),'utf8'));
   app.listen(Number(process.env.PORT)||3000,'0.0.0.0',()=>console.log('ZONA Z API online'));
+  void reportBotIdentity();
 }
 if(require.main===module) start().catch(e=>{console.error(e);process.exit(1)});
 module.exports={app,statsOf};
