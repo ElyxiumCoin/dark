@@ -35,10 +35,17 @@ async function mirrorStagingPlayers(sourcePool,targetUrl){
     const res=await target.query('SELECT '+columns.join(',')+' FROM zona_players ORDER BY telegram_id');
     const rows=new Map(res.rows.map(r=>[String(r.telegram_id),r]));
     const {isDeepStrictEqual}=require('node:util');
+    const saveFields=['game_name','game_title','level','kills','searches','rubles',
+      'gram','score','equipment','game_state','revision'];
     const same=old.rows.every(source=>{
       const destination=rows.get(String(source.telegram_id));
-      if(!destination || !isDeepStrictEqual(destination,source))return false;
-      return true;
+      if(!destination)return false;
+      // Once Neon becomes active, a newer revision must never be overwritten by
+      // a stale backup from Render. last_seen and profile metadata may change
+      // without increasing the save revision and are intentionally not compared.
+      if(BigInt(destination.revision)>BigInt(source.revision))return true;
+      if(BigInt(destination.revision)<BigInt(source.revision))return false;
+      return saveFields.every(field=>isDeepStrictEqual(destination[field],source[field]));
     });
     if(!same)throw Error('migration_verification_failed');
     console.log('[neon-migration] Verified complete source rows='+old.rowCount+
