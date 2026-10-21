@@ -244,7 +244,10 @@
       loadRank();
     } catch(e) { say('Нет связи с сервером: '+e.message+'. Локальный прогресс сохранён.',true); }
   }
-  document.addEventListener('DOMContentLoaded',() => {
+  // The main game is instantiated in a window DOMContentLoaded handler.
+  // A document DOMContentLoaded handler runs earlier during event bubbling,
+  // before `game = new Game()`; therefore register on window as well.
+  window.addEventListener('DOMContentLoaded',() => {
     const g=gameInstance();
     if(!g || !setupUI()) return;
     // Remove the old simulated NPC leaderboard; use real Telegram users only.
