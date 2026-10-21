@@ -22,6 +22,7 @@ function harness({localState,cloudState=null,cloudRevision=0}={}) {
   }
   const tab = new Node('tab');
   const handlers = {};
+  const windowHandlers = {};
   const document = {
     head:new Node('head'),
     createElement:tag=>new Node(tag),
@@ -50,11 +51,17 @@ function harness({localState,cloudState=null,cloudRevision=0}={}) {
   };
   const game = {state:localState||{name:'Сталкер',level:1,tracker:{kills:0,searches:0}},
     saveState(){},renderLeaderboard(){}};
-  const context = {document,localStorage,fetch,game,console,
-    window:{Telegram:{WebApp:{initData:'test-init-data'}},ZONA_API_URL:'https://api.example.test'},
+  const context = {document,localStorage,fetch,game:undefined,console,
+    window:{Telegram:{WebApp:{initData:'test-init-data'}},ZONA_API_URL:'https://api.example.test',
+      addEventListener:(name,fn)=>{windowHandlers[name]=fn;}},
     location:{reload(){}},setTimeout:()=>1,setInterval:()=>1};
   vm.runInNewContext(code,context,{filename:'online.js'});
-  handlers.DOMContentLoaded();
+  // Emulate the real page: the Game instance is created by an earlier window
+  // DOMContentLoaded listener, after document listeners but before online.js.
+  assert.equal(handlers.DOMContentLoaded,undefined,'online startup must not run on document first');
+  assert.equal(typeof windowHandlers.DOMContentLoaded,'function');
+  context.game=game;
+  windowHandlers.DOMContentLoaded();
   const findButton=text=>{
     const queue=[tab];
     while(queue.length){
@@ -108,4 +115,10 @@ test('conflicting cloud save is never silently copied over local progress',async
   const cloud=h.findButton('Загрузить облачное');
   assert.ok(cloud,'conflicting saves should require a manual choice');
   assert.equal(h.data.get('zona_cloud_owner'),undefined);
+});
+
+test('leaderboard UI initializes after game construction, removing old placeholder',async()=>{
+  const h=harness();
+  await h.settle();
+  assert.equal(h.findButton('Общий')!==null,true,'real leaderboard categories must mount');
 });
