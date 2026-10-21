@@ -4,7 +4,7 @@
   "private": true,
   "engines": {"node": ">=20"},
   "scripts": {
-    "start": "node server.js",
+    "start": "node migrate-neon-run.js; node server.js",
     "test": "node --test",
     "check": "node --check server.js && node --check auth.js && node --test"
   },
