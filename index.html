@@ -1351,7 +1351,7 @@ html.proportion-v2 body #app#app #kpk-buildings .reward-item span{font:11px/1.3 
 html.proportion-v2 body #app#app #kpk-buildings .reward-part-list>summary,html.proportion-v2 body #app#app #kpk-buildings .reward-more>summary{font:11px/1.4 Arial,sans-serif!important;color:#cdb980;padding:7px 0!important;cursor:pointer}
 html.proportion-v2 body #app#app #kpk-buildings .reward-part-list p{font:11px/1.4 Arial,sans-serif!important;margin:4px 0!important}
 </style><style id="save-summary-style">#zona-save-summary{padding:10px 12px;border:1px solid #655e43;background:linear-gradient(120deg,#222b1e,#101a12);display:flex;flex-direction:column;gap:5px}#zona-save-summary strong{font:700 12px/1.4 Arial,sans-serif;color:#d7c28b}#zona-save-summary span{font:11px/1.5 Arial,sans-serif;color:#afb69e}#zona-save-summary button{align-self:flex-start;margin-top:3px}#zona-save-summary button[hidden]{display:none!important}#zona-save-summary[data-state="error"]{border-color:#ab7654}</style></head>
-<body><div id="zona-startup-screen" role="status" aria-live="polite"><div class="startup-weather" aria-hidden="true"><div class="startup-rain"></div><div class="startup-fog"></div><div class="startup-lamp"></div></div><div class="startup-content"><div class="startup-eyebrow">КПК СТАЛКЕРА / ТЕРРИТОРИЯ ОТЧУЖДЕНИЯ</div><strong class="startup-title">ZONA Z</strong><div class="startup-caption">У ЗОНЫ ЕСТЬ СВОИ ПРАВИЛА</div><div class="startup-panel"><div class="startup-line"><span>ЗАГРУЗКА КПК</span><span id="zona-startup-percent">0%</span></div><div id="zona-startup-progress" class="startup-track" role="progressbar" aria-label="Подготовка к запуску" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="zona-startup-fill" class="startup-fill"></div></div><p id="zona-startup-message">Устанавливаем связь с КПК…</p><div class="startup-tip" aria-live="off"><strong>СОВЕТ СТАЛКЕРУ</strong><span id="zona-startup-tip">Сюжетное снаряжение нельзя продать или разобрать.</span></div></div><p class="startup-note">Подготовка занимает около 20 секунд.<br>Дождитесь завершения связи перед выходом в Зону.</p><p class="startup-version">ВЕРСИЯ 2026.10.22.2</p></div></div>
+<body><div id="zona-startup-screen" role="status" aria-live="polite"><div class="startup-weather" aria-hidden="true"><div class="startup-rain"></div><div class="startup-fog"></div><div class="startup-lamp"></div></div><div class="startup-content"><div class="startup-eyebrow">КПК СТАЛКЕРА / ТЕРРИТОРИЯ ОТЧУЖДЕНИЯ</div><strong class="startup-title">ZONA Z</strong><div class="startup-caption">У ЗОНЫ ЕСТЬ СВОИ ПРАВИЛА</div><div class="startup-panel"><div class="startup-line"><span>ЗАГРУЗКА КПК</span><span id="zona-startup-percent">0%</span></div><div id="zona-startup-progress" class="startup-track" role="progressbar" aria-label="Подготовка к запуску" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="zona-startup-fill" class="startup-fill"></div></div><p id="zona-startup-message">Устанавливаем связь с КПК…</p><div class="startup-tip" aria-live="off"><strong>СОВЕТ СТАЛКЕРУ</strong><span id="zona-startup-tip">Сюжетное снаряжение нельзя продать или разобрать.</span></div></div><p class="startup-note">Подготовка занимает около 20 секунд.<br>Дождитесь завершения связи перед выходом в Зону.</p><p class="startup-version">ВЕРСИЯ 2026.10.22.3</p></div></div>
 <div class="scanlines"></div>
 <div id="toast-box"></div>
 <div id="app">
@@ -1394,7 +1394,7 @@ html.proportion-v2 body #app#app #kpk-buildings .reward-part-list p{font:11px/1.
       <span data-save-note>Автосинхронизация — раз в 3 минуты.</span>
       <button class="btn btn-dark btn-xs" type="button" hidden>Сохранить сейчас</button>
     </section>
-    <div class="card" style="border-color:var(--border)">
+    <div id="locations-intro" class="card" style="border-color:var(--border)">
       <div class="cheader"><span style="color:var(--neon)">🗺️ ВЫЛАЗКИ В ЗОНУ</span><span style="font-size:11px;color:var(--muted)">28 секторов</span></div>
       <div style="font-size:11px;color:var(--muted);line-height:1.4">Исследуйте заброшенные объекты, ищите редкий хабар, артефакты и аномальные Gramcoin!</div>
     </div>
@@ -2174,9 +2174,9 @@ class Game{
       av.title="Открыть профиль и характеристики";
     }
 
-    document.getElementById('txt-hp').textContent=`${Math.round(this.state.hp)}/${this.state.maxHp}`;
+    document.getElementById('txt-hp').textContent=`${Number(this.state.hp.toFixed(1)).toLocaleString("ru-RU")}/${Number(this.state.maxHp.toFixed(1)).toLocaleString("ru-RU")}`;
     document.getElementById('bar-hp').style.width=`${Math.round((this.state.hp/this.state.maxHp)*100)}%`;
-    document.getElementById('txt-energy').textContent=`${Math.round(this.state.energy)}/${this.state.maxEnergy}`;
+    document.getElementById('txt-energy').textContent=`${Number(this.state.energy.toFixed(1)).toLocaleString("ru-RU")}/${Number(this.state.maxEnergy.toFixed(1)).toLocaleString("ru-RU")}`;
     document.getElementById('bar-energy').style.width=`${Math.round((this.state.energy/this.state.maxEnergy)*100)}%`;
 
     document.getElementById('txt-hunger').textContent=`${Math.round(this.state.hunger)}%`;
@@ -2184,7 +2184,7 @@ class Game{
     document.getElementById('txt-thirst').textContent=`${Math.round(this.state.thirst)}%`;
     document.getElementById('bar-thirst').style.width=`${Math.min(100,Math.round(this.state.thirst))}%`;
 
-    document.getElementById('txt-rad').textContent=`${this.state.radiation} мЗв`;
+    document.getElementById('txt-rad').textContent=`${Number(this.state.radiation.toFixed(1)).toLocaleString("ru-RU")} мЗв`;
     document.getElementById('bar-rad').style.width=`${Math.min(100,this.state.radiation)}%`;
 
     const exBanner=document.getElementById('exhaustion-banner');
@@ -3293,8 +3293,8 @@ class Game{
 
     document.getElementById('prof-modal-name').textContent=this.state.name;
     document.getElementById('prof-lvl-exp').textContent=`${this.state.level} ур. (${this.state.exp||0} / ${this.state.expReq||150})`;
-    document.getElementById('prof-hp').textContent=`${Math.round(this.state.hp)} / ${this.state.maxHp}`;
-    document.getElementById('prof-energy').textContent=`${Math.round(this.state.energy)} / ${this.state.maxEnergy}`;
+    document.getElementById('prof-hp').textContent=`${Number(this.state.hp.toFixed(1)).toLocaleString("ru-RU")} / ${Number(this.state.maxHp.toFixed(1)).toLocaleString("ru-RU")}`;
+    document.getElementById('prof-energy').textContent=`${Number(this.state.energy.toFixed(1)).toLocaleString("ru-RU")} / ${Number(this.state.maxEnergy.toFixed(1)).toLocaleString("ru-RU")}`;
     document.getElementById('prof-vital').textContent=`${Math.round(this.state.hunger||0)}% / ${Math.round(this.state.thirst||0)}%`;
     document.getElementById('prof-rad').textContent=`${Math.round(this.state.radiation||0)} мЗв`;
     document.getElementById('prof-dmg').textContent=`${atk[0]} - ${atk[1]}`;
@@ -3504,7 +3504,7 @@ window.addEventListener('zona:ready',()=>{
 
   const locations=DB.locations;
   const image=(key,cls,alt)=>{const el=document.createElement('img');el.src=photos[key];el.className=cls;el.alt=alt;el.decoding='async';return el;};
-  const hero=document.querySelector('#tab-locations>.card');
+  const hero=document.getElementById('locations-intro');
   hero.className='zone-hero';hero.removeAttribute('style');
   hero.innerHTML='<div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ТЕРРИТОРИЯ ОТЧУЖДЕНИЯ</div><h1>ЗОНА Z</h1><p>Исследуйте заброшенные объекты, ищите редкий хабар, артефакты и аномальные Gramcoin.</p><div class="hero-meta"><span>☢ 28 СЕКТОРОВ</span><span>ВЫЛАЗКИ В ЗОНУ</span></div></div>';
   hero.prepend(image('loc_pripyat_center','','Панорама заброшенной Припяти'));
