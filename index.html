@@ -1350,8 +1350,8 @@ html.proportion-v2 body #app#app #kpk-buildings .reward-craft strong{font:700 12
 html.proportion-v2 body #app#app #kpk-buildings .reward-item span{font:11px/1.3 'Roboto Condensed',Arial,sans-serif!important;color:#d4d8bd;overflow-wrap:anywhere}
 html.proportion-v2 body #app#app #kpk-buildings .reward-part-list>summary,html.proportion-v2 body #app#app #kpk-buildings .reward-more>summary{font:11px/1.4 Arial,sans-serif!important;color:#cdb980;padding:7px 0!important;cursor:pointer}
 html.proportion-v2 body #app#app #kpk-buildings .reward-part-list p{font:11px/1.4 Arial,sans-serif!important;margin:4px 0!important}
-</style></head>
-<body><div id="zona-startup-screen" role="status" aria-live="polite"><div class="startup-weather" aria-hidden="true"><div class="startup-rain"></div><div class="startup-fog"></div><div class="startup-lamp"></div></div><div class="startup-content"><div class="startup-eyebrow">КПК СТАЛКЕРА / ТЕРРИТОРИЯ ОТЧУЖДЕНИЯ</div><strong class="startup-title">ZONA Z</strong><div class="startup-caption">У ЗОНЫ ЕСТЬ СВОИ ПРАВИЛА</div><div class="startup-panel"><div class="startup-line"><span>ЗАГРУЗКА КПК</span><span id="zona-startup-percent">0%</span></div><div id="zona-startup-progress" class="startup-track" role="progressbar" aria-label="Подготовка к запуску" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="zona-startup-fill" class="startup-fill"></div></div><p id="zona-startup-message">Устанавливаем связь с КПК…</p><div class="startup-tip" aria-live="off"><strong>СОВЕТ СТАЛКЕРУ</strong><span id="zona-startup-tip">Сюжетное снаряжение нельзя продать или разобрать.</span></div></div><p class="startup-note">Подготовка занимает около 20 секунд.<br>Дождитесь завершения связи перед выходом в Зону.</p><p class="startup-version">ВЕРСИЯ 2026.10.22.1</p></div></div>
+</style><style id="save-summary-style">#zona-save-summary{padding:10px 12px;border:1px solid #655e43;background:linear-gradient(120deg,#222b1e,#101a12);display:flex;flex-direction:column;gap:5px}#zona-save-summary strong{font:700 12px/1.4 Arial,sans-serif;color:#d7c28b}#zona-save-summary span{font:11px/1.5 Arial,sans-serif;color:#afb69e}#zona-save-summary button{align-self:flex-start;margin-top:3px}#zona-save-summary button[hidden]{display:none!important}#zona-save-summary[data-state="error"]{border-color:#ab7654}</style></head>
+<body><div id="zona-startup-screen" role="status" aria-live="polite"><div class="startup-weather" aria-hidden="true"><div class="startup-rain"></div><div class="startup-fog"></div><div class="startup-lamp"></div></div><div class="startup-content"><div class="startup-eyebrow">КПК СТАЛКЕРА / ТЕРРИТОРИЯ ОТЧУЖДЕНИЯ</div><strong class="startup-title">ZONA Z</strong><div class="startup-caption">У ЗОНЫ ЕСТЬ СВОИ ПРАВИЛА</div><div class="startup-panel"><div class="startup-line"><span>ЗАГРУЗКА КПК</span><span id="zona-startup-percent">0%</span></div><div id="zona-startup-progress" class="startup-track" role="progressbar" aria-label="Подготовка к запуску" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="zona-startup-fill" class="startup-fill"></div></div><p id="zona-startup-message">Устанавливаем связь с КПК…</p><div class="startup-tip" aria-live="off"><strong>СОВЕТ СТАЛКЕРУ</strong><span id="zona-startup-tip">Сюжетное снаряжение нельзя продать или разобрать.</span></div></div><p class="startup-note">Подготовка занимает около 20 секунд.<br>Дождитесь завершения связи перед выходом в Зону.</p><p class="startup-version">ВЕРСИЯ 2026.10.22.2</p></div></div>
 <div class="scanlines"></div>
 <div id="toast-box"></div>
 <div id="app">
@@ -1388,6 +1388,12 @@ html.proportion-v2 body #app#app #kpk-buildings .reward-part-list p{font:11px/1.
 
   <!-- TAB: LOCATIONS -->
   <main id="tab-locations" class="content active">
+    <section id="zona-save-summary" class="card" aria-label="Сохранение прогресса">
+      <strong data-save-title>Проверяем сохранение…</strong>
+      <span data-save-time>Telegram: проверяем синхронизацию</span>
+      <span data-save-note>Автосинхронизация — раз в 3 минуты.</span>
+      <button class="btn btn-dark btn-xs" type="button" hidden>Сохранить сейчас</button>
+    </section>
     <div class="card" style="border-color:var(--border)">
       <div class="cheader"><span style="color:var(--neon)">🗺️ ВЫЛАЗКИ В ЗОНУ</span><span style="font-size:11px;color:var(--muted)">28 секторов</span></div>
       <div style="font-size:11px;color:var(--muted);line-height:1.4">Исследуйте заброшенные объекты, ищите редкий хабар, артефакты и аномальные Gramcoin!</div>
@@ -1742,7 +1748,7 @@ class Game{
     return s;
   }
 
-  saveState(){try{localStorage.setItem("zona_z_save_v10",JSON.stringify(this.state));}catch(e){} window.ZonaTelegramCloud?.queueSave(this.state);}
+  saveState(){try{localStorage.setItem("zona_z_save_v10",JSON.stringify(this.state));window.ZonaTelegramCloud?.recordLocalSave(true);}catch(e){window.ZonaTelegramCloud?.recordLocalSave(false);} window.ZonaTelegramCloud?.queueSave(this.state);}
 
   async resetProgress(){
     if(!confirm("ВНИМАНИЕ! Полностью сбросить весь прогресс сталкера? Все вещи, характеристики и баланс будут сброшены!"))return;
