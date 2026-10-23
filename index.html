@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v13.1 — Survival Visual Final</title>
+<title>ZONA Z v13.2 — Survival Visual & UI</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -1500,6 +1500,7 @@ html.proportion-v2 body #app #kpk-survival .sv-card{min-width:0;background:#131a
 @media(max-width:400px){html.proportion-v2 body #app #kpk-survival .sv-body{padding:10px}html.proportion-v2 body #app #kpk-survival .sv-card{padding:10px}#kpk-survival .sv-location-option{grid-template-columns:58px minmax(0,1fr) 17px!important;gap:8px}#kpk-survival .sv-loc-thumb{width:58px;height:52px}#kpk-survival .sv-search-row{display:block}#kpk-survival .sv-search-row input{width:100%;margin-top:6px}}
 @media(prefers-reduced-motion:reduce){#kpk-survival *{scroll-behavior:auto}}
 </style>
+
 </head>
 <body><div id="zona-startup-screen" role="status" aria-live="polite"><div class="startup-weather" aria-hidden="true"><div class="startup-rain"></div><div class="startup-fog"></div><div class="startup-lamp"></div></div><div class="startup-content"><div class="startup-eyebrow">КПК СТАЛКЕРА / ТЕРРИТОРИЯ ОТЧУЖДЕНИЯ</div><strong class="startup-title">ZONA Z</strong><div class="startup-caption">У ЗОНЫ ЕСТЬ СВОИ ПРАВИЛА</div><div class="startup-panel"><div class="startup-line"><span>ЗАГРУЗКА КПК</span><span id="zona-startup-percent">0%</span></div><div id="zona-startup-progress" class="startup-track" role="progressbar" aria-label="Подготовка к запуску" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="zona-startup-fill" class="startup-fill"></div></div><p id="zona-startup-message">Устанавливаем связь с КПК…</p><div class="startup-tip" aria-live="off"><strong>СОВЕТ СТАЛКЕРУ</strong><span id="zona-startup-tip">Сюжетное снаряжение нельзя продать или разобрать.</span></div></div><p class="startup-note">Подготовка занимает около 20 секунд.<br>Дождитесь завершения связи перед выходом в Зону.</p><p class="startup-version"><span class="startup-version-tag" aria-label="Версия игры 12.7"><span class="startup-version-label">ВЕРСИЯ</span><span>12.7</span></span></p></div></div>
 <div class="scanlines"></div>
@@ -7578,12 +7579,12 @@ gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
 const atlasImage=new Image();atlasImage.onload=()=>{if(disposed)return;try{gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,atlasImage);gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);textureReady=true;}catch(e){console.warn('3D texture atlas:',e)}};
 try{gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,makeSurfaceAtlas());gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);textureReady=true;}catch(error){console.warn("Survival atlas preview:",error)}atlasImage.src=SURVIVAL_V123_ATLAS;
-let yaw=0,zoom=420,pitch=1.5692,focus=null,currentMVP=null;
+let yaw=0,zoom=463,pitch=1.5692,focus=null,currentMVP=null;
 const animation={player:{angle:0,phase:0,speed:0},actors:new Map(),recoil:0};
 let previousVisual=null;const actorHistory=new Map();
 function rotate(){/* Camera rotation is locked; zoom and following still work. */}
-function changeZoom(d){/* Zoom disabled: fixed tactical top-down framing. */zoom=420}
-function resetCamera(){yaw=0;pitch=1.5692;zoom=420}
+function changeZoom(d){/* Zoom disabled: fixed tactical top-down framing. */zoom=463}
+function resetCamera(){yaw=0;pitch=1.5692;zoom=463}
 function movement(dx,dy){return [dx*Math.cos(yaw)+dy*Math.sin(yaw),dy*Math.cos(yaw)-dx*Math.sin(yaw)]}
 function bindBuffer(buf,vertices,usage){gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,vertices,usage);}
 function sceneLights(run,time){const l=[],room=run.room!=null?map.rooms[run.room]:null;
@@ -7651,7 +7652,7 @@ return {draw,rotate,changeZoom,resetCamera,movement,project,dispose,get yaw(){re
 // Draws the same world coordinates/actors, keeping saves and the Survival mechanics intact.
 function fallback(canvas,map,options={}){
  const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)return null;
- let disposed=false,zoom=420,yaw=0,roomKey='INIT',staticLayer=null,lastX=0,lastZ=0,scale=1;
+ let disposed=false,zoom=463,yaw=0,roomKey='INIT',staticLayer=null,lastX=0,lastZ=0,scale=1;
  const atlas=new Image();let tiles=null;
  const paint=(c)=>{const tile=tiles&&tiles[c];return tile?tile:null};
  atlas.onload=()=>{try{
@@ -7673,10 +7674,22 @@ function fallback(canvas,map,options={}){
   c.restore();
  }}
  function rock(c,x,z,r){disk(c,x+4,z+8,r*1.08,r*.48,'rgba(0,0,0,.28)');disk(c,x,z,r,r*.66,'#554e42');disk(c,x-r*.12,z-r*.14,r*.75,r*.44,'#716653')}
- function crates(c,x,z,r=21,col='#7e6748'){disk(c,x+5,z+9,r*.87,r*.48,'rgba(0,0,0,.3)');filled(c,4,x-r/2,z-r/2,r,r,col);c.strokeStyle='#bea37b';c.lineWidth=2;c.strokeRect(x-r/2,z-r/2,r,r);line(c,x-r/2,z-r/2,x+r/2,z+r/2,'#5d4831',1.3)}
- function tree(c,x,z,r){disk(c,x+12,z+20,r*.86,r*.55,'rgba(0,0,0,.40)');disk(c,x,z,r*.72,r*.7,'#17291c');
-  disk(c,x-8,z-7,r*.47,r*.46,'#304733');disk(c,x+10,z-4,r*.46,r*.48,'#384f37');disk(c,x,z-15,r*.42,r*.40,'#496340');
-  for(let i=0;i<7;i++){const a=i*2.3;line(c,x,z,x+Math.cos(a)*r*.72,z+Math.sin(a)*r*.63,'#253827',1.6)}}
+ function crates(c,x,z,r=21,col='#7e6748'){
+  const k=Math.max(9,r),a=x-k*.5,b=z-k*.5;c.save();
+  disk(c,x+7,z+11,k*.73,k*.42,'rgba(0,0,0,.48)');
+  c.fillStyle='#262a25';c.beginPath();c.moveTo(a+k,b);c.lineTo(a+k+7,b+6);c.lineTo(a+k+7,b+k+7);c.lineTo(a+k,b+k);c.fill();
+  filled(c,4,a,b,k,k,col);c.fillStyle='rgba(17,24,19,.20)';c.fillRect(a+1,b+k*.58,k-2,k*.40);
+  c.strokeStyle='#aa936a';c.lineWidth=Math.max(.8,k*.035);c.strokeRect(a+2,b+2,k-4,k-4);
+  line(c,a+k*.16,b+k*.2,a+k*.82,b+k*.79,'#413a2d',Math.max(1,k*.06));
+  line(c,a+k*.8,b+k*.2,a+k*.2,b+k*.8,'rgba(30,26,22,.65)',1);
+  c.strokeStyle='rgba(232,198,130,.38)';c.strokeRect(a+k*.1,b+k*.08,k*.8,k*.25);
+  for(const [dx,dy] of [[.14,.15],[.84,.15],[.14,.85],[.84,.85]]){c.fillStyle='#b3a283';c.fillRect(a+k*dx-1,b+k*dy-1,2,2)}
+  c.restore();
+ }
+ function tree(c,x,z,r){c.save();disk(c,x+12,z+19,r*.94,r*.56,'rgba(0,0,0,.46)');
+  disk(c,x,z,r*.70,r*.73,'#1b2820');disk(c,x-9,z-6,r*.48,r*.51,'#283d2f');disk(c,x+9,z-6,r*.47,r*.46,'#3b4a33');disk(c,x,z-13,r*.48,r*.46,'#374b36');
+  for(let i=0;i<13;i++){const a=i*2.399,rr=r*(.29+((i*7)%9)*.049);line(c,x,z,x+Math.cos(a)*rr,z+Math.sin(a)*rr,'rgba(9,20,15,.59)',2.1);disk(c,x+Math.cos(a)*rr,z+Math.sin(a)*rr,3.2,2.8,i%3===0?'#536a4a':'#293c30')}
+  for(let i=0;i<18;i++){const a=i*2.81;const d=(i%5+3)*r/10;line(c,x+Math.cos(a)*d,z+Math.sin(a)*d,x+Math.cos(a)*d+2,z+Math.sin(a)*d-2,'rgba(176,182,135,.17)',.8)}c.restore();}
  function tent(c,x,z,w=58,h=40){disk(c,x+12,z+14,w*.65,h*.73,'rgba(0,0,0,.32)');
   c.fillStyle='#45483d';c.beginPath();c.moveTo(x-w/2,z-h/2);c.lineTo(x+3,z-h/2-10);c.lineTo(x+w/2,z-h/2);c.lineTo(x+w/2,z+h/2);c.lineTo(x+3,z+h/2+2);c.lineTo(x-w/2,z+h/2);c.closePath();c.fill();
   c.fillStyle='#646a56';c.beginPath();c.moveTo(x-w/2,z-h/2);c.lineTo(x,z-h/2-11);c.lineTo(x,z+h/2+3);c.lineTo(x-w/2,z+h/2);c.fill();
@@ -7710,8 +7723,35 @@ function fallback(canvas,map,options={}){
   filled(c,3,x-18,z-21,w,h,'#5d594f');
   c.globalAlpha=.25;for(let i=12;i<w;i+=23)line(c,x-18+i,z-21,x-18+i,z-21+h,'#b6a88c',1);c.globalAlpha=1;
   filled(c,2,x-14,z-16,w-8,h-8,'#554f45');
+  c.save();c.beginPath();c.rect(x-14,z-16,w-8,h-8);c.clip();
+  for(let i=0;i<8;i++){const xx=x-11+i*(w-8)/8;line(c,xx,z-16,xx+3,z+h-24,'rgba(26,29,26,.34)',1.4)}
+  for(let i=0;i<17;i++){const xx=x+((i*57+21)%Math.max(1,w-24)),yy=z+((i*43+17)%Math.max(1,h-28));disk(c,xx,yy,5+(i%5)*4,2+(i%3)*3,i%2?'rgba(118,69,43,.16)':'rgba(20,25,22,.20)')}
+  c.restore();
   rect(c,b.door.x-18,z+h-13,36,17,'#221f1c');
   for(let i=0;i<3;i++){rect(c,x+26+i*55,z+h-3,23,5,'#85765b');rect(c,x+27+i*55,z+h-3,15,4,'#343e3e')}
+ }
+ function finishGround(p,w,indoor=false){
+  // Deterministic layers are baked ONCE when the sector is entered. No gameplay state changes.
+  let seed=(indoor?947:23171)+(w.w|0)*13+(w.h|0)*17;
+  const rnd=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296};
+  p.save();
+  const grains=indoor?17500:32000;
+  for(let i=0;i<grains;i++){
+   const x=rnd()*w.w,y=rnd()*w.h,v=rnd(),radius=.35+rnd()*1.8;
+   p.fillStyle=v<.48?'rgba(0,0,0,.10)':v<.83?'rgba(192,183,145,.10)':'rgba(90,122,117,.14)';
+   p.fillRect(x,y,radius,radius*(.3+rnd()));
+  }
+  // Break up large tiled surfaces with irregular asphalt fractures and edge gravel.
+  for(let i=0;i<(indoor?125:280);i++){
+   let x=12+rnd()*(w.w-24),y=12+rnd()*(w.h-24),a=rnd()*6.28;
+   const pieces=2+(rnd()*6|0);p.beginPath();p.moveTo(x,y);
+   for(let j=0;j<pieces;j++){a+=(rnd()-.5)*1.5;x+=Math.cos(a)*(5+rnd()*12);y+=Math.sin(a)*(5+rnd()*12);p.lineTo(x,y)}
+   p.strokeStyle='rgba(9,15,14,.22)';p.lineWidth=.55+rnd()*.9;p.stroke();
+   if(i%3===0){p.strokeStyle='rgba(157,150,125,.09)';p.lineWidth=.45;p.stroke()}
+  }
+  const marks=indoor?80:165;
+  for(let i=0;i<marks;i++){const x=rnd()*w.w,y=rnd()*w.h,size=1+rnd()*6;p.fillStyle=rnd()<.56?'rgba(12,15,13,.22)':'rgba(183,153,109,.14)';p.beginPath();p.ellipse(x,y,size,size*(.14+.25*rnd()),rnd()*3,0,6.284);p.fill()}
+  p.restore();
  }
  function buildBackground(room){const w=room==null?map:map.rooms[room],c=document.createElement('canvas');
   c.width=Math.ceil(w.w);c.height=Math.ceil(w.h);
@@ -7726,6 +7766,7 @@ function fallback(canvas,map,options={}){
    for(const r of map.roads||[])filled(p,1,r.x,r.y,r.w,r.h,'#403d38');
    for(const d of map.decals||[])rect(p,d.x,d.y,d.w,d.h,d.kind==='scorch'?'rgba(8,8,9,.38)':'rgba(102,92,72,.32)');
    for(const peb of map.pebbles||[]){const g=p.createRadialGradient(peb.x,peb.y,2,peb.x,peb.y,peb.r);g.addColorStop(0,'rgba(120,154,165,.84)');g.addColorStop(.36,'rgba(67,93,102,.34)');g.addColorStop(.72,'rgba(39,48,54,.12)');g.addColorStop(1,'rgba(24,29,32,0)');disk(p,peb.x,peb.y,peb.r,peb.r*.5,g);p.save();p.globalAlpha=.14;rect(p,peb.x-peb.r*.4,peb.y-peb.r*.18,peb.r*.8,Math.max(1,peb.r*.09),'#f0d8a0');p.restore();}
+   finishGround(p,w,false);
    for(const b of map.buildings||[])building(p,b);
    for(const t of map.trees||[])tree(p,t.x+15,t.y+15,t.size||28);
    for(const l of map.landmarks||[])landmark(p,l);
@@ -7739,6 +7780,7 @@ function fallback(canvas,map,options={}){
    for(const mark of w.markings||[])rect(p,mark.x,mark.y,mark.w,mark.h,'rgba(55,52,43,.72)');
    for(const dust of w.dust||[]){p.save();p.globalAlpha=.18;disk(p,dust.x,dust.y,dust.r*1.6,dust.r,'#c5bd97');p.restore();}
    for(const debris of w.debris||[]){p.save();p.translate(debris.x,debris.y);p.rotate(debris.rot||0);p.fillStyle=debris.c||'#66594b';p.fillRect(-(debris.size||2)*.7,-(debris.size||2)*.45,(debris.size||2)*1.4,Math.max(1,(debris.size||2)*.9));p.restore();}
+   finishGround(p,w,true);
    for(const prop of w.props||[]){const kind=prop.kind||'box';const col=kind==='machine'?'#486466':kind==='locker'?'#6d6652':kind==='bed'?'#5f6a57':'#6d593f';crates(p,prop.x+prop.w/2,prop.y+prop.h/2,Math.max(prop.w,prop.h),col)}
    for(const lamp of w.lights||[]){const rr=Math.max(28,(lamp.r||48)*.62);const g=p.createRadialGradient(lamp.x,lamp.y,2,lamp.x,lamp.y,rr);g.addColorStop(0,'rgba(255,192,104,.24)');g.addColorStop(.38,'rgba(227,142,68,.10)');g.addColorStop(.72,'rgba(104,148,154,.05)');g.addColorStop(1,'rgba(0,0,0,0)');p.save();p.globalCompositeOperation='screen';p.fillStyle=g;p.fillRect(lamp.x-rr,lamp.y-rr,rr*2,rr*2);p.restore();}
   }
@@ -7751,7 +7793,10 @@ function fallback(canvas,map,options={}){
  }
  function draw(run,enemyData,time){if(disposed||!run)return;
   if(roomKey!==run.room||!staticLayer){roomKey=run.room;staticLayer=buildBackground(run.room)}
-  const w=run.room==null?map:map.rooms[run.room];lastX=run.x;lastZ=run.y;
+  const w=run.room==null?map:map.rooms[run.room];
+  const halfX=zoom*Math.max(1,canvas.width)/Math.max(1,canvas.height),halfZ=zoom;
+  lastX=w.w>halfX*2?Math.max(halfX,Math.min(w.w-halfX,run.x)):w.w/2;
+  lastZ=w.h>halfZ*2?Math.max(halfZ,Math.min(w.h-halfZ,run.y)):w.h/2;
   scale=canvas.height/(zoom*2);
   ctx.save();ctx.fillStyle='#161c1b';ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(-yaw);ctx.scale(scale,scale);ctx.translate(-lastX,-lastZ);
@@ -7772,7 +7817,7 @@ function fallback(canvas,map,options={}){
   }
   ctx.restore();
   ctx.restore();
-  const mist=ctx.createLinearGradient(0,0,0,canvas.height);mist.addColorStop(0,'rgba(12,24,23,.16)');mist.addColorStop(.55,'rgba(25,39,37,.10)');mist.addColorStop(1,'rgba(7,11,12,.28)');ctx.fillStyle=mist;ctx.fillRect(0,0,canvas.width,canvas.height);
+  const mist=ctx.createLinearGradient(0,0,0,canvas.height);mist.addColorStop(0,'rgba(14,25,26,.12)');mist.addColorStop(.55,'rgba(25,39,37,.08)');mist.addColorStop(1,'rgba(7,11,12,.24)');ctx.fillStyle=mist;ctx.fillRect(0,0,canvas.width,canvas.height);
   const sheen=ctx.createLinearGradient(0,canvas.height*.58,0,canvas.height);sheen.addColorStop(0,'rgba(0,0,0,0)');sheen.addColorStop(1,'rgba(116,155,164,.05)');ctx.fillStyle=sheen;ctx.fillRect(0,0,canvas.width,canvas.height);
   const dark=ctx.createRadialGradient(canvas.width*.5,canvas.height*.5,canvas.height*.08,canvas.width*.5,canvas.height*.5,canvas.height*.82);
   dark.addColorStop(0,'rgba(0,0,0,0)');dark.addColorStop(.68,'rgba(4,10,10,.22)');dark.addColorStop(1,'rgba(2,7,8,.64)');ctx.fillStyle=dark;ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -7780,13 +7825,13 @@ function fallback(canvas,map,options={}){
  function project(x,y,z){const dx=(x-lastX)*scale,dz=(z-lastZ)*scale;let xx=dx*Math.cos(yaw)+dz*Math.sin(yaw),zz=dz*Math.cos(yaw)-dx*Math.sin(yaw);xx+=canvas.width/2;zz+=canvas.height/2;return{x:xx,y:zz,z:0,visible:xx>=0&&xx<=canvas.width&&zz>=0&&zz<=canvas.height}}
  function rotate(){/* Camera rotation is locked in compatible 2D mode. */}
  function movement(dx,dy){return[dx*Math.cos(yaw)+dy*Math.sin(yaw),dy*Math.cos(yaw)-dx*Math.sin(yaw)]}
- function changeZoom(d){/* Zoom disabled in compatible top-down mode. */zoom=420}
- function resetCamera(){yaw=0;zoom=420}
+ function changeZoom(d){/* Zoom disabled in compatible top-down mode. */zoom=463}
+ function resetCamera(){yaw=0;zoom=463}
  function dispose(){disposed=true;atlas.onload=null;tiles=null;staticLayer=null}
  return{draw,project,rotate,movement,changeZoom,resetCamera,dispose,get yaw(){return yaw},get zoom(){return zoom},get pitch(){return 1.05},get overhead(){return true},get webgl(){return false},get triangles(){return 0}}
 }
 
-window.ZonaSurvival3D={init,fallback,version:'13.1'};
+window.ZonaSurvival3D={init,fallback,version:'13.2'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -7795,9 +7840,9 @@ window.addEventListener('zona:ready',()=>{
 const g=window.game;if(!g||document.getElementById('kpk-survival'))return;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
-panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge">v13.1</span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
+panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge">v13.2</span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div><small>SURVIVAL 3D · v13.1</small><strong id="sv-title"></strong></div><button id="sv-pause" class="btn btn-dark">Пауза / КПК</button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div id="sv-camera-tools" aria-label="Камера сверху · фиксированная" hidden><button type="button" id="sv-cam-in" aria-label="Приблизить">+</button><button type="button" id="sv-cam-out" aria-label="Отдалить">−</button></div><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · v13.1 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action">Обыск</button><button id="sv-attack">Атака</button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small>КПК СТАЛКЕРА <span class="sv-head-separator">/</span> ЖИВАЯ ЗОНА <span class="sv-head-version">13.2</span></small><strong id="sv-title"></strong></div><button id="sv-pause" class="btn btn-dark">ПАУЗА / КПК</button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div id="sv-camera-tools" aria-label="Камера сверху · фиксированная" hidden><button type="button" id="sv-cam-in" aria-label="Приблизить">+</button><button type="button" id="sv-cam-out" aria-label="Отдалить">−</button></div><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · v13.2 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action">Обыск</button><button id="sv-attack">Атака</button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 const $=id=>document.getElementById(id);let canvas=$('sv-canvas');let renderer3d=null,mode3d=false,visible=false,frame=0,last=0,saveTimer=0,hudTimer=0,shot=0,hitLine=null,noteUntil=0;const keys=new Set(),stick={x:0,y:0,id:null};let map=null,rand=null;
 const state=()=>{const s=g.state.survival||(g.state.survival={version:2,quality:'high',selectedLoc:'',visits:{},run:null});s.quality='high';if(typeof s.selectedLoc!=='string')s.selectedLoc='';if(!s.visits||typeof s.visits!=='object')s.visits={};return s};const run=()=>state().run;
@@ -8034,7 +8079,7 @@ function enter(id){
   g.toast('Не удалось запустить графику. Состояние вылазки сохранено.','red');return false
  }
 }
-function resetInput(){keys.clear();stick.x=stick.y=0;stick.id=null;$('sv-stick').firstElementChild.style.transform='translate(-50%,-50%)'}
+function resetInput(){keys.clear();stick.x=stick.y=0;stick.id=null;$('sv-stick').classList.remove('is-active');$('sv-stick').firstElementChild.style.transform='translate(-50%,-50%)'}
 function pause(){if(!visible)return;visible=false;cancelAnimationFrame(frame);if(renderer3d){renderer3d.dispose();renderer3d=null}g.isRaidActive=false;overlay.hidden=true;document.body.classList.remove('sv-playing');resetInput();save();g.renderHeader();g.renderInventory();refresh()}
 function exitRun(){const r=run();if(!r)return false;if(r.room!==null||distance(r,map.exit)>85){note('Вернитесь к зелёной отметке выхода.');return false}let arts=0;for(const[id,count]of Object.entries(r.bag))if(DB.items[id]&&count>0){g.addItem(id,count);if(DB.items[id].type==='artifact')arts+=count;}if(g.state.tracker)g.state.tracker.artsFound=(g.state.tracker.artsFound||0)+arts;for(const c of g.state.activeContracts||[])if(c.type==='arts'&&!c.completed)c.current=(c.current||0)+arts;g.state.rubles+=r.rubles;if((r.gram||0)>0)g.awardGram?.(Number(r.gram.toFixed(2)));const count=Object.values(r.bag).reduce((a,b)=>a+b,0);const gram=(r.gram||0)>0?' · '+Number(r.gram.toFixed(2))+' GRAM':'';state().run=null;pause();g.renderTrophyCabinet?.();g.updateBadges?.();g.toast('Вы вернулись: '+count+' предметов, '+r.rubles+' ₽'+gram,'gold');return true}
 function fail(){const r=run();if(!r)return;state().run=null;g.state.hp=1;pause();g.toast('Сталкер доставил вас в убежище. Полевая добыча потеряна.','red')}
@@ -8132,23 +8177,97 @@ if(hitLine){const q=projected(r.x,25,r.y);if(q){c.fillStyle='rgba(255,205,119,'+
 if(mode==='rain'&&!indoor){c.strokeStyle='rgba(186,203,211,.29)';c.lineWidth=1;const n=eco?25:72;for(let i=0;i<n;i++){const x=(i*79.7+t*124)%w,y=(i*48.9+t*230)%h;c.beginPath();c.moveTo(x,y);c.lineTo(x-6,y+17);c.stroke()}}
 else if(['dust','ash','wind','sparks','radiation'].includes(mode)){c.fillStyle=mode==='sparks'?'rgba(240,215,132,.40)':mode==='radiation'?'rgba(138,196,108,.18)':'rgba(200,195,157,.15)';const n=eco?12:36;for(let i=0;i<n;i++){const x=(i*63.8+t*20)%w,y=(i*37.2+t*(mode==='wind'?18:10))%h;c.fillRect(x,y,mode==='sparks'?2:3,mode==='sparks'?2:2)}}
 const fog=c.createRadialGradient(w*.48,h*.48,Math.min(w,h)*.24,w*.48,h*.48,Math.max(w,h)*.7);fog.addColorStop(0,'rgba(4,7,5,0)');fog.addColorStop(.72,mode==='psy'?'rgba(28,10,39,.10)':'rgba(4,8,6,.08)');fog.addColorStop(1,mode==='psy'?'rgba(28,10,39,.33)':'rgba(4,8,6,.41)');c.fillStyle=fog;c.fillRect(0,0,w,h)}
-function draw3DMinimap(){const mini=$('sv-minimap-3d'),r=run();if(!r||mini.hidden)return;const w=world();
-if(mini.width!==124||mini.height!==104){mini.width=124;mini.height=104}const c=mini.getContext('2d');if(!c)return;
-c.fillStyle='#0c1716';c.fillRect(0,0,124,104);c.strokeStyle='#a68b53';c.strokeRect(1,1,122,102);
-const dot=(x,y,color,size=3)=>{c.fillStyle=color;c.fillRect(5+x/w.w*114-size/2,5+y/w.h*94-size/2,size,size)};
-if(r.room===null){for(const rd of map.roads||[]){c.fillStyle='#3b433b';const rx=5+rd.x/w.w*114,ry=5+rd.y/w.h*94;c.fillRect(rx,ry,Math.max(1,rd.w/w.w*114),Math.max(1,rd.h/w.h*94))}}
-for(const b of w.buildings||[])dot(b.x+b.w/2,b.y+b.h/2,'#748475',5);
-for(const enemy of w.enemies||[])if(!r.defeated.includes(enemy.id)){const z=enemyData(enemy);if(distance(r,z)<330)dot(z.x,z.y,'#c07162',3)}
-for(const box of w.crates||[])if(!r.opened.includes(box.id))dot(box.x,box.y,'#d1b86e');
-for(const p of w.people||[])dot(p.x,p.y,'#72bcca');
-dot(w.exit.x,w.exit.y,'#9fdf89',7);dot(r.x,r.y,'#fbe8b8',6);c.strokeStyle='#fbe8b8';c.lineWidth=1.5;const px=5+r.x/w.w*114,py=5+r.y/w.h*94,dir=renderer3d?.yaw||0;c.beginPath();c.moveTo(px,py);c.lineTo(px+Math.sin(dir)*8,py-Math.cos(dir)*8);c.stroke();
+function draw3DMinimap(){
+ const mini=$('sv-minimap-3d'),r=run();if(!r||mini.hidden)return;
+ const w=world(),N=168,P=12,T=N-2*P;
+ if(mini.width!==N||mini.height!==N){mini.width=N;mini.height=N;mini._terrain=null}
+ const c=mini.getContext('2d');if(!c)return;
+ const X=x=>P+Math.max(0,Math.min(w.w,x))/w.w*T,Y=y=>P+Math.max(0,Math.min(w.h,y))/w.h*T;
+ const key=r.locId+':'+r.room;
+ if(!mini._terrain||mini._terrainKey!==key){
+  const layer=document.createElement('canvas');layer.width=layer.height=N;const b=layer.getContext('2d');
+  b.fillStyle='#0a1715';b.fillRect(0,0,N,N);
+  // Old survey-paper grid with low contrast for legibility.
+  b.strokeStyle='rgba(135,166,141,.075)';b.lineWidth=.65;
+  for(let i=P;i<=N-P;i+=17){b.beginPath();b.moveTo(i,P);b.lineTo(i,N-P);b.moveTo(P,i);b.lineTo(N-P,i);b.stroke()}
+  if(r.room===null){
+   for(const a of map.patches||[]){if(a.r<60)continue;b.fillStyle='rgba(60,88,83,.19)';b.beginPath();b.ellipse(X(a.x),Y(a.y),a.r/w.w*T,a.r/w.h*T,0,0,6.284);b.fill()}
+   for(const rd of map.roads||[]){b.fillStyle='#394b41';b.fillRect(X(rd.x),Y(rd.y),Math.max(1,rd.w/w.w*T),Math.max(1,rd.h/w.h*T))}
+   for(const f of map.fences||[]){b.strokeStyle='rgba(173,159,116,.52)';b.lineWidth=1;b.beginPath();b.moveTo(X(f.x),Y(f.y));b.lineTo(X(f.x+(f.dir==='h'?f.w:0)),Y(f.y+(f.dir==='v'?f.w:0)));b.stroke()}
+   for(const build of map.buildings||[]){b.fillStyle='#677566';b.strokeStyle='#adb092';b.lineWidth=.7;b.fillRect(X(build.x),Y(build.y),Math.max(2,build.w/w.w*T),Math.max(2,build.h/w.h*T));b.strokeRect(X(build.x),Y(build.y),Math.max(2,build.w/w.w*T),Math.max(2,build.h/w.h*T))}
+   for(const site of map.landmarks||[]){b.fillStyle='rgba(178,157,97,.7)';b.fillRect(X(site.x)-1.5,Y(site.y)-1.5,3,3)}
+  }else{
+   for(const wall of w.walls||[]){b.fillStyle='#677063';b.fillRect(X(wall.x),Y(wall.y),Math.max(1,wall.w/w.w*T),Math.max(1,wall.h/w.h*T))}
+   for(const prop of w.props||[]){b.fillStyle='#354a40';b.fillRect(X(prop.x),Y(prop.y),Math.max(1,prop.w/w.w*T),Math.max(1,prop.h/w.h*T))}
+  }
+  mini._terrain=layer;mini._terrainKey=key;
+ }
+ c.clearRect(0,0,N,N);c.drawImage(mini._terrain,0,0);
+ c.save();c.beginPath();c.arc(N/2,N/2,N*.476,0,Math.PI*2);c.clip();
+ // Amber compass rings and ticks.
+ c.strokeStyle='rgba(209,192,143,.16)';c.lineWidth=1;
+ for(const q of [N*.23,N*.39]){c.beginPath();c.arc(N/2,N/2,q,0,Math.PI*2);c.stroke()}
+ const pin=(x,y,color,rad=2.6)=>{const xx=X(x),yy=Y(y);c.fillStyle=color;c.shadowColor=color;c.shadowBlur=4;c.beginPath();c.arc(xx,yy,rad,0,Math.PI*2);c.fill();c.shadowBlur=0};
+ for(const enemy of w.enemies||[])if(!r.defeated.includes(enemy.id)){const e=enemyData(enemy);if(distance(r,e)<330)pin(e.x,e.y,'#dc7465',2.1)}
+ for(const box of w.crates||[])if(!r.opened.includes(box.id))pin(box.x,box.y,'#e8ba67',2.2);
+ for(const human of w.people||[])pin(human.x,human.y,'#71c9cf',2.4);
+ pin(w.exit.x,w.exit.y,'#91dc8e',4);
+ const px=X(r.x),py=Y(r.y);c.strokeStyle='rgba(205,235,194,.28)';c.lineWidth=1;c.beginPath();c.moveTo(px-10,py);c.lineTo(px+10,py);c.moveTo(px,py-10);c.lineTo(px,py+10);c.stroke();
+ c.save();c.translate(px,py);c.rotate(renderer3d?.yaw||0);c.fillStyle='#faf3d7';c.strokeStyle='#22362e';c.lineWidth=1.4;c.beginPath();c.moveTo(0,-7);c.lineTo(5.1,6);c.lineTo(0,3.1);c.lineTo(-5.1,6);c.closePath();c.fill();c.stroke();c.restore();
+ c.restore();
+ const shade=c.createRadialGradient(N/2,N/2,N*.12,N/2,N/2,N*.5);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,'rgba(1,7,5,.75)');c.fillStyle=shade;c.fillRect(0,0,N,N);
+ c.strokeStyle='#a18a58';c.lineWidth=2.2;c.beginPath();c.arc(N/2,N/2,N*.481,0,6.284);c.stroke();
+ c.fillStyle='#e5d5a4';c.font='bold 10px monospace';c.textAlign='center';c.fillText('N',N/2,12);
+ c.textAlign='left';c.font='8px monospace';c.fillStyle='#c6b486';c.fillText('ZONA',13,N-12);
 } 
 $('sv-cam-in').addEventListener('click',()=>renderer3d?.changeZoom(-45));$('sv-cam-out').addEventListener('click',()=>renderer3d?.changeZoom(45));
 $('sv-start').addEventListener('click',()=>enter($('sv-location').value));$('sv-pause').addEventListener('click',pause);$('sv-action').addEventListener('click',action);$('sv-attack').addEventListener('click',attack);panel.addEventListener('toggle',()=>{if(!panel.open){const menu=$('sv-location-menu');if(menu)menu.hidden=true;}refresh()});panel.addEventListener('click',e=>{const pick=e.target.closest('[data-sv-loc]');if(pick&&!pick.disabled){$('sv-location').value=pick.dataset.svLoc;state().selectedLoc=pick.dataset.svLoc;const menu=$('sv-location-menu');if(menu)menu.hidden=true;save();refresh();return}const trigger=e.target.closest('#sv-location-trigger');if(trigger){if(trigger.disabled)return;const menu=$('sv-location-menu');if(menu){menu.hidden=!menu.hidden;trigger.setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden){renderSectorOptions()}}return}});document.addEventListener('click',e=>{const menu=$('sv-location-menu');if(menu&&!menu.hidden&&!panel.contains(e.target))menu.hidden=true;});
-const pad=$('sv-stick');function joy(e){const b=pad.getBoundingClientRect(),dx=(e.clientX-b.left-b.width/2)/40,dy=(e.clientY-b.top-b.height/2)/40,n=Math.max(1,Math.hypot(dx,dy));stick.x=dx/n;stick.y=dy/n;pad.firstElementChild.style.transform='translate(calc(-50% + '+stick.x*30+'px),calc(-50% + '+stick.y*30+'px))'}pad.addEventListener('pointerdown',e=>{if(stick.id!==null)return;stick.id=e.pointerId;pad.setPointerCapture(e.pointerId);joy(e)});pad.addEventListener('pointermove',e=>{if(e.pointerId===stick.id)joy(e)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,resetInput);
+const pad=$('sv-stick');
+function joy(e){
+ const b=pad.getBoundingClientRect(),thumb=pad.firstElementChild.getBoundingClientRect();
+ const range=Math.max(12,(b.width-thumb.width)*.5-5),rawX=e.clientX-(b.left+b.width/2),rawY=e.clientY-(b.top+b.height/2);
+ const distance=Math.hypot(rawX,rawY),amount=Math.min(1,distance/range),deadzone=.09;
+ const m=distance>0?Math.max(0,(amount-deadzone)/(1-deadzone))/distance:0;
+ stick.x=rawX*m;stick.y=rawY*m;
+ const travel=Math.min(range,distance),rx=distance?rawX/distance*travel:0,ry=distance?rawY/distance*travel:0;
+ pad.firstElementChild.style.transform='translate(calc(-50% + '+rx.toFixed(1)+'px),calc(-50% + '+ry.toFixed(1)+'px))';
+}
+pad.addEventListener('pointerdown',e=>{if(stick.id!==null||!visible)return;e.preventDefault();stick.id=e.pointerId;pad.classList.add('is-active');try{pad.setPointerCapture(e.pointerId)}catch(_){}joy(e)});
+pad.addEventListener('pointermove',e=>{if(e.pointerId===stick.id){e.preventDefault();joy(e)}});
+for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,e=>{if(e.pointerId!==stick.id)return;pad.classList.remove('is-active');stick.id=null;stick.x=stick.y=0;pad.firstElementChild.style.transform='translate(-50%,-50%)'});
 window.addEventListener('keydown',e=>{if(!visible)return;const k=e.key.length===1?e.key.toLowerCase():e.key;if(['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','e','Escape'].includes(k)){e.preventDefault();keys.add(k);if(k==='e'&&!e.repeat)action();if(k==='Escape')pause()}});window.addEventListener('keyup',e=>keys.delete(e.key.length===1?e.key.toLowerCase():e.key));window.addEventListener('resize',()=>{if(visible)resize()});window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});window.addEventListener('pagehide',pause);
 // Public interface also provides deterministic mechanics for regression tests.
 g.survival={enter,pause,action,attack,step,exit:exitRun,build,solid,sight,state,refresh,get map(){return map},get visible(){return visible},get is3d(){return mode3d},get renderer(){return renderer3d}};refresh();
 });
-</script></body>
+</script><style id="zona-survival-v132">
+/* Cohesive STALKER PDA: UI changes limited to Survival 3D */
+#sv-screen header{height:65px!important;min-height:65px!important;padding:8px 13px 8px 17px!important;background:linear-gradient(97deg,rgba(10,17,13,.98),rgba(25,32,23,.97) 61%,rgba(10,17,14,.98))!important;border-bottom:1px solid #ae8e52!important;border-top:2px solid #8d7448!important;box-shadow:inset 0 0 0 3px rgba(204,173,98,.055),0 5px 28px #000b!important}
+#sv-screen header:after{content:"";position:absolute;inset:5px 5px 5px 5px;border:1px solid rgba(186,157,91,.16);pointer-events:none}
+#sv-screen header .sv-head-copy{display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;z-index:1}
+#sv-screen header small{display:block;color:#bc9f69!important;letter-spacing:1.5px!important;font:600 9px/1.2 Consolas,monospace!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sv-screen .sv-head-separator{color:#82775b;padding:0 3px}
+#sv-screen .sv-head-version{display:inline-block;border:1px solid rgba(197,163,91,.52);border-radius:2px;background:rgba(24,32,23,.9);padding:1px 3px;margin-left:3px;color:#e3c38a}
+#sv-screen #sv-title{font:700 clamp(12px,3.4vw,17px)/1.22 var(--st-head,Arial,sans-serif)!important;color:#f3e5c2!important;letter-spacing:.2px!important;max-width:calc(100vw - 137px)!important;text-shadow:0 2px 2px #000!important}
+#sv-screen #sv-pause{z-index:2!important;min-width:92px!important;min-height:41px!important;padding:5px 9px!important;background:linear-gradient(180deg,#283026,#141d18)!important;border:1px solid #ae8e58!important;border-radius:4px!important;font:700 10px/1.2 var(--st-head,Arial,sans-serif)!important;letter-spacing:.6px!important;color:#e7d7ac!important;box-shadow:inset 0 1px #f1d39c25,0 3px 8px #0007!important}
+#sv-screen #sv-pause:active{background:#4b5031!important}
+#sv-screen .sv-hud-left{top:73px!important;border:1px solid rgba(181,150,87,.70)!important;background:linear-gradient(150deg,rgba(10,17,13,.91),rgba(18,25,18,.89))!important;box-shadow:0 8px 25px #0009,inset 0 1px rgba(220,189,111,.1)!important;border-radius:5px!important}
+#sv-screen .sv-hud-right{border-radius:5px!important;border-color:rgba(185,154,92,.61)!important;background:linear-gradient(150deg,rgba(10,17,14,.92),rgba(25,30,20,.89))!important}
+#sv-screen .sv-brand{color:#eacb8f!important}
+#sv-screen #sv-minimap-3d{top:73px!important;right:8px!important;width:118px!important;height:118px!important;border-radius:50%!important;border:2px solid #a58d58!important;background:#0d1613!important;box-shadow:0 0 0 4px rgba(7,11,9,.85),0 0 0 5px rgba(157,138,91,.25),0 8px 26px #000c!important;image-rendering:auto;overflow:hidden!important}
+#sv-screen .sv-view:after{box-shadow:inset 0 0 80px #01040355!important;z-index:2}
+#sv-screen .sv-controls{left:16px!important;right:14px!important;bottom:calc(21px + env(safe-area-inset-bottom))!important;z-index:12!important}
+#sv-screen #sv-stick{width:112px!important;height:112px!important;box-sizing:border-box!important;border:2px solid #a99260!important;background:radial-gradient(circle at 45% 40%,#2b392eeb 0,#13221bd8 42%,#070e0cda 100%)!important;box-shadow:0 0 0 5px rgba(9,16,12,.64),inset 0 0 15px #000b,0 7px 25px #000b!important;outline:1px solid #e0c48d40;outline-offset:-10px}
+#sv-screen #sv-stick:before{inset:15px!important;border:1px dashed rgba(226,197,126,.45)!important;box-shadow:0 0 0 4px rgba(220,185,110,.045)!important}
+#sv-screen #sv-stick:after{inset:33px!important;border:1px solid rgba(218,199,147,.11)!important;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(232,208,149,.14) 0deg 1.5deg,transparent 2deg 45deg)}
+#sv-screen #sv-stick span{width:49px!important;height:49px!important;z-index:3!important;background:radial-gradient(circle at 36% 29%,#f0dfac,#c1a66e 62%,#8b754c 100%)!important;border:2px solid #f4d994!important;box-shadow:inset 0 2px 5px #fff8,0 5px 12px #0009,0 0 0 3px #122018d9!important;transition:transform 65ms ease-out!important;will-change:transform}
+#sv-screen #sv-stick.is-active span{transition:none!important}
+#sv-screen .sv-actions{gap:9px!important}
+#sv-screen .sv-actions button{width:69px!important;height:69px!important;min-width:69px!important;min-height:69px!important;border:2px solid #ab9260!important;border-radius:50%!important;background:radial-gradient(circle at 38% 25%,#364538f5,#15261eea 72%)!important;color:#f7e9c5!important;font-size:12px!important;font-weight:800!important;box-shadow:inset 0 1px #ebd5a646,inset 0 -3px #070e09bd,0 6px 18px #000b!important;text-shadow:0 1px #000!important}
+#sv-screen .sv-actions button:last-child{border-color:#a56558!important;background:radial-gradient(circle at 40% 30%,#684035e7,#2f1d1ae8 76%)!important;color:#ffdfd0!important}
+#sv-screen .sv-actions button:active{filter:brightness(1.3)!important;transform:scale(.96)}
+#sv-screen #sv-weapon-name{color:#f3daaa}
+@media(max-width:390px){#sv-screen .sv-hud-left{width:157px!important}#sv-screen #sv-minimap-3d{width:104px!important;height:104px!important}#sv-screen #sv-stick{width:103px!important;height:103px!important}#sv-screen .sv-actions button{width:64px!important;height:64px!important;min-width:64px!important;min-height:64px!important}#sv-screen #sv-title{font-size:12px!important}}
+@media(max-width:350px){#sv-screen header{padding:6px 8px!important}#sv-screen header small{font-size:8px!important}#sv-screen #sv-pause{min-width:76px!important;min-height:37px!important;font-size:9px!important}#sv-screen .sv-hud-left{width:143px!important}#sv-screen #sv-minimap-3d{width:92px!important;height:92px!important}#sv-screen .sv-actions button{width:57px!important;height:57px!important;min-width:57px!important;min-height:57px!important;font-size:10px!important}#sv-screen #sv-stick{width:92px!important;height:92px!important}}
+</style>
+</body>
 </html>
