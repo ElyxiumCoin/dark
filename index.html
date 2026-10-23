@@ -6680,7 +6680,53 @@ class Mesh{
  cylinder(x,y,z,r,h,color,n=7,material=null){for(let i=0;i<n;i++){const a=i/n*Math.PI*2,b=(i+1)/n*Math.PI*2,xx=Math.cos(a),zz=Math.sin(a),x2=Math.cos(b),z2=Math.sin(b);this.quad([x+r*xx,y,z+r*zz],[x+r*x2,y,z+r*z2],[x+r*x2,y+h,z+r*z2],[x+r*xx,y+h,z+r*zz],color,.75+.25*Math.max(0,xx),material);this.tri([x,y+h,z],[x+r*xx,y+h,z+r*zz],[x+r*x2,y+h,z+r*z2],color,1.08,material)}}
  cone(x,y,z,r,h,color,n=6,material=null){for(let i=0;i<n;i++){const a=i/n*Math.PI*2,b=(i+1)/n*Math.PI*2;this.tri([x+r*Math.cos(a),y,z+r*Math.sin(a)],[x+r*Math.cos(b),y,z+r*Math.sin(b)],[x,y+h,z],color,.74+.26*Math.sin(a+1),material)}}
  rail(ax,az,bx,bz,h,color,width=3,material=null){const dx=bx-ax,dz=bz-az,len=Math.hypot(dx,dz)||1,nx=-dz/len*width,nz=dx/len*width;const a=[ax+nx,h,az+nz],b=[bx+nx,h,bz+nz],c=[bx-nx,h,bz-nz],d=[ax-nx,h,az-nz];this.quad(a,b,c,d,color,1.0,material)}
- shadow(x,z,rx,rz){this.quad([x-rx*.65,.035,z-rz*.6],[x+rx*.93,.035,z-rz*.6],[x+rx*1.27,.035,z+rz*.94],[x-rx*.34,.035,z+rz*.94],'#181c16',.58,8);this.quad([x-rx*.57,.04,z-rz*.45],[x+rx*.74,.04,z-rz*.45],[x+rx,.04,z+rz*.68],[x-rx*.29,.04,z+rz*.68],'#20241b',.6,8)}
+
+ ellipsoid(x,y,z,rx,ry,rz,color,rings=7,steps=12,material=null){
+   for(let a=0;a<rings;a++){
+     const t0=-Math.PI/2+a*Math.PI/rings,t1=-Math.PI/2+(a+1)*Math.PI/rings;
+     for(let b=0;b<steps;b++){
+       const p0=b*2*Math.PI/steps,p1=(b+1)*2*Math.PI/steps;
+       const point=(t,p)=>[x+Math.cos(t)*Math.cos(p)*rx,y+Math.sin(t)*ry,z+Math.cos(t)*Math.sin(p)*rz];
+       const u=point(t0,p0),v=point(t0,p1),w=point(t1,p1),q=point(t1,p0);
+       this.quad(u,q,w,v,color,.88+.12*Math.cos(p0),material);
+     }
+   }
+ }
+ branch(ax,ay,az,bx,by,bz,r,color,segments=7,material=null){
+   const dir=norm([bx-ax,by-ay,bz-az]);let side=norm(cross(dir,[0,0,1]));if(Math.hypot(...side)<.01)side=[1,0,0];const up=norm(cross(dir,side));
+   for(let i=0;i<segments;i++){
+     const a=i*2*Math.PI/segments,b=(i+1)*2*Math.PI/segments;
+     const p=(x,y,z,t,width)=>[x+(side[0]*Math.cos(t)+up[0]*Math.sin(t))*width,y+(side[1]*Math.cos(t)+up[1]*Math.sin(t))*width,z+(side[2]*Math.cos(t)+up[2]*Math.sin(t))*width];
+     this.quad(p(ax,ay,az,a,r),p(ax,ay,az,b,r),p(bx,by,bz,b,Math.max(.4,r*.58)),p(bx,by,bz,a,Math.max(.4,r*.58)),color,.9,material);
+   }
+ }
+ foliage(x,y,z,size,colors=['#28392a','#3b5032','#4e643c'],eco=false,seed=0){
+   // Hierarchical boughs, rather than three opaque low-poly cones.
+   const levels=eco?4:6,segments=eco?7:10;
+   this.branch(x,0,z,x,Math.max(42,size*2.1),z,Math.max(3.2,size*.13),'#473d2f',7,4);
+   for(let h=0;h<levels;h++){
+     const height=12+h*size*.29,radius=size*(1.22-h/(levels+.7));
+     const n=eco?7:10;
+     for(let j=0;j<n;j++){
+       const angle=j*2*Math.PI/n+h*.41+seed*.017;
+       const len=radius*(.79+.18*Math.sin(j*17+h));
+       const bx=x+Math.cos(angle)*len,bz=z+Math.sin(angle)*len;
+       this.branch(x,height+6,z,bx,height-4,bz,1.3,'#44382b',4,4);
+       const tip=[bx,height-9,bz],left=[x+Math.cos(angle+.17)*len*.57,height+size*.18,z+Math.sin(angle+.17)*len*.57],right=[x+Math.cos(angle-.17)*len*.57,height+size*.18,z+Math.sin(angle-.17)*len*.57];
+       this.tri(left,right,tip,colors[(j+h)%colors.length],.85,5);
+       this.tri(right,left,tip,colors[(j+h+1)%colors.length],.74,5);
+       if(!eco&&j%2===0){const cx=x+Math.cos(angle)*len*.72,cz=z+Math.sin(angle)*len*.72;this.tri([cx-5,height+size*.26,cz-3],[cx+7,height+size*.17,cz+4],tip,colors[(j+h+2)%colors.length],.8,5)}
+     }
+   }
+   this.ellipsoid(x,levels*size*.3+9,z,size*.18,size*.38,size*.18,colors[1],4,6,5);
+ }
+ shadow(x,z,rx,rz){
+  const cx=x+rx*.13,cz=z+rz*.19,seg=18;
+  for(const [radius,y,color] of [[1.22,.023,'#333a2e'],[.94,.027,'#283026'],[.67,.03,'#20271e']]){
+   const points=[];for(let i=0;i<seg;i++){const a=i*2*Math.PI/seg,b=(i+1)*2*Math.PI/seg;
+    this.tri([cx,y,cz],[cx+Math.cos(a)*rx*radius,y,cz+Math.sin(a)*rz*radius],[cx+Math.cos(b)*rx*radius,y,cz+Math.sin(b)*rz*radius],color,.92,8)}
+  }
+ }
  roof(x,y,z,w,d,color='#4b5048'){
   const lx=x-w/2,rx=x+w/2,bz=z-d/2,fz=z+d/2,rise=Math.min(34,Math.max(17,w*.15)),peak=y+rise;
   this.quad([lx,y,bz],[x,peak,bz],[x,peak,fz],[lx,y,fz],color,1.08,3);
@@ -6703,7 +6749,7 @@ const vehicle=(lgt,col=rust)=>{m.shadow(x,z,lgt*.58,31);m.box(x,8,z,lgt,20,34,co
 const pipe=(len)=>{m.box(x,5,z,len,12,16,metal);m.box(x,5,z-23,len*.7,10,12,rust)};
 if(kind!=='camp'&&kind!=='pond')m.shadow(x,z,kind==='ship'?104:Math.max(27,s*.64),kind==='factory'?69:39);
 switch(kind){
-case 'camp':m.shadow(x,z,102,92);m.disk(x,.11,z,88,'#34291f',14);m.cylinder(x,0,z,16,6,rust);m.cone(x,6,z,16,34,'#e7a25a');for(let i=0;i<4;i++){const a=i*Math.PI/2;m.box(x+Math.cos(a)*38,0,z+Math.sin(a)*38,44,9,15,'#6b5740')}tent(-48,-34,54,36,24,'#6a6f5f');tent(58,26,46,34,22,'#67624f');m.box(x-77,0,z+28,24,17,24,'#776048');m.box(x+84,0,z-20,22,13,18,'#5e6a57');lamp(x-22,z+48,26);lamp(x+26,z-46,26);for(let q=0;q<8;q++){const a=q*Math.PI/4;m.box(x+Math.cos(a)*23,0,z+Math.sin(a)*23,8,7,6,q%2?'#91826b':'#645c49')}m.box(x-24,0,z-78,44,10,16,wood);m.box(x+42,0,z+63,28,20,24,'#555c4b');m.cylinder(x+30,0,z-54,10,19,'#695741',10);m.cylinder(x+59,0,z-50,9,14,'#52574d',9);break;
+case 'camp':m.shadow(x,z,102,92);m.disk(x,.11,z,88,'#34291f',14);m.cylinder(x,0,z,16,6,rust);m.ellipsoid(x,15,z,10,20,10,'#ce8744',6,10,8);m.cone(x-4,6,z+2,7,25,'#edb868',7,8);m.cone(x+4,6,z-1,6,20,'#d16d2f',7,8);for(let i=0;i<4;i++){const a=i*Math.PI/2;m.box(x+Math.cos(a)*38,0,z+Math.sin(a)*38,44,9,15,'#6b5740')}tent(-48,-34,54,36,24,'#6a6f5f');tent(58,26,46,34,22,'#67624f');m.box(x-77,0,z+28,24,17,24,'#776048');m.box(x+84,0,z-20,22,13,18,'#5e6a57');lamp(x-22,z+48,26);lamp(x+26,z-46,26);for(let q=0;q<8;q++){const a=q*Math.PI/4;m.box(x+Math.cos(a)*23,0,z+Math.sin(a)*23,8,7,6,q%2?'#91826b':'#645c49')}m.box(x-24,0,z-78,44,10,16,wood);m.box(x+42,0,z+63,28,20,24,'#555c4b');m.cylinder(x+30,0,z-54,10,19,'#695741',10);m.cylinder(x+59,0,z-50,9,14,'#52574d',9);break;
 case 'well':m.cylinder(x,0,z,25,22,concrete,9);m.box(x,63,z,70,6,70,rust);for(const dx of [-29,29])m.box(x+dx,0,z,5,65,5,metal);m.box(x-42,0,z+36,18,14,18,wood);lamp(x+44,z-28,24);break;
 case 'shack':building(88,73,55);m.box(x,55,z,95,11,80,rust);m.box(x,0,z+42,54,7,14,wood);m.box(x-50,0,z-26,16,22,16,rust);tent(54,30,38,26,18,'#5f6652');break;
 case 'tower':case 'watch':m.box(x,87,z,67,13,67,rust);for(const dx of [-27,27])for(const dz of [-27,27])m.box(x+dx,0,z+dz,7,90,7,metal);m.box(x,101,z,78,7,78,metal);m.box(x,108,z+22,26,12,10,'#bba774');m.box(x+36,92,z,18,6,18,'#524833');lamp(x+20,z-24,36);break;
@@ -6760,9 +6806,9 @@ if(b.style==='storage'){for(let k=0;k<4;k++)m.box(b.x+26+k*48,0,b.y+b.h+16,19,17
 }
 
 if(!low){for(let j=0;j<5;j++){m.box(b.x+20+j*40,84,b.y+25,7,2,13,'#654f3e');m.box(b.x+19+j*40,83,b.y+b.h-24,7,2,13,'#654f3e')}}}
-for(const tr of map.trees){const x=tr.x+15,z=tr.y+15,s=tr.size||28;m.shadow(x,z,s*.72,s*.52);m.cylinder(x,0,z,5,26,'#483b30');m.cone(x,16,z,s*.72,s*1.2,t.treeDark,7,5);m.cone(x-3,28,z+3,s*.6,s*1.15,t.treeMid,7,5);m.cone(x+2,40,z-2,s*.42,s*.95,t.treeLight||t.treeMid,7,5);if(!low){m.rail(x,z,x+s*.36,z+s*.08,34,'#493d31',1.5);m.rail(x,z,x-s*.33,z-s*.18,29,'#493d31',1.5)}}
+for(const tr of map.trees){const x=tr.x+15,z=tr.y+15,s=tr.size||28;m.shadow(x,z,s*.70,s*.53);m.foliage(x,0,z,s,[t.treeDark,t.treeMid,t.treeLight||t.treeMid],low,(x*17+z*11)%53)}
 for(const s of map.scraps||[]){if(low&&s.s<15)continue;const x=s.x,z=s.y,k=s.kind,d=s.s;
-if(k==='bush'){m.cone(x,0,z,d*.9,d*.7,t.treeMid);continue}
+if(k==='bush'){m.shadow(x,z,d*.72,d*.62);m.ellipsoid(x,8,z,d*.58,d*.56,d*.48,t.treeMid,5,8,5);m.ellipsoid(x-d*.3,9,z+d*.25,d*.44,d*.4,d*.37,t.treeDark,5,8,5);m.ellipsoid(x+d*.24,12,z-d*.1,d*.34,d*.46,d*.38,t.treeLight,5,8,5);continue}
 if(k==='barrel'){m.shadow(x,z,d*.48,d*.48);m.cylinder(x,0,z,d*.35,d*1.2,'#775b40');m.cylinder(x,d*.45,z,d*.355,2,'#383b34');m.cylinder(x,d*.95,z,d*.355,2,'#343832');continue}
 if(k==='wreck'){m.box(x,0,z,d*1.7,13,d*.9,'#55564c');m.box(x+d*.24,9,z,d*.6,9,d*.55,'#6a5847');continue}
 if(k==='stump'){m.cylinder(x,0,z,d*.3,d*.6,'#746049');continue}
@@ -6794,19 +6840,60 @@ for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 return new Float32Array(m.data)}
 function entityMesh(world,map,run,enemyData,time,eco){const m=new Mesh(),room=run.room==null?null:map.rooms[run.room];
 const w=room||map;const player=run;m.materialMode=8;
-function human(x,z,c,isPlayer=false){m.shadow(x,z,17,15);const bob=isPlayer?Math.sin(time*8)*1.3:0;m.box(x,0,z-1,15,13,12,'#343631');m.box(x,13+bob,z,22,23,12,c);m.box(x,36+bob,z,16,15,15,isPlayer?'#a6a48b':'#8b856d');m.box(x,44+bob,z+8,21,5,16,'#3b483a');m.box(x,14+bob,z+9,19,17,9,isPlayer?'#5a6551':'#393f3d');m.box(x-14,14,z,7,21,9,c);m.box(x+14,14,z,7,21,9,c);m.box(x,23+bob,z-10,6,11,18,isPlayer?'#d2c694':'#4d4c41');m.box(x,18+bob,z+12,16,10,8,isPlayer?'#70775f':'#494f47');
-// Helmet visor, gas mask and arm padding; one tiny rifle on the right side.
-m.box(x,40+bob,z-9,14,6,4,isPlayer?'#383f39':'#343d37');
-m.box(x,34+bob,z-11,9,8,6,'#424947');m.box(x-6,34+bob,z-14,4,4,3,'#8faaa1');m.box(x+6,34+bob,z-14,4,4,3,'#8faaa1');
-m.box(x-16,20+bob,z,4,12,11,'#686b59');m.box(x+16,20+bob,z,4,12,11,'#686b59');
-m.box(x+18,13+bob,z-10,3,25,5,'#2b302d');m.box(x+18,25+bob,z-17,5,5,22,'#3a4038');
+function human(x,z,c,isPlayer=false){
+ const bob=isPlayer?Math.sin(time*9)*.8:0,stride=isPlayer?Math.sin(time*9)*3:0;
+ m.shadow(x,z,14,11);
+ // Lower body, boots and articulated legs
+ for(const side of [-1,1]){
+  const px=x+side*6.4;
+  m.branch(px,19,z+2,px+side*.7,8,z+stride*side,4.0,'#41483c',7,4);
+  m.branch(px+side*.7,8,z+stride*side,px+side,2,z+3+stride*side,4.5,'#2b312d',7,3);
+  m.ellipsoid(px+side,3,z-1+stride*side,5,3.3,8,'#292d29',4,7,3);
+ }
+ m.ellipsoid(x,22+bob,z,12,15,9,c,6,10,5);
+ m.box(x,21+bob,z+8,19,18,5,isPlayer?'#4a5844':'#46504a',5); // backpack
+ m.box(x,25+bob,z-8,13,14,2,isPlayer?'#76785f':'#5b6657',2);
+ m.ellipsoid(x,39+bob,z-1,7.7,8.2,8.4,isPlayer?'#737e66':'#6a7064',6,11,3);
+ m.ellipsoid(x,44+bob,z-1,8.7,3.6,9,'#424e42',5,10,3); // helmet
+ m.ellipsoid(x,39+bob,z-9,6.8,3.1,2.3,'#1b2c30',4,9,8); // visor
+ m.ellipsoid(x,34+bob,z-11,4,4.3,3.3,'#515c50',5,8,3); // respirator
+ m.box(x-6.2,35+bob,z-11.5,2.3,2,1.8,'#9eb4ad',8);
+ m.box(x+6.2,35+bob,z-11.5,2.3,2,1.8,'#9eb4ad',8);
+ for(const side of [-1,1]){
+  const ax=x+side*13;const back=(isPlayer?stride*side*.35:0);
+  m.branch(ax,31+bob,z,ax+side*2,16+bob,z-3+back,4.1,c,7,5);
+  m.ellipsoid(ax,29+bob,z,5,5,5,isPlayer?'#68735c':'#586055',4,8,5);
+  m.ellipsoid(ax+side*2,16+bob,z-3+back,4,4,4,'#484d44',4,7,5);
+ }
+ // Sling and a low profile long gun, dark neutral metal.
+ m.branch(x+16,28+bob,z-7,x+20,12+bob,z-21,1.7,'#222724',6,3);
+ m.branch(x+20,19+bob,z-15,x+19,18+bob,z-29,2.4,'#353932',6,3);
+ m.box(x+1,35+bob,z+11,9,7,5,'#333f35',4);
 }
-function mutant(x,z){m.shadow(x,z,27,17);m.box(x,12,z,41,17,21,'#64544b');m.box(x,15,z-15,16,15,18,'#76604c');for(const dx of [-14,14])for(const dz of [-6,13])m.box(x+dx,0,z+dz,7,13,6,'#443b35');m.box(x-5,23,z-23,3,3,2,'#dfbf68');m.box(x+5,23,z-23,3,3,2,'#dfbf68');m.box(x,20,z+12,12,8,10,'#5b4a40');
-m.cone(x-7,27,z-17,5,10,'#9b8972',5);m.cone(x+7,27,z-17,5,10,'#9b8972',5);
-m.rail(x,z+16,x-20,z+36,15,'#473a32',2);m.rail(x,z+16,x+20,z+36,15,'#473a32',2)}
+function mutant(x,z){
+ m.shadow(x,z,25,16);
+ // Quadruped body and face have curved forms, not square heads and spikes.
+ m.ellipsoid(x,22,z+3,25,16,15,'#5a4a3e',8,12,3);
+ m.ellipsoid(x,26,z+12,18,10,12,'#716052',6,10,3);
+ m.ellipsoid(x,19,z-17,15.5,11,12,'#665143',7,10,3);
+ m.ellipsoid(x,15,z-27,9,6.5,8,'#4b3931',6,9,3);
+ for(const side of [-1,1]){
+  for(const dz of [-8,17]){
+   const lx=x+side*17,lz=z+dz;
+   m.branch(lx,17,lz,lx+side*2,7,lz+2,4.1,'#483b33',6,3);
+   m.branch(lx+side*2,7,lz+2,lx+side*2,2,lz-1,3.8,'#3d312b',6,3);
+   m.ellipsoid(lx+side*2,2,lz-2,5,2.3,5,'#2d2927',4,7,3);
+  }
+  m.ellipsoid(x+side*10,24,z-20,4.2,6,3.4,'#715b4e',4,7,3);
+  m.ellipsoid(x+side*7,21,z-28,2.0,2.3,1.5,'#e7ba5e',4,7,8);
+  m.branch(x+side*7,13,z-27,x+side*10,21,z-32,2.4,'#aa9e83',6,2);
+ }
+ m.ellipsoid(x,18,z-35,4,3,2.4,'#2d2825',4,8,3);
+ m.branch(x,25,z+22,x,35,z+33,2.2,'#4e4238',5,3);
+}
 for(const c of w.crates){m.shadow(c.x,c.y,17,14);const opened=run.opened.includes(c.id);if(!opened)m.disk(c.x,.55,c.y,26,'#8b764a',10);m.box(c.x,0,c.y,29,20,25,opened?'#434239':'#a1844a');if(!opened){m.box(c.x,21,c.y,32,4,27,'#c19e63');m.box(c.x,0,c.y+14,36,6,3,'#d0b579')}}
-for(const p of w.people){m.disk(p.x,.7,p.y,21,'#326c73',10);human(p.x,p.y,'#468f92')}
-for(const e of w.enemies){if(run.defeated.includes(e.id))continue;const v=enemyData(e);if(Math.hypot(run.x-v.x,run.y-v.y)>440)continue;m.disk(v.x,.7,v.y,23,'#6d3430',9);if(/крыс|собак|кабан|плот|химер|кот|тушкан|псевдо/i.test(e.name||''))mutant(v.x,v.y);else human(v.x,v.y,'#9d5349')}
+for(const p of w.people){m.disk(p.x,.7,p.y,16,'#344d4b',12,8);human(p.x,p.y,'#468f92')}
+for(const e of w.enemies){if(run.defeated.includes(e.id))continue;const v=enemyData(e);if(Math.hypot(run.x-v.x,run.y-v.y)>440)continue;m.disk(v.x,.7,v.y,16,'#4e3932',12,8);if(/крыс|собак|кабан|плот|химер|кот|тушкан|псевдо/i.test(e.name||''))mutant(v.x,v.y);else human(v.x,v.y,'#9d5349')}
 // Extraction portal and visible marker, same coordinates as game's actual exit.
 const t=world.exit;m.cylinder(t.x,0,t.y,35,4,'#608855',12);for(let a=0;a<8;a++){const phi=a/8*Math.PI*2;m.box(t.x+Math.cos(phi)*32,4,t.y+Math.sin(phi)*32,4,9,4,'#afd986')}m.box(t.x,0,t.y,6,91,6,'#8dbd79');
 if(room==null){for(const b of map.buildings){m.box(b.door.x,0,b.door.y,3,53,3,'#bda76b')}
