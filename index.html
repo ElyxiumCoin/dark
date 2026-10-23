@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v14.5 — Survival Material Remaster</title>
+<title>ZONA Z v14.2 — Interface Light FX</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -8543,312 +8543,291 @@ html.proportion-v2 body #app #kpk-survival button:active:not(:disabled){filter:b
 html.proportion-v2 body #app #kpk-survival .sv-empty-sectors{font:12px var(--st-body);padding:10px;color:#a4af93}
 </style>
 
-
-<style id="zona-v141-global-visual-remaster">
+<style id="zona-ui-hotfix-1411-safe">
+/* Safe presentation-only effects. Position, overflow, stacking, geometry,
+   hit areas, display and the Survival renderer are deliberately untouched. */
+html body #app{box-shadow:0 18px 55px rgba(0,0,0,.38),0 0 0 1px rgba(190,151,80,.08)}
+html body #app>header{box-shadow:0 9px 26px rgba(0,0,0,.36),inset 0 -1px rgba(217,181,109,.10)}
+html body #app>header .uavatar{box-shadow:0 0 0 1px rgba(192,151,82,.32),0 5px 16px rgba(0,0,0,.40),0 0 13px rgba(222,161,75,.10)}
+html body #app>header .mbar{box-shadow:inset 0 1px 4px rgba(0,0,0,.50)}
+html body #app nav#zone-nav{box-shadow:0 -8px 26px rgba(0,0,0,.46),inset 0 1px rgba(231,199,122,.08)}
+html body #app nav#zone-nav .tab-btn{box-shadow:inset 0 1px rgba(255,233,176,.035),0 4px 10px rgba(0,0,0,.13)!important;transition:box-shadow .15s ease, color .15s ease, border-color .15s ease}
+html body #app nav#zone-nav .tab-btn.active{box-shadow:inset 0 0 14px rgba(210,156,67,.15),0 0 16px rgba(218,163,64,.13)!important}
+html body #app nav#zone-nav .tab-btn.active::after{box-shadow:0 0 8px rgba(243,189,94,.38)!important}
+html body #app .zone-hero,html body #app details.kpk-panel>summary.zone-hero{box-shadow:0 10px 26px rgba(0,0,0,.29),inset 0 1px rgba(255,228,159,.055)!important}
+html body #app details.kpk-panel[open]>summary.zone-hero{box-shadow:0 13px 30px rgba(0,0,0,.35),inset 0 1px rgba(255,232,176,.075),0 0 17px rgba(203,153,72,.095)!important}
+html body #app .location-card,html body #app .boss-card,html body #app .card,html body #app .eslot{box-shadow:0 8px 22px rgba(0,0,0,.20),inset 0 1px rgba(255,239,183,.035)}
+html body #app .modal-box{box-shadow:0 24px 60px rgba(0,0,0,.56),0 0 24px rgba(186,139,68,.065),inset 0 1px rgba(255,235,175,.06)}
+html body #app .btn,html body #app .supply-actions button{box-shadow:inset 0 1px rgba(255,229,170,.075),0 5px 13px rgba(0,0,0,.22)}
+html body #app .btn.btn-gold{box-shadow:inset 0 1px rgba(255,245,214,.16),0 6px 18px rgba(0,0,0,.26),0 0 13px rgba(225,175,86,.09)}
+html body #app .cheader,html body #app .section-label,html body #app .hero-copy h1{text-shadow:0 2px 5px rgba(0,0,0,.28)}
+html body #app .brarity,html body #app .shop-price{box-shadow:inset 0 1px rgba(255,232,174,.08),0 3px 9px rgba(0,0,0,.13)}
+@media(max-width:600px){html body #app{box-shadow:none}html body #app nav#zone-nav .tab-btn{box-shadow:inset 0 1px rgba(255,233,176,.03)!important}}
+@media(prefers-reduced-motion:reduce){html body #app nav#zone-nav .tab-btn{transition:none}}
+</style>
+<style id="zona-v142-interface-lightfx">
 :root{
-  --v141-gold:#d9b26b;
-  --v141-gold-soft:#f2d9a1;
-  --v141-panel:rgba(8,14,11,.84);
-  --v141-panel-2:rgba(14,22,18,.72);
-  --v141-line:rgba(191,156,92,.42);
-  --v141-glow:rgba(229,182,90,.22);
-  --v141-emerald:rgba(119,174,138,.14);
+  --v142-gold-1:#d2b06b;
+  --v142-gold-2:#f0d79c;
+  --v142-gold-3:#8f7340;
+  --v142-panel-top:rgba(19,29,23,.92);
+  --v142-panel-bot:rgba(10,16,13,.88);
+  --v142-line:rgba(184,152,92,.34);
+  --v142-glow:rgba(226,184,94,.14);
+  --v142-emerald:rgba(113,173,140,.10);
 }
-html body{
+@keyframes v142-sheen{0%{background-position:0% 0%,0 0,0 0}100%{background-position:200% 0%,0 0,0 0}}
+@keyframes v142-pulse{0%,100%{box-shadow:0 0 0 rgba(231,188,95,0),0 8px 18px rgba(0,0,0,.24)}50%{box-shadow:0 0 18px rgba(231,188,95,.10),0 10px 22px rgba(0,0,0,.28)}}
+@keyframes v142-glowLine{0%,100%{opacity:.45}50%{opacity:.88}}
+
+body{
   background:
-   radial-gradient(circle at 50% -10%, rgba(123,92,41,.18), transparent 35%),
-   radial-gradient(circle at 5% 10%, rgba(64,101,82,.10), transparent 28%),
-   radial-gradient(circle at 95% 0%, rgba(95,53,32,.12), transparent 30%),
-   #060b08 !important;
+    radial-gradient(circle at 50% 0%, rgba(155,116,42,.07), transparent 26%),
+    radial-gradient(circle at 0% 20%, rgba(64,110,88,.05), transparent 24%),
+    radial-gradient(circle at 100% 10%, rgba(110,70,43,.05), transparent 22%),
+    #090d0a !important;
 }
-html body #app{
-  position:relative;
+#app{
   background:
-   linear-gradient(180deg, rgba(6,11,9,.82), rgba(8,12,10,.90)),
-   radial-gradient(circle at 50% 0%, rgba(53,73,60,.14), transparent 38%),
-   #09100d !important;
-  box-shadow:0 22px 70px rgba(0,0,0,.58), 0 0 0 1px rgba(170,140,86,.08) !important;
-  overflow:hidden;
+    linear-gradient(180deg, rgba(10,14,12,.96), rgba(8,12,10,.98)) !important;
 }
-html body #app::before{
+#app > header{
+  background:
+    linear-gradient(180deg, rgba(18,25,20,.96), rgba(10,15,12,.94)) !important;
+  box-shadow:0 10px 26px rgba(0,0,0,.28), inset 0 -1px 0 rgba(255,230,168,.04) !important;
+}
+#app > header .uinfo,
+#app > header .currs,
+#app > header .meter-item,
+#app > header .crub,
+#app > header .cgram{
+  box-shadow:0 5px 14px rgba(0,0,0,.18);
+}
+#app > header .uavatar{
+  box-shadow:0 0 0 1px rgba(203,170,107,.36), 0 6px 16px rgba(0,0,0,.26), 0 0 18px rgba(214,171,82,.08) !important;
+}
+#app > header .mbar,
+#app .sv-bar,
+#app .battle-timer,
+#app .journal-tabs{
+  box-shadow:inset 0 1px 4px rgba(0,0,0,.42), 0 0 0 1px rgba(255,231,171,.03);
+}
+#app > header .mfill{filter:saturate(1.06) brightness(1.04)}
+
+#zone-nav{
+  background:
+    linear-gradient(180deg, rgba(18,24,19,.98), rgba(9,14,11,.98)) !important;
+  box-shadow:0 -10px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,227,162,.05) !important;
+}
+#zone-nav .tab-btn{
+  background:
+    linear-gradient(180deg, rgba(27,35,29,.58), rgba(12,18,14,.42)) !important;
+  border-color:rgba(174,144,87,.18) !important;
+  box-shadow:inset 0 1px 0 rgba(255,240,198,.04), 0 6px 14px rgba(0,0,0,.14) !important;
+  text-shadow:0 1px 2px rgba(0,0,0,.40);
+}
+#zone-nav .tab-btn.active{
+  background:
+    linear-gradient(90deg, rgba(239,214,152,.10), rgba(239,214,152,0) 18%, rgba(239,214,152,.10) 36%),
+    linear-gradient(180deg, rgba(81,63,31,.56), rgba(24,20,13,.48)) !important;
+  background-size:200% 100%, 100% 100% !important;
+  border-color:rgba(208,174,107,.54) !important;
+  color:#f5dfae !important;
+  box-shadow:inset 0 1px 0 rgba(255,238,190,.11), 0 0 0 1px rgba(110,87,48,.24), 0 10px 18px rgba(0,0,0,.20), 0 0 16px rgba(219,181,95,.10) !important;
+  animation:v142-sheen 4.8s linear infinite, v142-pulse 3.8s ease-in-out infinite;
+}
+#zone-nav .tab-btn.active::after{
+  box-shadow:0 0 8px rgba(237,195,101,.42), 0 0 16px rgba(237,195,101,.16) !important;
+}
+#zone-nav .tab-btn span,
+#zone-nav .tab-btn svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.38))}
+
+.card,
+.modal-box,
+details.kpk-panel,
+.kpk-panel,
+.location-card,
+.boss-card,
+.facility-card,
+.workshop-item,
+.field-expedition,
+.supply-body,
+.poster-card,
+.sv-card,
+.building-card,
+.refuge-room,
+.quest-card,
+.arena-card,
+.expedition-card,
+.dossier-combat,
+.journal-shell,
+.eslot{
+  background:
+    linear-gradient(180deg, rgba(255,233,180,.03), rgba(255,233,180,0) 22%),
+    linear-gradient(180deg, var(--v142-panel-top), var(--v142-panel-bot)) !important;
+  border-color:var(--v142-line) !important;
+  box-shadow:0 12px 28px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,236,186,.04), 0 0 16px rgba(219,180,92,.04) !important;
+}
+.card:hover,
+.location-card:hover,
+.boss-card:hover,
+.facility-card:hover,
+.workshop-item:hover,
+.building-card:hover,
+.quest-card:hover,
+.eslot:hover{
+  box-shadow:0 16px 32px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,239,191,.05), 0 0 20px rgba(221,183,96,.07) !important;
+}
+.cheader,
+.section-label,
+.hero-copy h1,
+.boss-copy h3,
+.journal-title>span,
+.quest-title,
+.building-card h2,
+.workshop-item h3,
+.facility-card h3{
+  text-shadow:0 2px 6px rgba(0,0,0,.44);
+}
+.section-label small,
+.eyebrow,
+.hero-meta,
+.pack-caption small,
+.boss-copy small,
+.workshop-item small,
+.facility-next,
+.quest-meta,
+.building-meta,
+.readout small{
+  color:#d1b37b !important;
+}
+
+.zone-hero,
+details.kpk-panel > summary.zone-hero,
+.building-panel-heading,
+.report-cover-heading,
+.building-section-cover{
+  box-shadow:0 16px 38px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,236,185,.05), 0 0 20px rgba(215,173,85,.06) !important;
+}
+.zone-hero .hero-copy h1{color:#f4e7c7 !important}
+.zone-hero .hero-copy p{color:#eadbb6 !important}
+
+.btn,
+button.btn,
+input[type="button"],
+input[type="submit"]{
+  text-shadow:0 1px 2px rgba(0,0,0,.32);
+  box-shadow:inset 0 1px 0 rgba(255,239,190,.08), inset 0 -2px 0 rgba(0,0,0,.28), 0 8px 18px rgba(0,0,0,.20) !important;
+}
+.btn:hover,
+button.btn:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover{
+  filter:brightness(1.05);
+  box-shadow:inset 0 1px 0 rgba(255,241,196,.10), inset 0 -2px 0 rgba(0,0,0,.32), 0 10px 20px rgba(0,0,0,.24) !important;
+}
+.btn.btn-gold,
+button.btn-gold,
+#app .btn-gold{
+  background:
+    linear-gradient(90deg, rgba(255,248,218,.18), rgba(255,248,218,0) 28%, rgba(255,248,218,.12) 56%, rgba(255,248,218,0) 80%),
+    linear-gradient(180deg, #d8be7e, #caa15d 54%, #9b7a42) !important;
+  background-size:220% 100%, 100% 100% !important;
+  border-color:rgba(122,91,39,.72) !important;
+  color:#22170d !important;
+  box-shadow:inset 0 1px 0 rgba(255,248,223,.52), inset 0 -2px 0 rgba(91,62,19,.26), 0 10px 22px rgba(0,0,0,.24), 0 0 18px rgba(227,186,94,.10) !important;
+  animation:v142-sheen 6s linear infinite;
+}
+.btn.btn-dark,
+button.btn-dark,
+#app .btn-dark{
+  background:linear-gradient(180deg, rgba(32,43,36,.94), rgba(12,19,15,.96)) !important;
+  border-color:rgba(171,145,94,.32) !important;
+  color:#ead7ad !important;
+}
+
+.modal-box{
+  box-shadow:0 24px 52px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,239,189,.05), 0 0 22px rgba(207,166,83,.06) !important;
+}
+.modal-box .mheader,
+.modal-box .cheader{position:relative}
+.modal-box .mheader::after,
+.modal-box .cheader::after,
+.section-label::after{
   content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:
-   radial-gradient(circle at 50% 0%, rgba(245,201,111,.05), transparent 30%),
-   radial-gradient(circle at 50% 120%, rgba(24,65,50,.15), transparent 34%),
-   linear-gradient(180deg, rgba(255,214,132,.02), transparent 18%, transparent 80%, rgba(0,0,0,.12));
-  mix-blend-mode:screen;
-}
-html body #app::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:linear-gradient(90deg, rgba(255,255,255,.018) 0, rgba(255,255,255,0) 10%, rgba(255,255,255,.012) 20%, rgba(255,255,255,0) 30%, rgba(255,255,255,.018) 40%, rgba(255,255,255,0) 50%, rgba(255,255,255,.012) 60%, rgba(255,255,255,0) 70%, rgba(255,255,255,.018) 80%, rgba(255,255,255,0) 100%);
-  opacity:.22;
-}
-html body #app > header,
-html body #app > .content,
-html body #app > nav,
-html body #app > *{position:relative;z-index:1}
-
-html body #app > header{
-  background:
-   linear-gradient(180deg, rgba(12,18,15,.98), rgba(10,16,13,.92)) !important;
-  border-bottom:1px solid rgba(184,149,84,.34) !important;
-  box-shadow:0 12px 30px rgba(0,0,0,.34), inset 0 -1px rgba(255,224,154,.06) !important;
-}
-html body #app > header::after{
-  content:"";
-  position:absolute;
-  left:12px; right:12px; bottom:0; height:1px;
-  background:linear-gradient(90deg, transparent, rgba(220,185,112,.52), transparent);
-}
-html body #app > header .uinfo,
-html body #app > header .currs,
-html body #app > header .meter-item,
-html body #app > header .crub,
-html body #app > header .cgram{
-  box-shadow:0 7px 18px rgba(0,0,0,.20);
-}
-html body #app > header .uavatar{
-  box-shadow:0 0 0 1px rgba(205,170,104,.42), 0 8px 20px rgba(0,0,0,.35), 0 0 22px rgba(170,125,58,.12) !important;
-}
-html body #app > header .meter-item{
-  background:linear-gradient(180deg, rgba(16,24,19,.86), rgba(9,15,12,.72)) !important;
-  border-color:rgba(170,140,86,.18) !important;
-}
-html body #app > header .mbar{
-  box-shadow:inset 0 1px 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,229,163,.03);
-}
-html body #app > header .mfill{filter:saturate(1.1) brightness(1.02)}
-
-html body #app nav#zone-nav{
-  background:
-   linear-gradient(180deg, rgba(13,19,16,.96), rgba(7,11,9,.98)),
-   url("zona-assets/asset-01.jpg") center 55%/cover no-repeat !important;
-  border:1px solid rgba(160,133,84,.72) !important;
-  border-top:2px solid rgba(204,171,106,.78) !important;
-  box-shadow:0 -18px 36px rgba(0,0,0,.42), inset 0 1px rgba(255,234,181,.08), 0 0 0 1px rgba(255,208,113,.05) !important;
-  backdrop-filter:blur(6px);
-  isolation:isolate;
-}
-html body #app nav#zone-nav::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:linear-gradient(90deg, rgba(255,215,136,.04), transparent 20%, transparent 80%, rgba(255,215,136,.04));
-}
-html body #app nav#zone-nav .tab-btn{
-  position:relative;
-  overflow:hidden;
-  border-radius:10px !important;
-  border:1px solid rgba(170,140,86,.20) !important;
-  background:linear-gradient(180deg, rgba(21,29,24,.48), rgba(10,15,12,.28)) !important;
-  box-shadow:inset 0 1px rgba(255,243,199,.035), 0 6px 16px rgba(0,0,0,.16) !important;
-  transition:transform .18s ease, filter .18s ease, box-shadow .18s ease, border-color .18s ease, color .18s ease;
-}
-html body #app nav#zone-nav .tab-btn::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:radial-gradient(circle at 50% 0%, rgba(244,203,122,.10), transparent 45%);
-  opacity:.0;
-  transition:opacity .18s ease;
-  pointer-events:none;
-}
-html body #app nav#zone-nav .tab-btn:hover{
-  transform:translateY(-1px);
-  filter:brightness(1.08);
-  border-color:rgba(203,171,108,.44) !important;
-  box-shadow:inset 0 1px rgba(255,239,191,.06), 0 10px 22px rgba(0,0,0,.24), 0 0 14px rgba(221,181,91,.08) !important;
-}
-html body #app nav#zone-nav .tab-btn:hover::before{opacity:1}
-html body #app nav#zone-nav .tab-btn.active{
-  background:linear-gradient(180deg, rgba(109,84,36,.34), rgba(25,20,12,.32)) !important;
-  color:#ffe2a3 !important;
-  border-color:rgba(210,176,108,.86) !important;
-  box-shadow:inset 0 1px rgba(255,236,183,.14), inset 0 0 25px rgba(195,146,56,.14), 0 0 0 1px rgba(123,95,45,.34), 0 12px 26px rgba(0,0,0,.24), 0 0 18px rgba(214,171,79,.14) !important;
-}
-html body #app nav#zone-nav .tab-btn.active::before{opacity:1}
-html body #app nav#zone-nav .tab-btn.active::after{
-  box-shadow:0 0 10px rgba(234,196,111,.55), 0 0 18px rgba(234,196,111,.24) !important;
-}
-html body #app nav#zone-nav .tab-btn svg,
-html body #app nav#zone-nav .tab-btn>span:not(.tbadge){
-  filter:drop-shadow(0 2px 4px rgba(0,0,0,.45));
-}
-html body #app nav#zone-nav .tab-btn.active svg,
-html body #app nav#zone-nav .tab-btn.active>span:not(.tbadge){
-  filter:drop-shadow(0 0 10px rgba(230,191,103,.22)) drop-shadow(0 2px 4px rgba(0,0,0,.42));
+  display:block;
+  margin-top:6px;
+  width:100%;
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(218,180,101,.55), transparent);
+  animation:v142-glowLine 4.2s ease-in-out infinite;
 }
 
-html body #app .card,
-html body #app .modal-box,
-html body #app .kpk-panel,
-html body #app details.kpk-panel,
-html body #app .location-card,
-html body #app .boss-card,
-html body #app .poster-card,
-html body #app .dossier-combat,
-html body #app .journal-shell,
-html body #app .supply-body,
-html body #app .eslot,
-html body #app .sv-card{
-  background:
-   linear-gradient(180deg, rgba(11,18,15,.90), rgba(8,13,11,.82)) !important;
-  border-color:rgba(178,145,88,.44) !important;
-  box-shadow:0 14px 28px rgba(0,0,0,.28), inset 0 1px rgba(255,235,186,.04), 0 0 0 1px rgba(255,211,122,.03) !important;
-  backdrop-filter:blur(5px);
+input,
+select,
+textarea,
+.sv-picker-trigger,
+.sv-location-menu,
+.sv-sector-search input{
+  box-shadow:inset 0 1px 4px rgba(0,0,0,.42), 0 0 0 1px rgba(255,230,170,.03) !important;
 }
-html body #app .card:hover,
-html body #app .location-card:hover,
-html body #app .boss-card:hover,
-html body #app .kpk-panel:hover{
-  box-shadow:0 18px 34px rgba(0,0,0,.32), inset 0 1px rgba(255,236,182,.05), 0 0 20px rgba(207,166,84,.08) !important;
-}
-html body #app .cheader,
-html body #app .section-label,
-html body #app .pack-caption span,
-html body #app .boss-copy h3,
-html body #app .journal-title>span{
-  text-shadow:0 1px 2px rgba(0,0,0,.65);
-}
-html body #app .section-label small,
-html body #app .eyebrow,
-html body #app .hero-meta,
-html body #app .pack-caption small{
-  color:#d1b57c !important;
+input:focus,
+select:focus,
+textarea:focus,
+.sv-picker-trigger:focus,
+.sv-sector-search input:focus{
+  outline:none;
+  border-color:rgba(208,174,107,.58) !important;
+  box-shadow:0 0 0 1px rgba(208,174,107,.34), 0 0 12px rgba(223,184,93,.10), inset 0 1px 4px rgba(0,0,0,.42) !important;
 }
 
-html body #app details.kpk-panel > summary.zone-hero,
-html body #app .zone-hero{
-  border:1px solid rgba(193,158,93,.50) !important;
-  box-shadow:0 18px 42px rgba(0,0,0,.34), inset 0 1px rgba(255,235,189,.05), 0 0 0 1px rgba(255,210,123,.04) !important;
-  overflow:hidden;
+#app .loot-badge,
+#app .brarity,
+#app .shop-price,
+#app .notif-dot,
+#app .attention-dot,
+#app .tbadge{
+  box-shadow:0 0 10px rgba(232,118,84,.24), 0 0 18px rgba(232,118,84,.10), inset 0 1px 0 rgba(255,231,220,.10);
 }
-html body #app details.kpk-panel > summary.zone-hero::before,
-html body #app .zone-hero::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:
-   linear-gradient(180deg, rgba(255,219,142,.08), transparent 26%, transparent 68%, rgba(0,0,0,.12)),
-   radial-gradient(circle at 78% 18%, rgba(255,178,84,.18), transparent 30%),
-   radial-gradient(circle at 18% 82%, rgba(59,121,96,.12), transparent 25%);
-  pointer-events:none;
-}
-html body #app details.kpk-panel[open] > summary.zone-hero,
-html body #app .zone-hero:hover{
-  box-shadow:0 18px 42px rgba(0,0,0,.40), inset 0 1px rgba(255,238,197,.08), 0 0 28px rgba(209,168,84,.12) !important;
-}
-html body #app .hero-copy h1{
-  text-shadow:0 3px 12px rgba(0,0,0,.55), 0 0 16px rgba(218,169,84,.10);
-}
-html body #app .hero-copy p{color:#f1e1bf !important}
-
-html body #app .btn,
-html body #app button.btn,
-html body #app .supply-actions button,
-html body #app .journal-tabs .btn,
-html body #app .combat-actions .btn,
-html body #app .tab-btn{
-  transition:transform .16s ease, filter .16s ease, box-shadow .16s ease, border-color .16s ease;
-}
-html body #app .btn,
-html body #app button.btn,
-html body #app .supply-actions button,
-html body #app .journal-tabs .btn,
-html body #app .combat-actions .btn{
-  border-color:rgba(194,160,96,.70) !important;
-  box-shadow:inset 0 1px rgba(255,237,190,.09), inset 0 -2px rgba(0,0,0,.32), 0 8px 20px rgba(0,0,0,.24) !important;
-}
-html body #app .btn:hover,
-html body #app button.btn:hover,
-html body #app .supply-actions button:hover,
-html body #app .journal-tabs .btn:hover,
-html body #app .combat-actions .btn:hover{
-  transform:translateY(-1px);
-  filter:brightness(1.07);
-  box-shadow:inset 0 1px rgba(255,239,191,.11), inset 0 -2px rgba(0,0,0,.38), 0 12px 24px rgba(0,0,0,.32), 0 0 18px rgba(212,172,93,.08) !important;
-}
-html body #app .btn.btn-gold,
-html body #app button.btn-gold{
-  box-shadow:inset 0 1px rgba(255,246,214,.20), inset 0 -2px rgba(59,39,11,.24), 0 10px 24px rgba(0,0,0,.28), 0 0 20px rgba(213,171,81,.10) !important;
+#app .readout,
+#app .combat-log,
+#app .journal-entry,
+#app .sv-note,
+#app .sv-route-status,
+#app .building-help,
+#app .building-gold,
+#app .building-result-body,
+#app .field-heading,
+#app .field-actions,
+#app .daily-footer{
+  box-shadow:inset 0 1px 0 rgba(255,236,186,.02);
 }
 
-html body #app .modal-box{
-  background:linear-gradient(180deg, rgba(10,18,14,.97), rgba(8,13,10,.93)) !important;
-  border:1px solid rgba(187,151,88,.46) !important;
-  box-shadow:0 28px 60px rgba(0,0,0,.56), inset 0 1px rgba(255,233,182,.05), 0 0 24px rgba(196,149,72,.08) !important;
+#app #kpk-survival .sv-version-badge{
+  color:#ead6a5 !important;
+  background:linear-gradient(180deg, rgba(46,42,25,.74), rgba(20,21,15,.86)) !important;
+  border-color:rgba(171,145,92,.44) !important;
+  box-shadow:0 0 10px rgba(216,177,90,.08), inset 0 1px 0 rgba(255,240,195,.08) !important;
 }
-html body #app .modal-box .mheader,
-html body #app .modal-box .cheader{
-  text-shadow:0 2px 5px rgba(0,0,0,.42);
-}
-
-html body #app :is(#tab-inventory,#tab-trader) .supply-symbol,
-html body #app #tab-inventory .slot-picture,
-html body #app .loc-art,
-html body #app .boss-card>img,
-html body #app .referral-poster{
-  box-shadow:0 12px 24px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.04);
-  filter:saturate(1.05) contrast(1.03);
-}
-html body #app :is(#tab-inventory,#tab-trader) .supply-stats>span,
-html body #app .brarity,
-html body #app .shop-price,
-html body #app .loot-badge{
-  box-shadow:inset 0 1px rgba(255,240,196,.08), 0 4px 12px rgba(0,0,0,.14);
+#app #kpk-survival .sv-card,
+#app #kpk-survival .sv-location-menu,
+#app #kpk-survival .sv-picker-trigger,
+#app #kpk-survival #sv-location-meta{
+  box-shadow:0 10px 22px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,237,187,.03), 0 0 16px rgba(218,180,92,.04) !important;
 }
 
-html body #app .dossier-track,
-html body #app .mbar,
-html body #app .sv-bar,
-html body #app .battle-timer,
-html body #app .journal-tabs{
-  box-shadow:inset 0 1px 4px rgba(0,0,0,.45), 0 0 0 1px rgba(255,226,154,.03);
-}
-
-html body #app .readout,
-html body #app .combat-log,
-html body #app .journal-entry,
-html body #app .sv-note,
-html body #app .sv-route-status{
-  background:linear-gradient(180deg, rgba(12,18,15,.62), rgba(9,13,11,.48)) !important;
-  border-color:rgba(172,141,87,.30) !important;
-}
-
-html body #app #zone-nav .tbadge,
-html body #app .notif-dot,
-html body #app .attention-dot{
-  box-shadow:0 0 12px rgba(240,115,83,.42), 0 0 24px rgba(240,115,83,.18);
-}
-
-@media (max-width:600px){
-  html body #app{box-shadow:none !important}
-  html body #app > header{box-shadow:0 8px 18px rgba(0,0,0,.28), inset 0 -1px rgba(255,224,154,.05) !important}
-  html body #app nav#zone-nav .tab-btn{border-radius:8px !important}
-  html body #app .card,
-  html body #app .modal-box,
-  html body #app .kpk-panel,
-  html body #app .location-card,
-  html body #app .boss-card{box-shadow:0 10px 20px rgba(0,0,0,.26), inset 0 1px rgba(255,235,186,.03) !important}
-  html body #app .hero-copy h1{text-shadow:0 2px 8px rgba(0,0,0,.55)}
-}
+img,
+canvas{image-rendering:auto}
 
 @media (prefers-reduced-motion:reduce){
-  html body #app nav#zone-nav .tab-btn,
-  html body #app .btn,
-  html body #app button.btn,
-  html body #app .supply-actions button,
-  html body #app .journal-tabs .btn,
-  html body #app .combat-actions .btn{transition:none !important}
+  #zone-nav .tab-btn.active,
+  .btn.btn-gold,
+  button.btn-gold,
+  #app .btn-gold,
+  .modal-box .mheader::after,
+  .modal-box .cheader::after,
+  .section-label::after{animation:none !important}
 }
 </style>
-
 </body>
 </html>
