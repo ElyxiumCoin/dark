@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v14.3 — Survival Material Remaster</title>
+<title>ZONA Z v14.5 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -1410,22 +1410,34 @@ html.proportion-v2 body #app#app#app .story-relic-card .story-lock{color:#ffe6a1
 @keyframes storyRelicFlow{0%,15%{background-position:180% 0,0 0,0% 50%}65%,100%{background-position:-90% 0,0 0,100% 50%}}
 @media(prefers-reduced-motion:reduce){html.proportion-v2 body #app#app#app :is(#inv-items-list,#trader-list)>.card.story-relic-card{animation:none!important;background-position:35% 0,0 0,50% 50%!important}}
 </style>
-<style id="survival-style">#kpk-survival{margin:16px 0;border:1px solid #89764e;border-radius:5px;overflow:hidden;background:#151c15}#kpk-survival>summary.zone-hero{min-height:255px;background:#292919}#kpk-survival>summary.zone-hero>img{object-position:center 42%!important}#kpk-survival>summary.zone-hero:after{background:linear-gradient(90deg,#070b09f2 0%,#0d110ece 36%,#12110a66 62%,#12110a2a 100%),linear-gradient(0deg,#090a08c9,transparent 74%)!important}#kpk-survival .hero-copy{max-width:720px}#kpk-survival .hero-copy p{max-width:560px}#kpk-survival .sv-body{padding:16px;background:radial-gradient(ellipse at 0% 0%,#5363441a,transparent 50%),#121912}#kpk-survival .sv-intro{margin:0 0 14px;color:#d2d7c4;font-size:12px;line-height:1.65}#kpk-survival .sv-grid{display:grid;gap:12px;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}#kpk-survival .sv-card{background:#111811;border:1px solid #5b5038;border-radius:4px;padding:14px}#kpk-survival .sv-card .section-label{margin:0 0 10px}#kpk-survival .sv-route-status{margin:0 0 12px;color:#e4d6b0;font-size:12px;line-height:1.55}#kpk-survival #sv-start{width:100%}#kpk-survival .sv-picker-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#172019;border:1px solid #8e7a52;color:#efe3c0;border-radius:3px;font:700 13px var(--st-head,Arial);letter-spacing:.3px;cursor:pointer;text-align:left}#kpk-survival .sv-picker-trigger small{display:block;color:#aeb59a;font:10px Consolas,monospace;letter-spacing:1.4px;margin-top:4px}#kpk-survival .sv-picker-trigger b{font:20px/1 sans-serif;color:#dfc27f}#kpk-survival .sv-picker-trigger[disabled]{opacity:.6;cursor:not-allowed}#kpk-survival .sv-location-menu{margin-top:8px;border:1px solid #6d5d40;border-radius:4px;background:#0d1310;max-height:340px;overflow:auto}#kpk-survival .sv-location-menu[hidden]{display:none}#kpk-survival .sv-location-option{width:100%;padding:12px 14px;background:transparent;border:0;border-bottom:1px solid #262f24;color:#e7dcc1;text-align:left;cursor:pointer;display:grid;gap:6px}#kpk-survival .sv-location-option:last-child{border-bottom:0}#kpk-survival .sv-location-option strong{font-size:13px;line-height:1.4}#kpk-survival .sv-location-option small{font:10px Consolas,monospace;letter-spacing:1.3px;color:#b6bb9f}#kpk-survival .sv-location-option em{font-style:normal;font-size:11px;color:#d2d6c7;line-height:1.45}#kpk-survival .sv-location-option.is-active,#kpk-survival .sv-location-option:hover{background:linear-gradient(180deg,#1b2218,#131913)}#kpk-survival .sv-location-option[disabled]{opacity:.45;cursor:not-allowed;background:#101410}#kpk-survival .sv-meta-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 12px}#kpk-survival .sv-meta-pill{border:1px solid #4f5a45;border-radius:3px;padding:9px 10px;background:#151d15}#kpk-survival .sv-meta-pill small{display:block;color:#9ea48c;font:9px Consolas,monospace;letter-spacing:1.5px;margin-bottom:4px}#kpk-survival .sv-meta-pill b{display:block;color:#f0e1bb;font-size:12px;line-height:1.45}#kpk-survival .sv-detail-copy{display:grid;gap:8px;color:#d8dccd;font-size:12px;line-height:1.6}#kpk-survival .sv-detail-copy strong{color:#f0e4be}#kpk-survival .sv-detail-copy .sv-sync{color:#e7c97f}#kpk-survival .sv-note{margin-top:10px;font-size:11px;color:#a8ad96;line-height:1.55}#kpk-survival .sv-version-badge{white-space:nowrap}#kpk-survival select[hidden]{display:none!important}@media(max-width:760px){#kpk-survival .sv-grid{grid-template-columns:1fr}#kpk-survival .sv-meta-list{grid-template-columns:1fr 1fr}}@media(max-width:520px){#kpk-survival .sv-body{padding:12px}#kpk-survival .sv-card{padding:12px}#kpk-survival .sv-meta-list{grid-template-columns:1fr}#kpk-survival>summary.zone-hero{min-height:220px}}</style>
-<style id="survival-v128-fullscreen-repair">
-/* Restore the original playable fullscreen Survival layout lost during the v12.6 panel update. */
-#sv-screen[hidden]{display:none!important}#sv-screen{position:fixed;inset:0;z-index:100000;background:#111913;color:#e6dbb9;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);box-sizing:border-box;font:13px Arial,sans-serif;overscroll-behavior:none}body.sv-playing{overflow:hidden!important}#sv-screen header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#172019;border-bottom:1px solid #786743}#sv-screen header div{min-width:0}#sv-screen header small{display:block;color:#b6a06a;font:10px monospace;letter-spacing:2px}#sv-title{display:block;font-size:13px;line-height:1.4}#sv-screen header button{flex-shrink:0;font:12px Arial;padding:10px}.sv-vitals{padding:8px 12px;font:12px monospace;color:#e5c983}.sv-view{position:relative;min-height:0;flex:1;overflow:hidden}#sv-canvas{display:block;touch-action:none}#sv-message{position:absolute;top:12px;left:12px;right:116px;padding:8px;background:#0c140ed9;border-left:2px solid #b49a60;font-size:12px;line-height:1.4;pointer-events:none}.sv-controls{position:absolute;left:18px;right:18px;bottom:calc(34px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;pointer-events:none}#sv-stick{width:112px;height:112px;border:2px solid #b49e6588;border-radius:50%;background:#111a14aa;position:relative;touch-action:none;pointer-events:auto;user-select:none}#sv-stick span{width:46px;height:46px;border:1px solid #ddc280;border-radius:50%;background:#a9955aaa;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none}.sv-actions{display:flex;flex-direction:column;gap:12px}.sv-actions button{min-width:112px;min-height:48px;border:1px solid #bda16a;border-radius:5px;background:linear-gradient(#67572fe8,#342e1de8);color:#ffedbc;font:bold 13px Arial;pointer-events:auto;touch-action:manipulation}.sv-actions button:active{background:#a68c4f}.sv-legend{position:absolute;bottom:calc(8px + env(safe-area-inset-bottom));left:12px;right:12px;color:#d0ccb8;text-align:center;font:9px Arial;pointer-events:none;background:#0b130b99;padding:3px}@media(min-width:900px){.sv-controls{left:40px;right:40px}#sv-message{max-width:440px}}
-
-#sv-screen{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;height:100%!important;height:100dvh!important;z-index:1000000!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;max-width:none!important;min-width:0!important;isolation:isolate!important;}
+<style id="survival-style"></style>
+<style id="survival-v128-fullscreen-repair">#sv-screen{font:13px Arial,sans-serif;overscroll-behavior:none;}
+#sv-screen header{justify-content:space-between;}
+#sv-screen header div{min-width:0;}
+#sv-title{display:block;font-size:13px;line-height:1.4;}
+#sv-screen header button{flex-shrink:0;font:12px Arial;padding:10px;}
+.sv-vitals{padding:8px 12px;font:12px monospace;color:#e5c983;}
+.sv-view{position:relative;min-height:0;flex:1;overflow:hidden;}
+#sv-canvas{display:block;touch-action:none;}
+#sv-message{position:absolute;top:12px;left:12px;right:116px;padding:8px;background:#0c140ed9;border-left:2px solid #b49a60;font-size:12px;line-height:1.4;pointer-events:none;}
+.sv-controls{position:absolute;left:18px;right:18px;bottom:calc(34px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;pointer-events:none;}
+#sv-stick{width:112px;height:112px;border:2px solid #b49e6588;border-radius:50%;background:#111a14aa;position:relative;touch-action:none;pointer-events:auto;user-select:none;}
+#sv-stick span{width:46px;height:46px;border:1px solid #ddc280;border-radius:50%;background:#a9955aaa;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;}
+.sv-actions{display:flex;flex-direction:column;gap:12px;}
+.sv-actions button{min-width:112px;min-height:48px;border:1px solid #bda16a;border-radius:5px;background:linear-gradient(#67572fe8,#342e1de8);color:#ffedbc;font:bold 13px Arial;pointer-events:auto;touch-action:manipulation;}
+.sv-actions button:active{background:#a68c4f;}
+.sv-legend{position:absolute;bottom:calc(8px + env(safe-area-inset-bottom));left:12px;right:12px;color:#d0ccb8;text-align:center;font:9px Arial;pointer-events:none;background:#0b130b99;padding:3px;}
+@media(min-width:900px){.sv-controls{left:40px;right:40px;}
+#sv-message{max-width:440px;}}
+#sv-screen{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;z-index:1000000!important;display:flex!important;flex-direction:column!important;max-width:none!important;min-width:0!important;isolation:isolate!important;}
 #sv-screen[hidden]{display:none!important;}
 #sv-screen>.sv-view{position:relative!important;flex:1 1 0!important;min-width:0!important;min-height:0!important;width:100%!important;height:auto!important;overflow:hidden!important;}
 #sv-screen>.sv-view #sv-canvas{position:absolute!important;inset:0!important;display:block!important;}
 #sv-screen>.sv-view #sv-3d-fx{position:absolute!important;inset:0!important;}
 body.sv-playing{overflow:hidden!important;overscroll-behavior:none!important;}
-@media(max-width:700px){#sv-screen>.sv-view{min-height:0!important;height:auto!important;}#sv-screen header{width:100%!important;}}
-</style>
-<style id="zona-global-graphics-4">
-/* ZONA Z 4.0 — global visual pass. Layout and input geometry preserved. */
-html{background:#090d0b}
+@media(max-width:700px){#sv-screen>.sv-view{min-height:0!important;height:auto!important;}
+#sv-screen header{width:100%!important;}}</style>
+<style id="zona-global-graphics-4">html{background:#090d0b}
 body{background-color:#0c100e}
 body::selection{background:#bda46a;color:#091009}
 #app{position:relative;isolation:isolate}
@@ -1439,67 +1451,18 @@ body::selection{background:#bda46a;color:#091009}
 #app .btn:focus-visible,#app select:focus-visible,#app button:focus-visible{outline:2px solid #d8bd76;outline-offset:2px}
 #app .btn:not(:disabled){transition:filter .16s ease,border-color .16s ease,box-shadow .16s ease}
 #app .btn:not(:disabled):active{filter:brightness(1.16)}
-#kpk-survival .sv-cover{position:relative;isolation:isolate;background-position:center 44%!important}
-#kpk-survival .sv-cover::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(155deg,rgba(5,11,7,.23),rgba(6,11,7,.76)),repeating-linear-gradient(0deg,transparent 0 4px,rgba(0,0,0,.16) 5px)}
-#kpk-survival .sv-picker{background:radial-gradient(ellipse at 0% 0%,#5363441a,transparent 50%),#121912}
-#kpk-survival .sv-quality-row{margin-bottom:8px}
-#kpk-survival select{border:1px solid #8e7a52!important;border-radius:2px}
-#sv-screen{--sv-amber:#d9b67b;background:#0a100d}
-#sv-screen header{background:linear-gradient(120deg,#131d18,#293027 58%,#121b16)!important;border-bottom:1px solid #8f784d;min-height:56px}
-#sv-screen header small{color:#c9a76d;letter-spacing:2.5px}
-#sv-screen #sv-title{color:#eee2c8;text-shadow:0 1px 2px #000}
-#sv-screen .sv-vitals{border-bottom:1px solid #62583d80;background:linear-gradient(90deg,#252e20,#171f19);color:#f1dba6;letter-spacing:.2px;min-height:31px}
-#sv-screen .sv-view{background:radial-gradient(ellipse at center,#28332a,#090e0c 90%)}
-#sv-screen #sv-message{border:1px solid #89744a77;border-left:3px solid #d0a863;background:linear-gradient(110deg,#0d150fe8,#1a2317ca);box-shadow:0 3px 18px #000a;color:#efdfbc;backdrop-filter:blur(2px)}
-#sv-screen #sv-stick{border-color:#bda977a8;background:radial-gradient(circle,#30392ca5,#111912bf);box-shadow:inset 0 0 30px #0008,0 2px 16px #0006}
-#sv-screen #sv-stick::after{content:"";position:absolute;inset:20px;border:1px dashed #beaf7255;border-radius:50%;pointer-events:none}
-#sv-screen #sv-stick span{z-index:1;box-shadow:inset 0 3px 8px #d8bf8766,0 2px 10px #0007}
-#sv-screen .sv-actions button{box-shadow:inset 0 1px #f6d8a951,inset 0 -4px #140f09a0,0 5px 15px #000a;text-shadow:0 1px 2px #000}
-#sv-screen .sv-legend{letter-spacing:.15px;background:#0c140dc9;border:1px solid #81704655;padding:5px 8px}
-@media(max-width:600px){#sv-screen header{padding:8px!important}#sv-screen .sv-vitals{font-size:10px;min-height:28px;padding:8px!important}#sv-screen #sv-message{left:8px;top:8px;right:112px;font-size:11px}#sv-screen .sv-legend{font-size:8px;padding:4px 5px}}
-@media(prefers-reduced-motion:reduce){#app .btn{transition:none!important}#sv-screen .sv-actions button{transition:none!important}}
-</style>
-<style id="survival-v127-polish">
-html.proportion-v2 body #app #kpk-survival{background:#111712;border:1px solid #917550;border-radius:5px;margin:10px 0 15px!important;overflow:hidden}
-html.proportion-v2 body #app #kpk-survival>summary.zone-hero{min-height:150px!important;border:0!important;border-radius:0!important;box-shadow:inset 0 0 0 1px #806740}
-html.proportion-v2 body #app #kpk-survival .hero-copy{max-width:none!important;padding:16px 18px!important}
-html.proportion-v2 body #app #kpk-survival .hero-copy h1{font-size:clamp(27px,6vw,38px)!important;line-height:1.1!important;margin:7px 0!important;letter-spacing:2.5px!important}
-#kpk-survival .sv-version-badge{display:inline-block;color:#d6ad6e;font:700 12px Consolas,monospace!important;letter-spacing:.4px!important;vertical-align:middle;border:1px solid #ad8d5866;padding:4px 7px;border-radius:3px;background:#10150fd9;text-shadow:none}
-html.proportion-v2 body #app #kpk-survival .hero-copy p{max-width:590px!important;font-size:12px!important;line-height:1.52!important;color:#e3d4b7!important}
-html.proportion-v2 body #app #kpk-survival .hero-meta{display:flex;align-items:center;gap:15px;margin-top:13px!important}
-html.proportion-v2 body #app #kpk-survival .sv-body{padding:14px;background:linear-gradient(150deg,#161d17,#101510 52%,#121811)!important}
-html.proportion-v2 body #app #kpk-survival .sv-intro{margin:0 0 12px;font:12px/1.5 Arial,sans-serif;color:#cbd1bc}
-html.proportion-v2 body #app #kpk-survival .sv-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
-html.proportion-v2 body #app #kpk-survival .sv-card{min-width:0;background:#131a14;box-shadow:inset 0 1px 0 #f6d79b0a;border:1px solid #5c533d;padding:12px;border-radius:4px}
-#kpk-survival .sv-picker-trigger{font-family:var(--st-head,Arial)!important;background:linear-gradient(115deg,#232a1e,#121913)!important;box-shadow:inset 0 1px 0 #d9b56e26;border:1px solid #aa8951!important;color:#f5e8ca!important;min-height:64px;border-radius:3px!important}
-#kpk-survival .sv-picker-trigger>span{min-width:0}
-#kpk-survival .sv-picker-trigger #sv-location-current{display:block;line-height:1.4;font-size:13px}
-#kpk-survival .sv-picker-trigger #sv-location-sub{margin-top:5px;white-space:normal}
-#kpk-survival .sv-location-menu{background:#0e150f;border:1px solid #a1875a;box-shadow:0 8px 26px #0009;max-height:375px;overflow-y:auto;overscroll-behavior:contain}
-#kpk-survival .sv-location-option{display:grid!important;grid-template-columns:68px minmax(0,1fr) 22px!important;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #39402f;color:#e6e1d4;position:relative}
-#kpk-survival .sv-loc-thumb{display:block;width:68px;height:55px;object-fit:cover;border:1px solid #665c40;border-radius:2px;filter:saturate(.8) contrast(1.09) brightness(.85)}
-#kpk-survival .sv-location-option.is-active{background:linear-gradient(100deg,#34341f,#172016)!important;box-shadow:inset 3px 0 #d9b36d}
-#kpk-survival .sv-location-option:not([disabled]):hover{background:#263123!important}
-#kpk-survival .sv-location-option .sv-loc-copy{display:block;min-width:0}
-#kpk-survival .sv-location-option .sv-loc-copy strong{display:block;font:700 13px/1.4 Arial,sans-serif}
-#kpk-survival .sv-location-option .sv-loc-copy small{display:block;font:10px/1.35 Consolas,monospace;color:#d7bb8c;margin-top:5px}
-#kpk-survival .sv-location-option .sv-loc-mark{font:700 19px/1 Arial,sans-serif;color:#e0c17e;text-align:center}
-#kpk-survival .sv-location-option[disabled]{opacity:.46;cursor:not-allowed}
-#kpk-survival .sv-location-option[disabled] .sv-loc-thumb{filter:grayscale(1) brightness(.55)}
-#kpk-survival .sv-empty-sectors{padding:14px;color:#e0cda4;font-size:12px}
-#kpk-survival .sv-location-visual{height:126px;position:relative;overflow:hidden;border:1px solid #6c5a3d;border-radius:3px;margin-bottom:10px;background:#121a17}
-#kpk-survival .sv-location-visual img{width:100%;height:100%;display:block;object-fit:cover;object-position:center 46%;filter:saturate(.82) brightness(.80) contrast(1.12)}
-#kpk-survival .sv-location-visual:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 34%,#0c110b8a 100%);pointer-events:none}
-#kpk-survival .sv-location-visual span{position:absolute;left:10px;bottom:8px;z-index:1;color:#f1d8a7;background:#0d1512b8;padding:3px 7px;border:1px solid #8f7544;border-radius:2px;font:10px Consolas,monospace;letter-spacing:1.2px}
-#kpk-survival .sv-meta-pill{background:linear-gradient(#1b221b,#111712);border-color:#505b44}
-#kpk-survival .sv-detail-copy{font-size:11px;line-height:1.55;gap:6px}
-#kpk-survival .sv-note{font-size:11px;margin-top:10px;color:#bac5a6}
-#kpk-survival #sv-start{min-height:48px;letter-spacing:1.2px;margin-top:5px}
-#sv-screen .sv-view:after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 115px #02050391;z-index:2}
-@media(max-width:700px){html.proportion-v2 body #app #kpk-survival .sv-grid{grid-template-columns:1fr}html.proportion-v2 body #app #kpk-survival>summary.zone-hero{min-height:155px!important}html.proportion-v2 body #app #kpk-survival .hero-copy{padding:13px 14px!important}#kpk-survival .sv-location-visual{height:118px}}
-@media(max-width:400px){html.proportion-v2 body #app #kpk-survival .sv-body{padding:10px}html.proportion-v2 body #app #kpk-survival .sv-card{padding:10px}#kpk-survival .sv-location-option{grid-template-columns:58px minmax(0,1fr) 17px!important;gap:8px}#kpk-survival .sv-loc-thumb{width:58px;height:52px}#kpk-survival .sv-search-row{display:block}#kpk-survival .sv-search-row input{width:100%;margin-top:6px}}
-@media(prefers-reduced-motion:reduce){#kpk-survival *{scroll-behavior:auto}}
-</style>
+#sv-screen{--sv-amber:#d9b67b;}
+#sv-screen .sv-vitals{min-height:31px;}
+#sv-screen #sv-stick{border-color:#bda977a8;}
+#sv-screen #sv-stick::after{content:"";position:absolute;inset:20px;border:1px dashed #beaf7255;border-radius:50%;pointer-events:none;}
+#sv-screen .sv-legend{letter-spacing:.15px;}
+@media(max-width:600px){#sv-screen header{padding:8px!important;}
+#sv-screen .sv-vitals{font-size:10px;min-height:28px;padding:8px!important;}
+#sv-screen #sv-message{left:8px;top:8px;right:112px;font-size:11px;}
+#sv-screen .sv-legend{font-size:8px;padding:4px 5px;}}
+@media(prefers-reduced-motion:reduce){#app .btn{transition:none!important}
+#sv-screen .sv-actions button{transition:none!important;}}</style>
+<style id="survival-v127-polish">#sv-screen .sv-view:after{content:"";position:absolute;inset:0;pointer-events:none;}</style>
 
 </head>
 <body><div id="zona-startup-screen" role="status" aria-live="polite"><div class="startup-weather" aria-hidden="true"><div class="startup-rain"></div><div class="startup-fog"></div><div class="startup-lamp"></div></div><div class="startup-content"><div class="startup-eyebrow">КПК СТАЛКЕРА / ТЕРРИТОРИЯ ОТЧУЖДЕНИЯ</div><strong class="startup-title">ZONA Z</strong><div class="startup-caption">У ЗОНЫ ЕСТЬ СВОИ ПРАВИЛА</div><div class="startup-panel"><div class="startup-line"><span>ЗАГРУЗКА КПК</span><span id="zona-startup-percent">0%</span></div><div id="zona-startup-progress" class="startup-track" role="progressbar" aria-label="Подготовка к запуску" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="zona-startup-fill" class="startup-fill"></div></div><p id="zona-startup-message">Устанавливаем связь с КПК…</p><div class="startup-tip" aria-live="off"><strong>СОВЕТ СТАЛКЕРУ</strong><span id="zona-startup-tip">Сюжетное снаряжение нельзя продать или разобрать.</span></div></div><p class="startup-note">Подготовка занимает около 20 секунд.<br>Дождитесь завершения связи перед выходом в Зону.</p><p class="startup-version"><span class="startup-version-tag" aria-label="Версия игры 12.7"><span class="startup-version-label">ВЕРСИЯ</span><span>12.7</span></span></p></div></div>
@@ -6577,135 +6540,112 @@ html.proportion-v2 body #app #refuge-workshop .workshop-tabs .btn[aria-selected=
 html.proportion-v2 body #app #refuge-workshop .workshop-tabs{display:grid!important;grid-template-columns:1fr 1fr;gap:6px!important}
 html.proportion-v2 body #app #refuge-workshop .workshop-filters{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px!important}
 html.proportion-v2 body #app #refuge-workshop .workshop-filters .btn{padding:6px 3px!important;min-width:0!important;white-space:normal!important}
-</style><style id="zona-3d-ui">#sv-screen .sv-view{background:#101713}#sv-minimap-3d{position:absolute;top:12px;right:12px;width:112px;height:94px;z-index:2;border:1px solid #907d56;box-shadow:0 3px 14px #0009;pointer-events:none}#sv-screen #sv-canvas{width:100%;height:100%;display:block;touch-action:none}#sv-screen .sv-controls{z-index:6}#sv-screen #sv-message{z-index:4;max-width:380px;right:135px}#kpk-survival .sv-picker label{margin-top:10px}#sv-screen .sv-actions button{min-height:56px}#sv-screen #sv-camera-tools{position:absolute;right:12px;top:119px;display:flex;flex-direction:column;gap:6px;z-index:5;pointer-events:auto}#sv-camera-tools[hidden]{display:none!important}#sv-screen #sv-camera-tools button{background:#152119d9;color:#e8dcaf;border:1px solid #9b8b60;border-radius:5px;font:700 17px Arial;min-width:40px;min-height:39px;cursor:pointer;touch-action:manipulation}#sv-screen #sv-camera-tools button:active{background:#526345}#sv-screen #sv-3d-fx{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}#sv-screen #sv-3d-prompt{position:absolute;bottom:calc(175px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:6px 10px;border:1px solid #bba16a;background:#102018db;color:#f3dfb0;font:600 11px Arial,sans-serif;text-align:center;max-width:50%;z-index:3;pointer-events:none}#sv-screen #sv-3d-prompt[hidden]{display:none!important}@media(max-width:520px){#sv-screen #sv-camera-tools{top:110px;right:8px}#sv-screen #sv-camera-tools button{min-width:38px;min-height:38px}#sv-screen #sv-3d-prompt{bottom:155px}} </style>
-<style id="zona-survival-7">
-#sv-screen{background:#080d0b!important}
-#sv-screen header{background:linear-gradient(180deg,#131814,#0f1712)!important;border-bottom:1px solid #8f784d;box-shadow:0 10px 26px rgba(0,0,0,.28)}
-#sv-screen .sv-vitals{padding:8px 14px;background:linear-gradient(90deg,#1a211b,#101611 55%,#182018)!important;color:#e8d4a4;border-bottom:1px solid rgba(192,162,97,.22);font:12px monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#sv-screen .sv-view{background:radial-gradient(circle at 50% 42%,#253028 0,#121914 48%,#080d0b 100%)}
-#sv-screen #sv-message{background:linear-gradient(180deg,rgba(10,16,12,.88),rgba(16,25,19,.78));border:1px solid rgba(187,161,106,.46);border-left:3px solid #c4a260;border-radius:10px;padding:10px 12px;box-shadow:0 10px 24px rgba(0,0,0,.34);backdrop-filter:blur(3px)}
-#sv-screen .sv-hud-panel{position:absolute;z-index:5;pointer-events:none;background:linear-gradient(180deg,rgba(8,12,10,.92),rgba(17,24,18,.82));border:1px solid rgba(181,151,91,.62);box-shadow:0 12px 28px rgba(0,0,0,.38);backdrop-filter:blur(4px)}
-#sv-screen .sv-hud-left{left:12px;top:12px;width:186px;border-radius:12px;padding:10px 10px 8px} 
-#sv-screen .sv-brand{color:#f2dfb1;font:700 11px/1.2 Arial,sans-serif;letter-spacing:.6px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px} 
-#sv-screen .sv-brand b{background:#233126;border:1px solid rgba(192,162,97,.46);padding:3px 6px;border-radius:9px;color:#ffdd94;font-size:10px} 
-#sv-screen .sv-stat{display:grid;grid-template-columns:46px 1fr 42px;gap:6px;align-items:center;margin-bottom:5px;color:#d8dbc8;font:700 10px Arial,sans-serif} 
-#sv-screen .sv-stat span{color:#d8cba5} 
-#sv-screen .sv-stat em{font-style:normal;text-align:right;color:#eef1e2;font-size:10px} 
-#sv-screen .sv-bar{display:block;height:8px;border-radius:999px;background:rgba(32,39,30,.95);border:1px solid rgba(255,255,255,.06);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.5)} 
-#sv-screen .sv-bar i{display:block;height:100%;width:50%;border-radius:999px;background:linear-gradient(90deg,#7fe07b,#47a650)} 
-#sv-screen #sv-bar-hp{background:linear-gradient(90deg,#ca4f44,#ff7a65)}
-#sv-screen #sv-bar-energy{background:linear-gradient(90deg,#58c97d,#9aea8d)}
-#sv-screen #sv-bar-hunger{background:linear-gradient(90deg,#d39a32,#f3cb69)}
-#sv-screen #sv-bar-thirst{background:linear-gradient(90deg,#4388d8,#7dc9ff)}
-#sv-screen #sv-bar-radiation{background:linear-gradient(90deg,#b53ad2,#f08dff)}
-#sv-screen .sv-money{margin-top:8px;padding-top:7px;border-top:1px solid rgba(216,203,165,.14);display:flex;justify-content:space-between;color:#f2ddb0;font:700 11px Arial,sans-serif} 
-#sv-screen .sv-hud-right{right:12px;bottom:205px;width:210px;border-radius:12px;padding:10px} 
-#sv-screen .sv-hud-right small{display:block;color:#b9ae8a;font:700 10px Arial,sans-serif;letter-spacing:.6px;margin-bottom:4px} 
-#sv-screen .sv-weapon-box,#sv-screen .sv-objective-box{padding:8px 10px;border-radius:10px;background:rgba(28,35,28,.44);border:1px solid rgba(255,255,255,.05)}
-#sv-screen .sv-objective-box{margin-top:8px} 
-#sv-screen .sv-weapon-box strong,#sv-screen .sv-objective-box strong{display:block;color:#f1dfb6;font-size:15px;line-height:1.15} 
-#sv-screen #sv-weapon-ammo,#sv-screen #sv-objective-dist{margin-top:3px;color:#d3ddc7;font:11px monospace} 
-#sv-screen #sv-zone-state{color:#f0cf84} 
-#sv-screen #sv-minimap-3d{top:12px;right:12px;width:124px;height:104px;border-radius:12px;background:rgba(6,11,10,.82)}
-#sv-screen #sv-camera-tools{top:126px;right:12px} 
-#sv-screen .sv-actions button{min-width:132px;min-height:62px;border-radius:12px;background:linear-gradient(180deg,rgba(117,93,45,.92),rgba(56,46,27,.95));box-shadow:0 10px 22px rgba(0,0,0,.34);font-size:16px} 
-#sv-screen .sv-actions button:last-child{background:linear-gradient(180deg,rgba(83,70,35,.92),rgba(42,33,19,.95))} 
-#sv-screen #sv-stick{width:126px;height:126px;background:radial-gradient(circle at 50% 50%,rgba(11,20,16,.92),rgba(5,9,8,.95));box-shadow:0 12px 26px rgba(0,0,0,.3)}
-#sv-screen #sv-stick:before{content:"";position:absolute;inset:16px;border:2px dashed rgba(212,188,124,.25);border-radius:50%} 
-#sv-screen #sv-stick span{width:58px;height:58px;background:radial-gradient(circle at 35% 35%,#d8c188,#98804d);box-shadow:0 4px 16px rgba(0,0,0,.35)}
-#sv-screen .sv-legend{background:linear-gradient(180deg,rgba(10,15,11,.72),rgba(8,10,8,.86));border-radius:10px;border:1px solid rgba(255,255,255,.05);left:12px;right:12px;bottom:calc(6px + env(safe-area-inset-bottom));padding:4px 8px;color:#d8d1bc;font-size:10px} 
-#sv-screen #sv-3d-prompt{background:linear-gradient(180deg,rgba(16,24,18,.94),rgba(15,26,19,.78));border:1px solid rgba(190,161,99,.58);border-radius:999px;padding:8px 14px;box-shadow:0 10px 20px rgba(0,0,0,.35)}
-#sv-screen .sv-controls{bottom:calc(38px + env(safe-area-inset-bottom))} 
-@media(max-width:760px){#sv-screen .sv-hud-left{width:172px;padding:9px}#sv-screen .sv-hud-right{width:178px;bottom:202px;padding:8px}#sv-screen .sv-weapon-box strong,#sv-screen .sv-objective-box strong{font-size:13px}#sv-screen .sv-actions button{min-width:124px;min-height:58px}}
-@media(max-width:520px){#sv-screen .sv-hud-left{width:155px;transform:scale(.94);transform-origin:top left}#sv-screen .sv-hud-right{right:10px;bottom:196px;width:154px;transform:scale(.95);transform-origin:bottom right}#sv-screen #sv-message{right:10px;left:10px;top:136px;max-width:none}#sv-screen #sv-minimap-3d{top:146px;right:10px;width:108px;height:92px}#sv-screen #sv-camera-tools{top:244px;right:10px}#sv-screen #sv-3d-prompt{max-width:72%;bottom:172px}}
-</style>
+</style><style id="zona-3d-ui">#sv-minimap-3d{position:absolute;top:12px;right:12px;width:112px;height:94px;z-index:2;border:1px solid #907d56;box-shadow:0 3px 14px #0009;pointer-events:none;}
+#sv-screen #sv-canvas{width:100%;height:100%;display:block;touch-action:none;}
+#sv-screen #sv-message{z-index:4;}
+#sv-screen #sv-camera-tools{position:absolute;pointer-events:auto;}
+#sv-camera-tools[hidden]{display:none!important;}
+#sv-screen #sv-camera-tools button{color:#e8dcaf;border:1px solid #9b8b60;font:700 17px Arial;cursor:pointer;touch-action:manipulation;}
+#sv-screen #sv-camera-tools button:active{background:#526345;}
+#sv-screen #sv-3d-fx{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;}
+#sv-screen #sv-3d-prompt{position:absolute;transform:translateX(-50%);color:#f3dfb0;font:600 11px Arial,sans-serif;text-align:center;z-index:3;pointer-events:none;}
+#sv-screen #sv-3d-prompt[hidden]{display:none!important;}</style>
+<style id="zona-survival-7">#sv-screen .sv-vitals{border-bottom:1px solid rgba(192,162,97,.22);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#sv-screen .sv-hud-panel{position:absolute;pointer-events:none;}
+#sv-screen .sv-brand b{background:#233126;border:1px solid rgba(192,162,97,.46);color:#ffdd94;}
+#sv-screen .sv-stat{display:grid;align-items:center;color:#d8dbc8;font:700 10px Arial,sans-serif;}
+#sv-screen .sv-stat span{color:#d8cba5;}
+#sv-screen .sv-stat em{font-style:normal;text-align:right;color:#eef1e2;}
+#sv-screen .sv-bar{display:block;border-radius:999px;overflow:hidden;}
+#sv-screen .sv-bar i{display:block;height:100%;width:50%;border-radius:999px;background:linear-gradient(90deg,#7fe07b,#47a650);}
+#sv-screen #sv-bar-hp{background:linear-gradient(90deg,#ca4f44,#ff7a65);}
+#sv-screen #sv-bar-energy{background:linear-gradient(90deg,#58c97d,#9aea8d);}
+#sv-screen #sv-bar-hunger{background:linear-gradient(90deg,#d39a32,#f3cb69);}
+#sv-screen #sv-bar-thirst{background:linear-gradient(90deg,#4388d8,#7dc9ff);}
+#sv-screen #sv-bar-radiation{background:linear-gradient(90deg,#b53ad2,#f08dff);}
+#sv-screen .sv-money{border-top:1px solid rgba(216,203,165,.14);display:flex;justify-content:space-between;color:#f2ddb0;font:700 11px Arial,sans-serif;}
+#sv-screen .sv-hud-right small{display:block;color:#b9ae8a;font:700 10px Arial,sans-serif;letter-spacing:.6px;margin-bottom:4px;}
+#sv-screen .sv-weapon-box,#sv-screen .sv-objective-box{border-radius:10px;background:rgba(28,35,28,.44);border:1px solid rgba(255,255,255,.05);}
+#sv-screen .sv-objective-box{margin-top:8px;}
+#sv-screen .sv-weapon-box strong,#sv-screen .sv-objective-box strong{display:block;color:#f1dfb6;font-size:15px;line-height:1.15;}
+#sv-screen #sv-weapon-ammo,#sv-screen #sv-objective-dist{margin-top:3px;color:#d3ddc7;font:11px monospace;}
+#sv-screen #sv-zone-state{color:#f0cf84;}
+#sv-screen #sv-stick:before{content:"";position:absolute;border-radius:50%;}
+#sv-screen .sv-legend{left:12px;right:12px;font-size:10px;}
+#sv-screen #sv-3d-prompt{background:linear-gradient(180deg,rgba(16,24,18,.94),rgba(15,26,19,.78));border:1px solid rgba(190,161,99,.58);border-radius:999px;box-shadow:0 10px 20px rgba(0,0,0,.35);}
+@media(max-width:760px){#sv-screen .sv-hud-left{width:172px;padding:9px;}
+#sv-screen .sv-hud-right{width:178px;bottom:202px;padding:8px;}
+#sv-screen .sv-weapon-box strong,#sv-screen .sv-objective-box strong{font-size:13px;}
+#sv-screen .sv-actions button{min-width:124px;min-height:58px;}}
+@media(max-width:520px){#sv-screen .sv-hud-left{transform-origin:top left;}
+#sv-screen .sv-hud-right{transform-origin:bottom right;}
+#sv-screen #sv-message{max-width:none;}
+#sv-screen #sv-3d-prompt{max-width:72%;bottom:172px;}}</style>
 
-<style id="zona-survival-8-mobile">
-/* Single overhead 3D view: keep touch targets clear of game content. */
-#sv-screen #sv-message[hidden]{display:none!important}
-#sv-screen .sv-hud-panel{box-sizing:border-box}
-#sv-screen #sv-message{transition:opacity .2s ease;max-height:80px;overflow:hidden}
-#sv-screen .sv-brand{gap:4px}
-#sv-screen .sv-hud-left{z-index:7}
-#sv-screen .sv-hud-right{z-index:7}
-#sv-screen .sv-actions{z-index:9}
-#sv-screen #sv-3d-fx{mix-blend-mode:screen;opacity:.7}
-#sv-screen .sv-legend{opacity:.85}
-@media(max-width:520px){
- #sv-screen .sv-hud-left{top:8px;left:8px;width:146px;transform:none;padding:7px}
- #sv-screen .sv-hud-left .sv-stat{grid-template-columns:44px 1fr 36px;gap:4px;font-size:9px}
- #sv-screen .sv-hud-left .sv-brand{font-size:9px}
- #sv-screen .sv-hud-right{right:9px;bottom:calc(192px + env(safe-area-inset-bottom));width:146px;transform:none;padding:7px}
- #sv-screen .sv-weapon-box,#sv-screen .sv-objective-box{padding:5px}
- #sv-screen #sv-message{left:8px;right:8px;top:286px;min-height:0;font-size:11px;max-height:56px}
- #sv-screen #sv-minimap-3d{top:8px;right:8px;width:100px;height:82px}
- #sv-screen #sv-camera-tools{top:98px;right:9px;gap:4px}
- #sv-screen #sv-camera-tools button{min-width:35px;min-height:34px}
- #sv-screen .sv-actions button{min-width:100px;min-height:53px;font-size:13px}
- #sv-screen #sv-stick{width:108px;height:108px}
- #sv-screen #sv-stick span{width:50px;height:50px}
- #sv-screen .sv-controls{bottom:calc(33px + env(safe-area-inset-bottom));left:14px;right:12px}
- #sv-screen .sv-legend{font-size:8px}
-}
-</style>
+<style id="zona-survival-8-mobile">#sv-screen .sv-hud-panel{box-sizing:border-box;}
+#sv-screen #sv-message{transition:opacity .2s ease;}
+#sv-screen .sv-hud-left{z-index:7;}
+#sv-screen .sv-hud-right{z-index:7;}
+#sv-screen .sv-actions{z-index:9;}
+#sv-screen #sv-3d-fx{mix-blend-mode:screen;opacity:.7;}
+#sv-screen .sv-legend{opacity:.85;}
+@media(max-width:520px){#sv-screen .sv-hud-left{top:8px;left:8px;padding:7px;}
+#sv-screen .sv-hud-left .sv-stat{grid-template-columns:44px 1fr 36px;gap:4px;font-size:9px;}
+#sv-screen .sv-hud-left .sv-brand{font-size:9px;}
+#sv-screen .sv-hud-right{right:9px;padding:7px;}
+#sv-screen .sv-weapon-box,#sv-screen .sv-objective-box{padding:5px;}
+#sv-screen #sv-message{min-height:0;max-height:56px;}
+#sv-screen #sv-minimap-3d{top:8px;right:8px;}
+#sv-screen #sv-camera-tools{top:98px;right:9px;gap:4px;}
+#sv-screen #sv-camera-tools button{min-width:35px;min-height:34px;}
+#sv-screen .sv-actions button{font-size:13px;}
+#sv-screen #sv-stick span{width:50px;height:50px;}
+#sv-screen .sv-controls{bottom:calc(33px + env(safe-area-inset-bottom));left:14px;right:12px;}
+#sv-screen .sv-legend{font-size:8px;}}</style>
 
-<style id="zona-survival-ui-repair">
-/* Survival 3D UI repair — keeps the world visible; no gameplay changes */
-#sv-screen{padding-top:0!important;background:#0b100e!important}
-#sv-screen header{position:absolute!important;z-index:12!important;left:0;right:0;top:0;min-height:0!important;height:43px!important;display:flex!important;align-items:center!important;box-sizing:border-box!important;padding:4px 9px!important;background:linear-gradient(90deg,rgba(9,14,11,.95),rgba(13,20,16,.83))!important;border-bottom:1px solid rgba(193,160,95,.35)!important;box-shadow:0 3px 14px rgba(0,0,0,.32)!important}
-#sv-screen header small{font-size:8px!important;letter-spacing:1px!important;line-height:1.1!important}
-#sv-screen #sv-title{font-size:12px!important;line-height:1.2!important;max-width:calc(100vw - 123px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#sv-screen #sv-pause{font-size:10px!important;min-width:83px;min-height:31px!important;padding:4px 7px!important;white-space:nowrap;background:rgba(20,29,23,.92)!important;color:#e7d8b7!important;border:1px solid #746446!important;border-radius:7px!important}
-#sv-screen .sv-vitals{display:none!important}
-#sv-screen .sv-view{position:relative!important;flex:1!important;min-height:100%!important;height:100%!important}
-#sv-screen #sv-message{position:absolute!important;top:auto!important;bottom:142px!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;width:max-content!important;max-width:min(265px,62vw)!important;max-height:51px!important;min-height:0!important;padding:7px 10px!important;border-radius:8px!important;font-size:10px!important;line-height:1.3!important;text-align:center!important;background:rgba(12,20,16,.84)!important;overflow:hidden!important;box-shadow:0 5px 10px rgba(0,0,0,.28)!important}
-#sv-screen #sv-message[hidden]{display:none!important}
-#sv-screen .sv-hud-panel{z-index:8!important;backdrop-filter:none!important;background:rgba(9,16,13,.82)!important;border:1px solid rgba(193,169,112,.40)!important;box-shadow:0 4px 14px rgba(0,0,0,.23)!important}
-#sv-screen .sv-hud-left{top:50px!important;left:8px!important;right:auto!important;width:164px!important;box-sizing:border-box!important;padding:8px!important;border-radius:7px!important;transform:none!important}
-#sv-screen .sv-brand{font-size:8px!important;letter-spacing:0!important;line-height:1.15!important;gap:4px!important;margin-bottom:6px!important}
-#sv-screen .sv-brand b{font-size:8px!important;padding:2px 4px!important;border-radius:5px!important;flex-shrink:0}
-#sv-screen .sv-stat{grid-template-columns:42px 1fr 32px!important;gap:3px!important;margin-bottom:4px!important;font-size:9px!important}
-#sv-screen .sv-stat em{font-size:9px!important}
-#sv-screen .sv-bar{height:6px!important}
-#sv-screen .sv-money{margin-top:5px!important;padding-top:5px!important;font-size:9px!important}
-#sv-screen #sv-minimap-3d{top:50px!important;right:8px!important;width:104px!important;height:94px!important;border-radius:8px!important;box-shadow:0 3px 9px rgba(0,0,0,.32)!important;z-index:5!important}
-#sv-screen #sv-camera-tools{top:151px!important;right:8px!important;display:flex!important;flex-direction:row!important;gap:4px!important;z-index:10!important}
-#sv-screen #sv-camera-tools[hidden]{display:none!important}
-#sv-screen #sv-camera-tools button{min-width:30px!important;min-height:29px!important;padding:2px!important;font-size:12px!important;border-radius:6px!important;background:rgba(12,18,14,.82)!important}
-#sv-screen #sv-camera-tools #sv-cam-north{font-size:8px!important;min-width:39px!important}
-#sv-screen .sv-hud-right{top:auto!important;left:auto!important;right:8px!important;bottom:145px!important;width:113px!important;padding:4px!important;border-radius:7px!important;transform:none!important}
-#sv-screen .sv-weapon-box{padding:4px!important;border:0!important;background:transparent!important}
-#sv-screen .sv-weapon-box small{font-size:8px!important;margin-bottom:2px!important}
-#sv-screen .sv-weapon-box strong{font-size:10px!important;line-height:1.1!important;max-height:27px;overflow:hidden}
-#sv-screen #sv-weapon-ammo{font-size:8px!important;line-height:1.1!important;margin-top:3px!important}
-#sv-screen .sv-objective-box{display:none!important}
-#sv-screen #sv-3d-prompt{bottom:127px!important;left:50%!important;max-width:170px!important;padding:5px 8px!important;font-size:9px!important}
-#sv-screen .sv-controls{left:14px!important;right:12px!important;bottom:calc(20px + env(safe-area-inset-bottom))!important;align-items:flex-end!important}
-#sv-screen #sv-stick{width:96px!important;height:96px!important;border-width:1px!important;background:rgba(9,16,13,.53)!important;box-shadow:0 4px 10px rgba(0,0,0,.20)!important}
-#sv-screen #sv-stick:before{inset:14px!important;border-width:1px!important}
-#sv-screen #sv-stick span{width:42px!important;height:42px!important;box-shadow:none!important;background:linear-gradient(135deg,#bea979,#8e8056)!important}
-#sv-screen .sv-actions{flex-direction:row!important;gap:7px!important;align-items:center!important}
-#sv-screen .sv-actions button{min-width:64px!important;width:64px!important;min-height:64px!important;height:64px!important;padding:4px!important;font-size:11px!important;border-radius:50%!important;background:rgba(24,34,27,.83)!important;border-color:rgba(183,157,100,.65)!important;box-shadow:0 3px 10px rgba(0,0,0,.20)!important}
-#sv-screen .sv-actions button:last-child{background:rgba(59,35,29,.85)!important;border-color:rgba(210,125,101,.61)!important}
-#sv-screen .sv-legend{display:none!important}
-@media(min-width:750px){
- #sv-screen .sv-hud-left{width:179px!important;top:51px!important;padding:9px!important}
- #sv-screen .sv-hud-right{width:153px!important;bottom:24px!important;right:165px!important}
- #sv-screen .sv-objective-box{display:block!important;padding:5px!important;margin-top:4px!important}
- #sv-screen .sv-actions button{width:72px!important;height:72px!important}
- #sv-screen #sv-stick{width:112px!important;height:112px!important}
- #sv-screen #sv-minimap-3d{width:126px!important;height:110px!important}
- #sv-screen #sv-camera-tools{top:166px!important}
-}
-@media(max-width:360px){
- #sv-screen .sv-hud-left{width:139px!important}
- #sv-screen .sv-stat{grid-template-columns:38px 1fr 29px!important;font-size:7px!important}
- #sv-screen #sv-minimap-3d{width:92px!important;height:82px!important}
- #sv-screen #sv-camera-tools{top:140px!important}
- #sv-screen .sv-actions button{width:56px!important;min-width:56px!important;height:56px!important;min-height:56px!important;font-size:10px!important}
- #sv-screen #sv-stick{width:85px!important;height:85px!important}
-}
-</style>
+<style id="zona-survival-ui-repair">#sv-screen{padding-top:0!important;}
+#sv-screen header{z-index:12!important;left:0;right:0;top:0;display:flex!important;align-items:center!important;box-sizing:border-box!important;}
+#sv-screen header small{font-size:8px!important;line-height:1.1!important;}
+#sv-screen #sv-title{line-height:1.2!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#sv-screen #sv-pause{white-space:nowrap;}
+#sv-screen .sv-vitals{display:none!important;}
+#sv-screen #sv-message{position:absolute!important;transform:translateX(-50%)!important;width:max-content!important;max-height:51px!important;min-height:0!important;line-height:1.3!important;text-align:center!important;overflow:hidden!important;}
+#sv-screen #sv-message[hidden]{display:none!important;}
+#sv-screen .sv-hud-panel{z-index:8!important;backdrop-filter:none!important;}
+#sv-screen .sv-hud-left{right:auto!important;box-sizing:border-box!important;}
+#sv-screen .sv-brand{letter-spacing:0!important;line-height:1.15!important;}
+#sv-screen .sv-brand b{border-radius:5px!important;flex-shrink:0;}
+#sv-screen .sv-stat em{font-size:9px!important;}
+#sv-screen #sv-minimap-3d{z-index:5!important;}
+#sv-screen #sv-camera-tools{top:151px!important;right:8px!important;display:flex!important;flex-direction:row!important;gap:4px!important;z-index:10!important;}
+#sv-screen #sv-camera-tools[hidden]{display:none!important;}
+#sv-screen #sv-camera-tools button{min-width:30px!important;min-height:29px!important;padding:2px!important;font-size:12px!important;border-radius:6px!important;background:rgba(12,18,14,.82)!important;}
+#sv-screen #sv-camera-tools #sv-cam-north{font-size:8px!important;min-width:39px!important;}
+#sv-screen .sv-hud-right{top:auto!important;left:auto!important;transform:none!important;}
+#sv-screen .sv-weapon-box{border:0!important;background:transparent!important;}
+#sv-screen .sv-weapon-box small{margin-bottom:2px!important;}
+#sv-screen .sv-weapon-box strong{line-height:1.1!important;max-height:27px;}
+#sv-screen #sv-weapon-ammo{line-height:1.1!important;margin-top:3px!important;}
+#sv-screen .sv-objective-box{display:none!important;}
+#sv-screen #sv-3d-prompt{left:50%!important;padding:5px 8px!important;}
+#sv-screen #sv-stick{border-width:1px!important;}
+#sv-screen #sv-stick:before{border-width:1px!important;}
+#sv-screen .sv-actions{align-items:center!important;}
+#sv-screen .sv-actions button{border-color:rgba(183,157,100,.65)!important;}
+#sv-screen .sv-legend{display:none!important;}
+@media(min-width:750px){#sv-screen .sv-hud-left{width:179px!important;top:51px!important;padding:9px!important;}
+#sv-screen .sv-hud-right{width:153px!important;bottom:24px!important;right:165px!important;}
+#sv-screen .sv-objective-box{display:block!important;padding:5px!important;margin-top:4px!important;}
+#sv-screen .sv-actions button{width:72px!important;height:72px!important;}
+#sv-screen #sv-stick{width:112px!important;height:112px!important;}
+#sv-screen #sv-minimap-3d{width:126px!important;height:110px!important;}
+#sv-screen #sv-camera-tools{top:166px!important;}}
+@media(max-width:360px){#sv-screen .sv-hud-left{width:139px!important;}
+#sv-screen .sv-stat{grid-template-columns:38px 1fr 29px!important;font-size:7px!important;}
+#sv-screen #sv-minimap-3d{width:92px!important;height:82px!important;}
+#sv-screen #sv-camera-tools{top:140px!important;}
+#sv-screen .sv-actions button{width:56px!important;min-width:56px!important;height:56px!important;min-height:56px!important;font-size:10px!important;}
+#sv-screen #sv-stick{width:85px!important;height:85px!important;}}</style>
 <script id="zona-3d-engine">
 /* ZONA Z 3D Engine, offline native WebGL1; no remote libraries. */
 (function(){
@@ -6733,7 +6673,7 @@ class Mesh{
  this.quad([xb,ya,za],[xa,ya,za],[xa,yb,za],[xb,yb,za],color,.67,material);
  this.quad([xb,ya,zb],[xb,ya,za],[xb,yb,za],[xb,yb,zb],color,.77,material);
  this.quad([xa,ya,za],[xa,ya,zb],[xa,yb,zb],[xa,yb,za],color,.76,material)}
- plane(x,y,z,w,d,color,material=0){this.quad([x-w/2,y,z-d/2],[x+w/2,y,z-d/2],[x+w/2,y,z+d/2],[x-w/2,y,z+d/2],color,1,material)}
+ plane(x,y,z,w,d,color,material=0){if(y>=0&&y<1)y=y*4+((Math.abs(x*17+z*31+w*7+d*13)%97)/97)*.07;this.quad([x-w/2,y,z-d/2],[x+w/2,y,z-d/2],[x+w/2,y,z+d/2],[x-w/2,y,z+d/2],color,1,material)}
  disk(x,y,z,r,color,segments=9,material=0){for(let i=0;i<segments;i++){const a=i/segments*Math.PI*2,b=(i+1)/segments*Math.PI*2;this.tri([x,y,z],[x+r*Math.cos(a),y,z+r*Math.sin(a)],[x+r*Math.cos(b),y,z+r*Math.sin(b)],color,.93,material)}}
  cylinder(x,y,z,r,h,color,n=12,material=null){
  const steps=Math.max(n,10);
@@ -6801,7 +6741,7 @@ class Mesh{
   this.rail(rx,z-d*.48,rx,z+d*.48,y,'#6b5b4a',2,3);
  }
  plank(x,z,w,d,angle=0,color='#67523c'){const c=Math.cos(angle),q=Math.sin(angle),a=[-w/2,-d/2],b=[w/2,-d/2],g=[w/2,d/2],h=[-w/2,d/2],pt=p=>[x+p[0]*c-p[1]*q,.8,z+p[0]*q+p[1]*c];this.quad(pt(a),pt(b),pt(g),pt(h),color,.9,4)}
- puddle(x,z,rx,rz){for(let i=0;i<20;i++){const a=i*Math.PI/10,b=(i+1)*Math.PI/10,r=t=>.83+.11*Math.sin(t*3+x)+.06*Math.cos(t*7+z);this.tri([x,.91,z],[x+Math.cos(a)*rx*r(a),.91,z+Math.sin(a)*rz*r(a)],[x+Math.cos(b)*rx*r(b),.91,z+Math.sin(b)*rz*r(b)],'#29343b',1,6)}}
+ puddle(x,z,rx,rz){const surface=3.9+(Math.abs(x*17+z*31)%97)/97*.12;for(let i=0;i<20;i++){const a=i*Math.PI/10,b=(i+1)*Math.PI/10,r=t=>.83+.11*Math.sin(t*3+x)+.06*Math.cos(t*7+z);this.tri([x,surface,z],[x+Math.cos(a)*rx*r(a),surface,z+Math.sin(a)*rz*r(a)],[x+Math.cos(b)*rx*r(b),surface,z+Math.sin(b)*rz*r(b)],'#29343b',1,6)}}
 }
 function decorateLandmark(m,l,hi){const x=l.x,z=l.y,s=l.size||55,kind=l.kind,metal='#62655c',rust='#79563d',concrete='#6b6e64',dark='#303933',glow='#95cbb4',canvas='#5e6553',wood='#66543d',amber='#d8a45c';
 const building=(w,d,h)=>m.box(x,0,z,w,h,d,concrete);
@@ -7114,7 +7054,7 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v14.3: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v14.5: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop';
  if(sloped){
@@ -7389,7 +7329,7 @@ const SURVIVAL_V123_ATLAS='data:image/webp;base64,UklGRr6WDABXRUJQVlA4WAoAAAAgAA
 function init(canvas,map,options={}){
 let gl=null;try{gl=canvas.getContext('webgl',{alpha:false,antialias:true,depth:true,preserveDrawingBuffer:false,powerPreference:'low-power'})||canvas.getContext('experimental-webgl')}catch(e){console.warn('3D context unavailable:',e)}if(!gl)return null;
 let program,staticBuffer,dynamicBuffer,staticData=null,roomKey=null,scene=map,eco=options.eco||false;
-const vs=`attribute vec3 aPosition;attribute vec3 aColor;attribute vec3 aNormal;attribute float aMaterial;uniform mat4 uShadowMatrix;varying vec4 vShadow;uniform mat4 uMVP;uniform float uTime;uniform vec3 uCamera;uniform float uFog;uniform vec3 uTint;varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;void main(){vWorld=aPosition.xz;vWorldPos=aPosition;vNormal=aNormal;vMaterial=aMaterial;vHeight=aPosition.y;vec3 drawn=aPosition;if(aMaterial>4.5&&aMaterial<5.5){float bend=min(aPosition.y,100.0)*.018;drawn.x+=sin(uTime*1.3+aPosition.z*.035)*bend;drawn.z+=cos(uTime*.9+aPosition.x*.027)*bend*.5;}vShadow=uShadowMatrix*vec4(drawn,1.);gl_Position=uMVP*vec4(drawn,1.0);vColor=aColor*uTint;float d=distance(aPosition,uCamera);vFog=clamp((d-190.0)/uFog,0.0,0.95);}`;
+const vs=`attribute vec3 aPosition;attribute vec3 aColor;attribute vec3 aNormal;attribute float aMaterial;uniform mat4 uShadowMatrix;varying vec4 vShadow;uniform mat4 uMVP;uniform float uTime;uniform vec3 uCamera;uniform float uFog;uniform vec3 uTint;varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;void main(){vWorld=aPosition.xz;vWorldPos=aPosition;vNormal=aNormal;vMaterial=aMaterial;vHeight=aPosition.y;vec3 drawn=aPosition;vShadow=uShadowMatrix*vec4(drawn,1.);gl_Position=uMVP*vec4(drawn,1.0);vColor=aColor*uTint;float d=distance(aPosition,uCamera);vFog=clamp((d-190.0)/uFog,0.0,0.95);}`;
 const fs=`#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -7665,7 +7605,7 @@ let atlasTexture=gl.createTexture(),textureReady=false,disposed=false;
 gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
 const atlasImage=new Image();atlasImage.onload=()=>{if(disposed)return;try{gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,atlasImage);gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);textureReady=true;}catch(e){console.warn('3D texture atlas:',e)}};
-try{gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,makeSurfaceAtlas());gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);textureReady=true;}catch(error){console.warn("Survival atlas preview:",error)}atlasImage.onerror=()=>console.warn('Material atlas unavailable: retaining local procedural surfaces');atlasImage.src=SURVIVAL_V123_ATLAS;
+atlasImage.onerror=()=>{if(disposed)return;gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,makeSurfaceAtlas());gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);textureReady=true;};atlasImage.src=SURVIVAL_V123_ATLAS;
 let yaw=0,zoom=520,pitch=1.5692,focus=null,currentMVP=null;
 const animation={player:{angle:0,phase:0,speed:0},actors:new Map(),recoil:0};
 let previousVisual=null;const actorHistory=new Map();
@@ -7704,7 +7644,7 @@ function sceneShadows(run){const points=[];const w=run.room==null?map:map.rooms[
 }
 function rebuild(room){shadowValid=false;roomKey=room;focus=null;staticData=staticMesh(map,room,eco);bindBuffer(staticBuffer,staticData,gl.STATIC_DRAW)}
 function drawBuffer(buffer,count){if(!count)return;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(A.position);gl.enableVertexAttribArray(A.color);gl.enableVertexAttribArray(A.normal);gl.enableVertexAttribArray(A.material);gl.vertexAttribPointer(A.position,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(A.color,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(A.normal,3,gl.FLOAT,false,40,24);gl.vertexAttribPointer(A.material,1,gl.FLOAT,false,40,36);gl.drawArrays(gl.TRIANGLES,0,count)}
-function draw(run,enemyData,time,visual={}){if(!run)return;
+function draw(run,enemyData,time,visual={}){if(!run||!textureReady)return;
  const same=previousVisual&&previousVisual.room===run.room,dx=same?run.x-previousVisual.x:0,dz=same?run.y-previousVisual.y:0,dist=Math.hypot(dx,dz),dt=same?Math.max(.001,time-previousVisual.time):.016;
  const pose=animation.player;pose.speed=dist>.02?Math.min(1,dist/dt/120):0;pose.phase+=Math.min(dist,15)*.11;
  if(dist>.02)pose.angle=Math.atan2(dx,-dz);
@@ -7720,7 +7660,7 @@ const marginX=Math.min(w.w/2,Math.max(150,zoom*asp*.84)),marginZ=Math.min(w.h/2,
 const point=[clamp(run.x,marginX,w.w-marginX),17,clamp(run.y,marginZ,w.h-marginZ)];
 if(!focus)focus=point.slice();else{focus[0]+=(point[0]-focus[0])*.18;focus[1]=17;focus[2]+=(point[2]-focus[2])*.18}
 const target=focus,eye=[focus[0],focus[1]+960,focus[2]+0.01];
-const M=mul(orthographic(-zoom*asp,zoom*asp,-zoom,zoom,1,3200),lookAt(eye,target,[0,0,-1]));currentMVP=M;
+const M=mul(orthographic(-zoom*asp,zoom*asp,-zoom,zoom,1,1400),lookAt(eye,target,[0,0,-1]));currentMVP=M;
 const dyn=entityMesh(w,map,run,enemyData,time,eco,animation);bindBuffer(dynamicBuffer,dyn,gl.DYNAMIC_DRAW);
 if(!shadowValid||shadowTick++%(eco?5:compactMode?3:2)===0)renderShadow(target,asp,dyn.length/10);
 gl.viewport(0,0,canvas.width,canvas.height);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthFunc(gl.LEQUAL);gl.disable(gl.BLEND);const sky=rgb(map.theme.sky||'#080c0d').map(v=>Math.min(.12,v*.40+.006));gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.uniformMatrix4fv(U.mvp,false,new Float32Array(M));
@@ -8021,7 +7961,7 @@ function fallback(canvas,map,options={}){
  return{draw,project,rotate,movement,changeZoom,resetCamera,dispose,get yaw(){return yaw},get zoom(){return zoom},get pitch(){return 1.05},get overhead(){return true},get webgl(){return false},get triangles(){return 0}}
 }
 
-window.ZonaSurvival3D={init,fallback,version:'14.3'};
+window.ZonaSurvival3D={init,fallback,version:'14.5'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -8030,7 +7970,7 @@ window.addEventListener('zona:ready',()=>{
 const g=window.game;if(!g||document.getElementById('kpk-survival'))return;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
-panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge">BETA</span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
+panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge">BETA</span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
 const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small>КПК СТАЛКЕРА <span class="sv-head-separator">/</span> ЖИВАЯ ЗОНА <span class="sv-head-version">BETA</span></small><strong id="sv-title"></strong></div><button id="sv-pause" class="btn btn-dark">ПАУЗА / КПК</button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div id="sv-camera-tools" aria-label="Камера сверху · фиксированная" hidden><button type="button" id="sv-cam-in" aria-label="Приблизить">+</button><button type="button" id="sv-cam-out" aria-label="Отдалить">−</button></div><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · BETA <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action">Обыск</button><button id="sv-attack">Атака</button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
@@ -8049,7 +7989,7 @@ window.Telegram?.WebApp?.onEvent?.('safeAreaChanged',syncSurvivalViewport);
 window.Telegram?.WebApp?.onEvent?.('contentSafeAreaChanged',syncSurvivalViewport);
 new ResizeObserver(()=>{if(visible)resize()}).observe(overlay.querySelector('.sv-view'));
 
-const $=id=>document.getElementById(id);let canvas=$('sv-canvas');let renderer3d=null,mode3d=false,visible=false,frame=0,last=0,saveTimer=0,hudTimer=0,shot=0,hitLine=null,noteUntil=0;const keys=new Set(),stick={x:0,y:0,id:null};let map=null,rand=null;
+const $=id=>document.getElementById(id);let canvas=$('sv-canvas');let renderer3d=null,mode3d=false,visible=false,frame=0,last=0,saveTimer=0,hudTimer=0,shot=0,hitLine=null,noteUntil=0;const stick={x:0,y:0,id:null};let map=null,rand=null;
 const state=()=>{const s=g.state.survival||(g.state.survival={version:2,quality:'high',selectedLoc:'',visits:{},run:null});s.quality='high';if(typeof s.selectedLoc!=='string')s.selectedLoc='';if(!s.visits||typeof s.visits!=='object')s.visits={};return s};const run=()=>state().run;
 function random(seed){let a=seed|0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function seedOf(s){let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0}
@@ -8064,13 +8004,13 @@ function renderLocSummary(l,active){
  const box=$('sv-location-meta'),visual=$('sv-location-visual');if(!box||!l)return;
  if(visual){visual.replaceChildren();const img=document.createElement('img');img.src=sectorArt[l.id];img.alt='';img.loading='lazy';img.decoding='async';visual.append(img);const label=document.createElement('span');label.textContent=l.dangerText||'ЗОНА';visual.append(label);}
  const preview=locLootPreview(l);
- box.innerHTML='<div class="sv-meta-list"><div class="sv-meta-pill"><small>УРОВЕНЬ</small><b>'+esc(String(l.minLevel||1))+'</b></div><div class="sv-meta-pill"><small>ВХОД</small><b>'+(l.energyCost||l.energy||5)+' ЭНЕРГИИ</b></div><div class="sv-meta-pill"><small>ОПАСНОСТЬ</small><b>'+esc(l.dangerText||'Неизвестно')+'</b></div><div class="sv-meta-pill"><small>ШАНС GRAM</small><b>'+esc(l.gramStr||(((l.gramcoinChance||l.gramChance||0)*100).toFixed(1)+'%'))+'</b></div></div><div class="sv-detail-copy"><div><strong>Противники:</strong> '+esc(locEnemyNames(l).join(' · ')||'Нет данных')+'</div><div><strong>Возможный хабар:</strong> '+esc(preview.join(' · ')||'Припасы и хлам')+'</div></div>';
+ box.innerHTML='<div class="sv-meta-list"><div class="sv-meta-pill"><small>УРОВЕНЬ</small><b>'+esc(String(l.minLevel||1))+'</b></div><div class="sv-meta-pill"><small>ВХОД</small><b>'+(l.energyCost||l.energy||5)+' ЭНЕРГИИ</b></div><div class="sv-meta-pill"><small>ОПАСНОСТЬ</small><b>'+esc(l.dangerText||'Неизвестно')+'</b></div><div class="sv-meta-pill"><small>ШАНС GRAM</small><b>'+esc(l.gramStr||(((l.gramcoinChance||l.gramChance||0)*100).toFixed(1)+'%'))+'</b></div></div><details class="sv-detail-fold"><summary>Противники и хабар <span>+</span></summary><div class="sv-detail-copy"><div><strong>Противники:</strong> '+esc(locEnemyNames(l).join(' · ')||'Нет данных')+'</div><div><strong>Возможный хабар:</strong> '+esc(preview.join(' · ')||'Припасы и хлам')+'</div></div></details>';
  $('sv-run-info').textContent=active?'Маршрут сохранён: '+(loc()?.name||active.locId):'Возвращение — у зелёной отметки на карте.';
 }
 function renderSectorOptions(){
  const list=$('sv-location-options');if(!list)return;
  const value=$('sv-location')?.value;
- const rows=DB.locations.map((l,i)=>({l,i}));
+ const query=($('sv-sector-search')?.value||'').trim().toLocaleLowerCase('ru');const rows=DB.locations.map((l,i)=>({l,i})).filter(({l})=>!query||l.name.toLocaleLowerCase('ru').includes(query));
  const frag=document.createDocumentFragment();
  if(!rows.length){const none=document.createElement('p');none.className='sv-empty-sectors';none.textContent='Секторы не найдены';frag.append(none)}
  for(const {l,i} of rows){const locked=g.state.level<(l.minLevel||1),chosen=l.id===value;
@@ -8284,7 +8224,7 @@ function enter(id){
   g.toast('Не удалось запустить графику. Состояние вылазки сохранено.','red');return false
  }
 }
-function resetInput(){keys.clear();stick.x=stick.y=0;stick.id=null;$('sv-stick').classList.remove('is-active');$('sv-stick').firstElementChild.style.transform='translate(-50%,-50%)'}
+function resetInput(){stick.x=stick.y=0;stick.id=null;$('sv-stick').classList.remove('is-active');$('sv-stick').firstElementChild.style.transform='translate(-50%,-50%)'}
 function pause(){if(!visible)return;visible=false;cancelAnimationFrame(frame);if(renderer3d){renderer3d.dispose();renderer3d=null}g.isRaidActive=false;overlay.hidden=true;document.body.classList.remove('sv-playing');resetInput();save();g.renderHeader();g.renderInventory();refresh()}
 function exitRun(){const r=run();if(!r)return false;if(r.room!==null||distance(r,map.exit)>85){note('Вернитесь к зелёной отметке выхода.');return false}let arts=0;for(const[id,count]of Object.entries(r.bag))if(DB.items[id]&&count>0){g.addItem(id,count);if(DB.items[id].type==='artifact')arts+=count;}if(g.state.tracker)g.state.tracker.artsFound=(g.state.tracker.artsFound||0)+arts;for(const c of g.state.activeContracts||[])if(c.type==='arts'&&!c.completed)c.current=(c.current||0)+arts;g.state.rubles+=r.rubles;if((r.gram||0)>0)g.awardGram?.(Number(r.gram.toFixed(2)));const count=Object.values(r.bag).reduce((a,b)=>a+b,0);const gram=(r.gram||0)>0?' · '+Number(r.gram.toFixed(2))+' GRAM':'';state().run=null;pause();g.renderTrophyCabinet?.();g.updateBadges?.();g.toast('Вы вернулись: '+count+' предметов, '+r.rubles+' ₽'+gram,'gold');return true}
 function fail(){const r=run();if(!r)return;state().run=null;g.state.hp=1;pause();g.toast('Сталкер доставил вас в убежище. Полевая добыча потеряна.','red')}
@@ -8336,14 +8276,14 @@ function attack(){
  }
  save();hud();
 }
-function step(dt){if(!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x+(keys.has('d')||keys.has('ArrowRight')?1:0)-(keys.has('a')||keys.has('ArrowLeft')?1:0),dy=stick.y+(keys.has('s')||keys.has('ArrowDown')?1:0)-(keys.has('w')||keys.has('ArrowUp')?1:0);const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];move(r,v[0]*155*dt,v[1]*155*dt);if(keys.has(' '))attack();for(const e of w.enemies){if(r.defeated.includes(e.id))continue;const d=enemyData(e),proto=DB.enemies[e.enemyId]||{};d.cool=Math.max(0,d.cool-dt);const dist=distance(r,d);if(dist<260&&sight(d,r)){if(dist>27){const pursuit=/rat|tushkano|dog|cat_bayun|psydog/.test(e.enemyId)?75:/pseudogiant|giant_titan|titan_juggernaut/.test(e.enemyId)?44:61;move(d,(r.x-d.x)/dist*pursuit*dt,(r.y-d.y)/dist*pursuit*dt)}else if(d.cool<=0){d.cool=1.3;const dmgRange=Array.isArray(proto.dmg)?proto.dmg:[7+(loc().minLevel||1)*.18,10+(loc().minLevel||1)*.26],base=dmgRange[0]+Math.random()*Math.max(0,(dmgRange[1]||dmgRange[0])-dmgRange[0]);g.state.hp=Math.max(0,g.state.hp-Math.max(1,Math.round(base*100/(100+Math.max(0,g.getDefensePower())))));if(g.state.hp<=0){fail();return}}}}
+function step(dt){if(!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x,dy=stick.y;const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];move(r,v[0]*155*dt,v[1]*155*dt);for(const e of w.enemies){if(r.defeated.includes(e.id))continue;const d=enemyData(e),proto=DB.enemies[e.enemyId]||{};d.cool=Math.max(0,d.cool-dt);const dist=distance(r,d);if(dist<260&&sight(d,r)){if(dist>27){const pursuit=/rat|tushkano|dog|cat_bayun|psydog/.test(e.enemyId)?75:/pseudogiant|giant_titan|titan_juggernaut/.test(e.enemyId)?44:61;move(d,(r.x-d.x)/dist*pursuit*dt,(r.y-d.y)/dist*pursuit*dt)}else if(d.cool<=0){d.cool=1.3;const dmgRange=Array.isArray(proto.dmg)?proto.dmg:[7+(loc().minLevel||1)*.18,10+(loc().minLevel||1)*.26],base=dmgRange[0]+Math.random()*Math.max(0,(dmgRange[1]||dmgRange[0])-dmgRange[0]);g.state.hp=Math.max(0,g.state.hp-Math.max(1,Math.round(base*100/(100+Math.max(0,g.getDefensePower())))));if(g.state.hp<=0){fail();return}}}}
 saveTimer+=dt;hudTimer+=dt;if(saveTimer>=5){saveTimer=0;save()}if(hudTimer>.2){hudTimer=0;hud()}}
-function hud(){const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=.5-.5*Math.cos(phase),tod=night>.7?'НОЧЬ':night>.4?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / Здание '+(r.room+1):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(state().quality==='eco'?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action').textContent=verb;const prompt=$('sv-3d-prompt');prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb+' · E / ДЕЙСТВИЕ';$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit));const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}}
+function hud(){const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=.5-.5*Math.cos(phase),tod=night>.7?'НОЧЬ':night>.4?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / Здание '+(r.room+1):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(state().quality==='eco'?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action').textContent=verb;const prompt=$('sv-3d-prompt');prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb+' · кнопка справа';$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit));const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}}
 function resize(){const b=canvas.parentElement.getBoundingClientRect(),dpr=window.devicePixelRatio||1,ratio=state().quality==='eco'?Math.min(dpr,1):(renderer3d&&!renderer3d.webgl?Math.min(dpr,1.4):Math.min(dpr,(/Telegram|iPhone|iPad|iPod/i.test(navigator.userAgent)||!!window.Telegram?.WebApp)?1.45:1.75));canvas.width=Math.max(1,Math.floor(b.width*ratio));canvas.height=Math.max(1,Math.floor(b.height*ratio));canvas.style.width=b.width+'px';canvas.style.height=b.height+'px';const fx=$('sv-3d-fx');if(fx){fx.width=Math.max(1,Math.floor(b.width));fx.height=Math.max(1,Math.floor(b.height))}}
 function loop(t){if(!visible)return;const dt=last?Math.min(.05,(t-last)/1000):0;last=t;step(dt);if(!visible||!renderer3d)return;renderer3d.draw(run(),enemyData,t/1000,{hit:hitLine});draw3DWeather(t/1000);draw3DMinimap();if(t>noteUntil){const box=$('sv-message');if(box)box.hidden=true}frame=requestAnimationFrame(loop)}
 function attach3DLook(){if(!mode3d||!renderer3d)return;
 // Fixed camera angle and fixed scale: dragging/touching the scene cannot rotate the view, wheel zoom is disabled.
-canvas.addEventListener('wheel',e=>{e.preventDefault();},{passive:false});
+
 canvas.addEventListener('contextmenu',e=>e.preventDefault());}
 function draw3DWeather(t){const fx=$('sv-3d-fx'),r=run();if(!fx||fx.hidden||!r)return;const c=fx.getContext('2d');if(!c)return;const w=fx.width,h=fx.height;c.clearRect(0,0,w,h);const mode=map?.theme?.weather||'fog',eco=state().quality==='eco';
 const lights=[];
@@ -8426,7 +8366,7 @@ function draw3DMinimap(){
  c.textAlign='left';c.font='8px monospace';c.fillStyle='#c6b486';c.fillText('ZONA',13,N-12);
 } 
 $('sv-cam-in').addEventListener('click',()=>renderer3d?.changeZoom(-45));$('sv-cam-out').addEventListener('click',()=>renderer3d?.changeZoom(45));
-$('sv-start').addEventListener('click',()=>enter($('sv-location').value));$('sv-pause').addEventListener('click',pause);$('sv-action').addEventListener('click',action);$('sv-attack').addEventListener('click',attack);panel.addEventListener('toggle',()=>{if(!panel.open){const menu=$('sv-location-menu');if(menu)menu.hidden=true;}refresh()});panel.addEventListener('click',e=>{const pick=e.target.closest('[data-sv-loc]');if(pick&&!pick.disabled){$('sv-location').value=pick.dataset.svLoc;state().selectedLoc=pick.dataset.svLoc;const menu=$('sv-location-menu');if(menu)menu.hidden=true;save();refresh();return}const trigger=e.target.closest('#sv-location-trigger');if(trigger){if(trigger.disabled)return;const menu=$('sv-location-menu');if(menu){menu.hidden=!menu.hidden;trigger.setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden){renderSectorOptions()}}return}});document.addEventListener('click',e=>{const menu=$('sv-location-menu');if(menu&&!menu.hidden&&!panel.contains(e.target))menu.hidden=true;});
+$('sv-sector-search').addEventListener('input',renderSectorOptions);$('sv-start').addEventListener('click',()=>enter($('sv-location').value));$('sv-pause').addEventListener('click',pause);$('sv-action').addEventListener('click',action);$('sv-attack').addEventListener('click',attack);panel.addEventListener('toggle',()=>{if(!panel.open){const menu=$('sv-location-menu');if(menu)menu.hidden=true;}refresh()});panel.addEventListener('click',e=>{const pick=e.target.closest('[data-sv-loc]');if(pick&&!pick.disabled){$('sv-location').value=pick.dataset.svLoc;state().selectedLoc=pick.dataset.svLoc;const menu=$('sv-location-menu');if(menu)menu.hidden=true;save();refresh();return}const trigger=e.target.closest('#sv-location-trigger');if(trigger){if(trigger.disabled)return;const menu=$('sv-location-menu');if(menu){menu.hidden=!menu.hidden;trigger.setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden){renderSectorOptions()}}return}});document.addEventListener('click',e=>{const menu=$('sv-location-menu');if(menu&&!menu.hidden&&!panel.contains(e.target))menu.hidden=true;});
 const pad=$('sv-stick');
 function joy(e){
  const b=pad.getBoundingClientRect(),thumb=pad.firstElementChild.getBoundingClientRect();
@@ -8440,115 +8380,167 @@ function joy(e){
 pad.addEventListener('pointerdown',e=>{if(stick.id!==null||!visible)return;e.preventDefault();stick.id=e.pointerId;pad.classList.add('is-active');try{pad.setPointerCapture(e.pointerId)}catch(_){}joy(e)});
 pad.addEventListener('pointermove',e=>{if(e.pointerId===stick.id){e.preventDefault();joy(e)}});
 for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,e=>{if(e.pointerId!==stick.id)return;pad.classList.remove('is-active');stick.id=null;stick.x=stick.y=0;pad.firstElementChild.style.transform='translate(-50%,-50%)'});
-window.addEventListener('keydown',e=>{if(!visible)return;const k=e.key.length===1?e.key.toLowerCase():e.key;if(['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','e','Escape'].includes(k)){e.preventDefault();keys.add(k);if(k==='e'&&!e.repeat)action();if(k==='Escape')pause()}});window.addEventListener('keyup',e=>keys.delete(e.key.length===1?e.key.toLowerCase():e.key));window.addEventListener('resize',()=>{if(visible)resize()});window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});window.addEventListener('pagehide',pause);
+window.addEventListener('resize',()=>{if(visible)resize()});window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});window.addEventListener('pagehide',pause);
 // Public interface also provides deterministic mechanics for regression tests.
 g.survival={enter,pause,action,attack,step,exit:exitRun,build,solid,sight,state,refresh,get map(){return map},get visible(){return visible},get is3d(){return mode3d},get renderer(){return renderer3d}};refresh();
 });
-</script><style id="zona-survival-v132">
-/* Cohesive STALKER PDA: UI changes limited to Survival 3D */
-#sv-screen header{height:65px!important;min-height:65px!important;padding:8px 13px 8px 17px!important;background:linear-gradient(97deg,rgba(10,17,13,.98),rgba(25,32,23,.97) 61%,rgba(10,17,14,.98))!important;border-bottom:1px solid #ae8e52!important;border-top:2px solid #8d7448!important;box-shadow:inset 0 0 0 3px rgba(204,173,98,.055),0 5px 28px #000b!important}
-#sv-screen header:after{content:"";position:absolute;inset:5px 5px 5px 5px;border:1px solid rgba(186,157,91,.16);pointer-events:none}
-#sv-screen header .sv-head-copy{display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;z-index:1}
-#sv-screen header small{display:block;color:#bc9f69!important;letter-spacing:1.5px!important;font:600 9px/1.2 Consolas,monospace!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#sv-screen .sv-head-separator{color:#82775b;padding:0 3px}
-#sv-screen .sv-head-version{display:inline-block;border:1px solid rgba(197,163,91,.52);border-radius:2px;background:rgba(24,32,23,.9);padding:1px 3px;margin-left:3px;color:#e3c38a}
-#sv-screen #sv-title{font:700 clamp(12px,3.4vw,17px)/1.22 var(--st-head,Arial,sans-serif)!important;color:#f3e5c2!important;letter-spacing:.2px!important;max-width:calc(100vw - 137px)!important;text-shadow:0 2px 2px #000!important}
-#sv-screen #sv-pause{z-index:2!important;min-width:92px!important;min-height:41px!important;padding:5px 9px!important;background:linear-gradient(180deg,#283026,#141d18)!important;border:1px solid #ae8e58!important;border-radius:4px!important;font:700 10px/1.2 var(--st-head,Arial,sans-serif)!important;letter-spacing:.6px!important;color:#e7d7ac!important;box-shadow:inset 0 1px #f1d39c25,0 3px 8px #0007!important}
-#sv-screen #sv-pause:active{background:#4b5031!important}
-#sv-screen .sv-hud-left{top:73px!important;border:1px solid rgba(181,150,87,.70)!important;background:linear-gradient(150deg,rgba(10,17,13,.91),rgba(18,25,18,.89))!important;box-shadow:0 8px 25px #0009,inset 0 1px rgba(220,189,111,.1)!important;border-radius:5px!important}
-#sv-screen .sv-hud-right{border-radius:5px!important;border-color:rgba(185,154,92,.61)!important;background:linear-gradient(150deg,rgba(10,17,14,.92),rgba(25,30,20,.89))!important}
-#sv-screen .sv-brand{color:#eacb8f!important}
-#sv-screen #sv-minimap-3d{top:73px!important;right:8px!important;width:118px!important;height:118px!important;border-radius:50%!important;border:2px solid #a58d58!important;background:#0d1613!important;box-shadow:0 0 0 4px rgba(7,11,9,.85),0 0 0 5px rgba(157,138,91,.25),0 8px 26px #000c!important;image-rendering:auto;overflow:hidden!important}
-#sv-screen .sv-view:after{box-shadow:inset 0 0 80px #01040355!important;z-index:2}
-#sv-screen .sv-controls{left:16px!important;right:14px!important;bottom:calc(21px + env(safe-area-inset-bottom))!important;z-index:12!important}
-#sv-screen #sv-stick{width:112px!important;height:112px!important;box-sizing:border-box!important;border:2px solid #a99260!important;background:radial-gradient(circle at 45% 40%,#2b392eeb 0,#13221bd8 42%,#070e0cda 100%)!important;box-shadow:0 0 0 5px rgba(9,16,12,.64),inset 0 0 15px #000b,0 7px 25px #000b!important;outline:1px solid #e0c48d40;outline-offset:-10px}
-#sv-screen #sv-stick:before{inset:15px!important;border:1px dashed rgba(226,197,126,.45)!important;box-shadow:0 0 0 4px rgba(220,185,110,.045)!important}
-#sv-screen #sv-stick:after{inset:33px!important;border:1px solid rgba(218,199,147,.11)!important;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(232,208,149,.14) 0deg 1.5deg,transparent 2deg 45deg)}
-#sv-screen #sv-stick span{width:49px!important;height:49px!important;z-index:3!important;background:radial-gradient(circle at 36% 29%,#f0dfac,#c1a66e 62%,#8b754c 100%)!important;border:2px solid #f4d994!important;box-shadow:inset 0 2px 5px #fff8,0 5px 12px #0009,0 0 0 3px #122018d9!important;transition:transform 65ms ease-out!important;will-change:transform}
-#sv-screen #sv-stick.is-active span{transition:none!important}
-#sv-screen .sv-actions{gap:9px!important}
-#sv-screen .sv-actions button{width:69px!important;height:69px!important;min-width:69px!important;min-height:69px!important;border:2px solid #ab9260!important;border-radius:50%!important;background:radial-gradient(circle at 38% 25%,#364538f5,#15261eea 72%)!important;color:#f7e9c5!important;font-size:12px!important;font-weight:800!important;box-shadow:inset 0 1px #ebd5a646,inset 0 -3px #070e09bd,0 6px 18px #000b!important;text-shadow:0 1px #000!important}
-#sv-screen .sv-actions button:last-child{border-color:#a56558!important;background:radial-gradient(circle at 40% 30%,#684035e7,#2f1d1ae8 76%)!important;color:#ffdfd0!important}
-#sv-screen .sv-actions button:active{filter:brightness(1.3)!important;transform:scale(.96)}
-#sv-screen #sv-weapon-name{color:#f3daaa}
-@media(max-width:390px){#sv-screen .sv-hud-left{width:157px!important}#sv-screen #sv-minimap-3d{width:104px!important;height:104px!important}#sv-screen #sv-stick{width:103px!important;height:103px!important}#sv-screen .sv-actions button{width:64px!important;height:64px!important;min-width:64px!important;min-height:64px!important}#sv-screen #sv-title{font-size:12px!important}}
-@media(max-width:350px){#sv-screen header{padding:6px 8px!important}#sv-screen header small{font-size:8px!important}#sv-screen #sv-pause{min-width:76px!important;min-height:37px!important;font-size:9px!important}#sv-screen .sv-hud-left{width:143px!important}#sv-screen #sv-minimap-3d{width:92px!important;height:92px!important}#sv-screen .sv-actions button{width:57px!important;height:57px!important;min-width:57px!important;min-height:57px!important;font-size:10px!important}#sv-screen #sv-stick{width:92px!important;height:92px!important}}
-</style>
-<style id="zona-survival-v140-remaster">
-#sv-screen{background:linear-gradient(180deg,#08100d 0%,#0c1410 100%)!important;color:#ecdcb4!important}
-#sv-screen header{padding:10px 12px!important;background:linear-gradient(180deg,rgba(10,18,15,.98),rgba(12,19,16,.92))!important;border-bottom:1px solid rgba(165,140,87,.58)!important;box-shadow:0 10px 26px rgba(0,0,0,.32)!important;position:relative!important} 
-#sv-screen header::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(210,183,114,.55),transparent)}
-#sv-screen .sv-head-copy small{font:11px Consolas,monospace!important;letter-spacing:2px!important;color:#b89b61!important} 
-#sv-screen .sv-head-version{display:inline-block;padding:1px 6px;border:1px solid rgba(205,174,106,.42);border-radius:999px;color:#f0d499;background:rgba(72,55,26,.26)}
-#sv-screen #sv-title{font-size:17px!important;font-weight:800!important;color:#f2e6ca!important;text-shadow:0 1px 2px #000}
-#sv-screen #sv-pause{min-height:50px!important;padding:0 18px!important;border-radius:14px!important;background:linear-gradient(180deg,rgba(27,42,33,.95),rgba(10,18,14,.96))!important;border:1px solid rgba(184,154,94,.72)!important;color:#f2dfb2!important;box-shadow:inset 0 1px rgba(255,241,190,.10),0 8px 22px rgba(0,0,0,.30)!important}
-#sv-screen .sv-vitals{padding:8px 12px!important;background:linear-gradient(180deg,rgba(10,16,13,.80),rgba(9,15,12,.24))!important;color:#cdb47f!important;font:600 11px Consolas,monospace!important;letter-spacing:.4px}
-#sv-screen .sv-view{background:radial-gradient(circle at 50% 25%,rgba(24,36,30,.24),rgba(9,14,12,0) 38%),#0b120f!important}
-#sv-screen #sv-message{top:128px!important;left:12px!important;right:124px!important;padding:10px 12px!important;border:1px solid rgba(181,152,93,.50)!important;border-left:4px solid #caa86a!important;border-radius:12px!important;background:linear-gradient(180deg,rgba(10,18,14,.92),rgba(7,12,10,.82))!important;box-shadow:0 10px 30px rgba(0,0,0,.28)!important;color:#ead9b4!important;backdrop-filter:blur(3px)}
-#sv-screen .sv-hud-panel{background:linear-gradient(180deg,rgba(6,13,11,.90),rgba(9,16,14,.72))!important;border:1px solid rgba(170,144,90,.64)!important;border-radius:18px!important;box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px rgba(255,238,195,.04)!important;backdrop-filter:blur(2px)}
-#sv-screen .sv-hud-left{width:204px!important;padding:12px!important}#sv-screen .sv-hud-right{width:188px!important;right:12px!important;bottom:214px!important;padding:10px!important}
-#sv-screen .sv-brand{color:#f2db9e!important;font:700 14px Arial!important;display:flex!important;justify-content:space-between!important;align-items:center!important;margin-bottom:8px!important;text-shadow:0 1px #000}
-#sv-screen .sv-bar{background:rgba(23,31,25,.88)!important;border:1px solid rgba(154,131,84,.50)!important;box-shadow:inset 0 1px 4px rgba(0,0,0,.42)!important}
-#sv-screen .sv-stat span,#sv-screen .sv-stat em,#sv-screen .sv-money{color:#e7d6af!important}
-#sv-screen .sv-weapon-box,#sv-screen .sv-objective-box{padding:6px 2px!important}
-#sv-screen #sv-minimap-3d{top:72px!important;right:10px!important;width:122px!important;height:122px!important;border-radius:50%!important;border:2px solid rgba(182,156,99,.88)!important;background:radial-gradient(circle at 50% 50%,rgba(10,25,21,.96),rgba(6,12,11,.98))!important;box-shadow:0 0 0 5px rgba(8,12,10,.82),0 0 0 6px rgba(184,156,90,.18),0 10px 28px rgba(0,0,0,.50)!important}
-#sv-screen #sv-stick{width:118px!important;height:118px!important;border:2px solid #b59d65!important;background:radial-gradient(circle at 45% 40%,#304035f0 0,#162720eb 44%,#070e0cd9 100%)!important;box-shadow:0 0 0 6px rgba(7,12,10,.68),inset 0 0 20px rgba(0,0,0,.72),0 10px 28px rgba(0,0,0,.56)!important}
-#sv-screen #sv-stick span{width:52px!important;height:52px!important;border:2px solid #f0d89c!important;background:radial-gradient(circle at 34% 28%,#f4e0ad,#c0a56e 62%,#8d784d 100%)!important;box-shadow:inset 0 2px 7px rgba(255,255,255,.45),0 5px 14px rgba(0,0,0,.72),0 0 0 4px rgba(17,32,24,.88)!important}
-#sv-screen .sv-actions{gap:10px!important}#sv-screen .sv-actions button{width:76px!important;height:76px!important;min-width:76px!important;min-height:76px!important;border:2px solid rgba(179,152,96,.88)!important;border-radius:50%!important;background:radial-gradient(circle at 38% 24%,rgba(56,74,60,.96),rgba(18,30,24,.96) 72%)!important;color:#f7ead0!important;font-size:13px!important;font-weight:800!important;box-shadow:inset 0 1px rgba(246,223,177,.35),inset 0 -4px rgba(5,11,8,.90),0 10px 22px rgba(0,0,0,.54)!important}#sv-screen .sv-actions button:last-child{background:radial-gradient(circle at 40% 25%,rgba(101,62,52,.96),rgba(45,25,22,.96) 74%)!important;border-color:rgba(192,118,100,.88)!important;color:#ffe0d4!important}
-#sv-screen .sv-legend{padding:6px 12px!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;border:1px solid rgba(155,134,86,.36)!important;border-radius:10px!important;background:rgba(8,14,11,.72)!important;color:#cdb892!important}
-@media(max-width:520px){#sv-screen #sv-title{font-size:15px!important}#sv-screen .sv-hud-left{width:184px!important;transform:none!important}#sv-screen .sv-hud-right{width:170px!important;bottom:208px!important;transform:none!important}#sv-screen #sv-message{top:205px!important;right:10px!important;left:10px!important;font-size:11px!important}#sv-screen #sv-minimap-3d{width:112px!important;height:112px!important}#sv-screen #sv-stick{width:110px!important;height:110px!important}#sv-screen .sv-actions button{width:72px!important;height:72px!important;min-width:72px!important;min-height:72px!important}}
-@media(max-width:390px){#sv-screen .sv-hud-left{width:170px!important;padding:10px!important}#sv-screen .sv-hud-right{width:156px!important;bottom:200px!important}#sv-screen #sv-minimap-3d{width:104px!important;height:104px!important}#sv-screen #sv-stick{width:100px!important;height:100px!important}#sv-screen .sv-actions button{width:66px!important;height:66px!important;min-width:66px!important;min-height:66px!important;font-size:12px!important}}
-</style>
+</script><style id="zona-survival-v132">#sv-screen header:after{content:"";position:absolute;inset:5px 5px 5px 5px;border:1px solid rgba(186,157,91,.16);pointer-events:none;}
+#sv-screen header .sv-head-copy{display:flex;flex-direction:column;justify-content:center;min-width:0;z-index:1;}
+#sv-screen header small{display:block;color:#bc9f69!important;letter-spacing:1.5px!important;font:600 9px/1.2 Consolas,monospace!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#sv-screen .sv-head-separator{color:#82775b;padding:0 3px;}
+#sv-screen .sv-head-version{margin-left:3px;}
+#sv-screen #sv-title{text-shadow:0 2px 2px #000!important;}
+#sv-screen #sv-pause{z-index:2!important;font:700 10px/1.2 var(--st-head,Arial,sans-serif)!important;}
+#sv-screen #sv-pause:active{background:#4b5031!important;}
+#sv-screen .sv-hud-left{border:1px solid rgba(181,150,87,.70)!important;background:linear-gradient(150deg,rgba(10,17,13,.91),rgba(18,25,18,.89))!important;}
+#sv-screen .sv-hud-right{border-color:rgba(185,154,92,.61)!important;background:linear-gradient(150deg,rgba(10,17,14,.92),rgba(25,30,20,.89))!important;}
+#sv-screen #sv-minimap-3d{image-rendering:auto;overflow:hidden!important;}
+#sv-screen .sv-view:after{box-shadow:inset 0 0 80px #01040355!important;z-index:2;}
+#sv-screen #sv-stick{box-sizing:border-box!important;outline:1px solid #e0c48d40;outline-offset:-10px;}
+#sv-screen #sv-stick:before{border:1px dashed rgba(226,197,126,.45)!important;box-shadow:0 0 0 4px rgba(220,185,110,.045)!important;}
+#sv-screen #sv-stick:after{border:1px solid rgba(218,199,147,.11)!important;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(232,208,149,.14) 0deg 1.5deg,transparent 2deg 45deg);}
+#sv-screen #sv-stick span{z-index:3!important;transition:transform 65ms ease-out!important;will-change:transform;}
+#sv-screen #sv-stick.is-active span{transition:none!important;}
+#sv-screen .sv-actions button{text-shadow:0 1px #000!important;}
+#sv-screen .sv-actions button:active{filter:brightness(1.3)!important;transform:scale(.96);}
+#sv-screen #sv-weapon-name{color:#f3daaa;}
+@media(max-width:390px){#sv-screen #sv-title{font-size:12px!important;}}
+@media(max-width:350px){#sv-screen header{padding:6px 8px!important;}
+#sv-screen header small{font-size:8px!important;}
+#sv-screen #sv-pause{min-width:76px!important;min-height:37px!important;font-size:9px!important;}
+#sv-screen .sv-hud-left{width:143px!important;}
+#sv-screen #sv-minimap-3d{width:92px!important;height:92px!important;}
+#sv-screen .sv-actions button{width:57px!important;height:57px!important;min-width:57px!important;min-height:57px!important;font-size:10px!important;}
+#sv-screen #sv-stick{width:92px!important;height:92px!important;}}</style>
+<style id="zona-survival-v140-remaster">#sv-screen{background:linear-gradient(180deg,#08100d 0%,#0c1410 100%)!important;color:#ecdcb4!important;}
+#sv-screen header{background:linear-gradient(180deg,rgba(10,18,15,.98),rgba(12,19,16,.92))!important;border-bottom:1px solid rgba(165,140,87,.58)!important;}
+#sv-screen header::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(210,183,114,.55),transparent);}
+#sv-screen .sv-head-copy small{font:11px Consolas,monospace!important;letter-spacing:2px!important;color:#b89b61!important;}
+#sv-screen .sv-head-version{display:inline-block;padding:1px 6px;border:1px solid rgba(205,174,106,.42);border-radius:999px;color:#f0d499;background:rgba(72,55,26,.26);}
+#sv-screen #sv-title{font-weight:800!important;color:#f2e6ca!important;text-shadow:0 1px 2px #000;}
+#sv-screen #sv-pause{background:linear-gradient(180deg,rgba(27,42,33,.95),rgba(10,18,14,.96))!important;border:1px solid rgba(184,154,94,.72)!important;color:#f2dfb2!important;}
+#sv-screen .sv-vitals{padding:8px 12px!important;background:linear-gradient(180deg,rgba(10,16,13,.80),rgba(9,15,12,.24))!important;color:#cdb47f!important;font:600 11px Consolas,monospace!important;letter-spacing:.4px;}
+#sv-screen .sv-view{background:radial-gradient(circle at 50% 25%,rgba(24,36,30,.24),rgba(9,14,12,0) 38%),#0b120f!important;}
+#sv-screen #sv-message{border:1px solid rgba(181,152,93,.50)!important;border-left:4px solid #caa86a!important;border-radius:12px!important;background:linear-gradient(180deg,rgba(10,18,14,.92),rgba(7,12,10,.82))!important;box-shadow:0 10px 30px rgba(0,0,0,.28)!important;color:#ead9b4!important;backdrop-filter:blur(3px);}
+#sv-screen .sv-hud-panel{background:linear-gradient(180deg,rgba(6,13,11,.90),rgba(9,16,14,.72))!important;border:1px solid rgba(170,144,90,.64)!important;border-radius:18px!important;box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px rgba(255,238,195,.04)!important;backdrop-filter:blur(2px);}
+#sv-screen .sv-brand{color:#f2db9e!important;display:flex!important;justify-content:space-between!important;align-items:center!important;text-shadow:0 1px #000;}
+#sv-screen .sv-bar{background:rgba(23,31,25,.88)!important;border:1px solid rgba(154,131,84,.50)!important;box-shadow:inset 0 1px 4px rgba(0,0,0,.42)!important;}
+#sv-screen .sv-stat span,#sv-screen .sv-stat em,#sv-screen .sv-money{color:#e7d6af!important;}
+#sv-screen .sv-weapon-box,#sv-screen .sv-objective-box{padding:6px 2px!important;}
+#sv-screen #sv-minimap-3d{border-radius:50%!important;border:2px solid rgba(182,156,99,.88)!important;background:radial-gradient(circle at 50% 50%,rgba(10,25,21,.96),rgba(6,12,11,.98))!important;}
+#sv-screen #sv-stick{border:2px solid #b59d65!important;background:radial-gradient(circle at 45% 40%,#304035f0 0,#162720eb 44%,#070e0cd9 100%)!important;}
+#sv-screen #sv-stick span{border:2px solid #f0d89c!important;background:radial-gradient(circle at 34% 28%,#f4e0ad,#c0a56e 62%,#8d784d 100%)!important;box-shadow:inset 0 2px 7px rgba(255,255,255,.45),0 5px 14px rgba(0,0,0,.72),0 0 0 4px rgba(17,32,24,.88)!important;}
+#sv-screen .sv-actions button{border:2px solid rgba(179,152,96,.88)!important;border-radius:50%!important;background:radial-gradient(circle at 38% 24%,rgba(56,74,60,.96),rgba(18,30,24,.96) 72%)!important;color:#f7ead0!important;font-weight:800!important;}
+#sv-screen .sv-actions button:last-child{background:radial-gradient(circle at 40% 25%,rgba(101,62,52,.96),rgba(45,25,22,.96) 74%)!important;border-color:rgba(192,118,100,.88)!important;color:#ffe0d4!important;}
+#sv-screen .sv-legend{padding:6px 12px!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;border:1px solid rgba(155,134,86,.36)!important;border-radius:10px!important;background:rgba(8,14,11,.72)!important;color:#cdb892!important;}
+@media(max-width:520px){#sv-screen #sv-title{font-size:15px!important;}
+#sv-screen .sv-hud-left{width:184px!important;transform:none!important;}
+#sv-screen .sv-hud-right{width:170px!important;bottom:208px!important;transform:none!important;}
+#sv-screen #sv-message{top:205px!important;right:10px!important;left:10px!important;font-size:11px!important;}
+#sv-screen #sv-minimap-3d{width:112px!important;height:112px!important;}
+#sv-screen #sv-stick{width:110px!important;height:110px!important;}
+#sv-screen .sv-actions button{width:72px!important;height:72px!important;min-width:72px!important;min-height:72px!important;}}
+@media(max-width:390px){#sv-screen .sv-hud-left{width:170px!important;padding:10px!important;}
+#sv-screen .sv-hud-right{width:156px!important;bottom:200px!important;}
+#sv-screen #sv-minimap-3d{width:104px!important;height:104px!important;}
+#sv-screen #sv-stick{width:100px!important;height:100px!important;}
+#sv-screen .sv-actions button{width:66px!important;height:66px!important;min-width:66px!important;min-height:66px!important;font-size:12px!important;}}</style>
 
-<style id="zona-survival-v142-layout">
-/* One bounded viewport: header + remaining playfield, never 100% + header. */
-#sv-screen{inset:0 0 auto!important;height:var(--sv-visible-height,100dvh)!important;max-height:100dvh!important;min-height:0!important;padding:0!important;overflow:hidden!important;box-sizing:border-box!important}
-#sv-screen header{position:relative!important;flex:0 0 44px!important;height:44px!important;min-height:44px!important;padding:4px 8px!important;gap:6px!important}
-#sv-screen header .sv-head-copy small{font:7px/1.2 Consolas,monospace!important;letter-spacing:.7px!important}
-#sv-screen #sv-title{font-size:12px!important;max-width:calc(100vw - 100px)!important}
-#sv-screen #sv-pause{min-width:76px!important;width:76px!important;min-height:32px!important;height:32px!important;padding:3px!important;font-size:9px!important;border-radius:7px!important}
-#sv-screen .sv-view{position:relative!important;flex:1 1 0!important;height:auto!important;min-height:0!important;width:100%!important;overflow:hidden!important}
-#sv-screen #sv-canvas{position:absolute!important;inset:0!important}
-#sv-screen .sv-hud-left{top:7px!important;left:7px!important;width:146px!important;padding:6px!important;border-radius:7px!important;transform:none!important}
-#sv-screen .sv-brand{font:700 9px/1.2 Arial!important;margin-bottom:5px!important;gap:3px!important}
-#sv-screen .sv-brand b{font-size:7px!important;padding:2px!important}
-#sv-screen .sv-stat{grid-template-columns:49px minmax(0,1fr) 31px!important;font-size:8px!important;gap:2px!important;margin-bottom:3px!important;line-height:12px!important}
-#sv-screen .sv-stat span,#sv-screen .sv-stat em{font-size:8px!important;white-space:nowrap!important}
-#sv-screen .sv-bar{height:5px!important;min-width:0!important}
-#sv-screen .sv-money{font-size:8px!important;margin-top:4px!important;padding-top:4px!important}
-#sv-screen #sv-minimap-3d{top:7px!important;right:7px!important;width:82px!important;height:82px!important;box-sizing:border-box!important;border-width:1px!important;box-shadow:0 0 0 2px #080e0bcc!important}
-#sv-screen .sv-controls{left:max(12px,env(safe-area-inset-left))!important;right:max(12px,env(safe-area-inset-right))!important;bottom:calc(12px + max(env(safe-area-inset-bottom,0px),var(--sv-safe-bottom,0px)))!important;align-items:flex-end!important;z-index:20!important}
-#sv-screen #sv-stick{flex:0 0 86px!important;width:86px!important;height:86px!important;min-width:86px!important;min-height:86px!important;box-shadow:0 0 0 3px #09100bb0!important}
-#sv-screen #sv-stick span{width:36px!important;height:36px!important;box-sizing:border-box!important}
-#sv-screen #sv-stick:before{inset:11px!important}#sv-screen #sv-stick:after{inset:24px!important}
-#sv-screen .sv-actions{flex-direction:row!important;gap:8px!important}
-#sv-screen .sv-actions button{box-sizing:border-box!important;flex:0 0 54px!important;width:54px!important;height:54px!important;min-width:54px!important;min-height:54px!important;padding:3px!important;font-size:10px!important;line-height:1.1!important;box-shadow:0 3px 9px #0008!important}
-#sv-screen .sv-hud-right{right:8px!important;bottom:calc(79px + max(env(safe-area-inset-bottom,0px),var(--sv-safe-bottom,0px)))!important;width:116px!important;padding:5px!important;border-radius:7px!important}
-#sv-screen .sv-weapon-box{padding:0!important}#sv-screen .sv-weapon-box small{font-size:7px!important}#sv-screen .sv-weapon-box strong{font-size:10px!important}#sv-screen #sv-weapon-ammo{font-size:8px!important}
-#sv-screen #sv-3d-prompt{bottom:calc(108px + max(env(safe-area-inset-bottom,0px),var(--sv-safe-bottom,0px)))!important;font-size:9px!important;max-width:160px!important}
-#sv-screen #sv-message{top:132px!important;bottom:auto!important;left:50%!important;right:auto!important;max-width:70%!important;padding:5px 7px!important;font-size:10px!important}
-@media(max-height:430px){#sv-screen header{flex-basis:36px!important;height:36px!important;min-height:36px!important}#sv-screen .sv-stat{line-height:10px!important;margin-bottom:2px!important}#sv-screen .sv-hud-left{width:142px!important}#sv-screen #sv-message{top:116px!important}#sv-screen #sv-minimap-3d{width:72px!important;height:72px!important}}
-</style>
+<style id="zona-survival-v142-layout">#sv-screen{inset:0 0 auto!important;height:var(--sv-visible-height,100dvh)!important;max-height:100dvh!important;min-height:0!important;padding:0!important;overflow:hidden!important;box-sizing:border-box!important;}
+#sv-screen header{position:relative!important;gap:6px!important;}
+#sv-screen header .sv-head-copy small{font:7px/1.2 Consolas,monospace!important;letter-spacing:.7px!important;}
+#sv-screen #sv-title{font-size:12px!important;}
+#sv-screen .sv-view{position:relative!important;flex:1 1 0!important;height:auto!important;min-height:0!important;width:100%!important;overflow:hidden!important;}
+#sv-screen #sv-canvas{position:absolute!important;inset:0!important;}
+#sv-screen .sv-hud-left{transform:none!important;}
+#sv-screen .sv-brand{font:700 9px/1.2 Arial!important;gap:3px!important;}
+#sv-screen .sv-stat{font-size:8px!important;}
+#sv-screen .sv-stat span,#sv-screen .sv-stat em{white-space:nowrap!important;}
+#sv-screen .sv-bar{height:5px!important;min-width:0!important;}
+#sv-screen #sv-minimap-3d{top:7px!important;right:7px!important;width:82px!important;height:82px!important;box-sizing:border-box!important;border-width:1px!important;box-shadow:0 0 0 2px #080e0bcc!important;}
+#sv-screen .sv-controls{left:max(12px,env(safe-area-inset-left))!important;right:max(12px,env(safe-area-inset-right))!important;bottom:calc(12px + max(env(safe-area-inset-bottom,0px),var(--sv-safe-bottom,0px)))!important;align-items:flex-end!important;z-index:20!important;}
+#sv-screen #sv-stick{flex:0 0 86px!important;width:86px!important;height:86px!important;min-width:86px!important;min-height:86px!important;box-shadow:0 0 0 3px #09100bb0!important;}
+#sv-screen #sv-stick span{width:36px!important;height:36px!important;box-sizing:border-box!important;}
+#sv-screen #sv-stick:before{inset:11px!important;}
+#sv-screen #sv-stick:after{inset:24px!important;}
+#sv-screen .sv-actions{flex-direction:row!important;gap:8px!important;}
+#sv-screen .sv-actions button{box-sizing:border-box!important;flex:0 0 54px!important;width:54px!important;height:54px!important;min-width:54px!important;min-height:54px!important;padding:3px!important;font-size:10px!important;line-height:1.1!important;box-shadow:0 3px 9px #0008!important;}
+#sv-screen .sv-hud-right{right:8px!important;bottom:calc(79px + max(env(safe-area-inset-bottom,0px),var(--sv-safe-bottom,0px)))!important;}
+#sv-screen .sv-weapon-box small{font-size:7px!important;}
+#sv-screen .sv-weapon-box strong{font-size:10px!important;}
+#sv-screen #sv-weapon-ammo{font-size:8px!important;}
+#sv-screen #sv-3d-prompt{bottom:calc(108px + max(env(safe-area-inset-bottom,0px),var(--sv-safe-bottom,0px)))!important;font-size:9px!important;max-width:160px!important;}
+#sv-screen #sv-message{top:132px!important;bottom:auto!important;left:50%!important;right:auto!important;max-width:70%!important;padding:5px 7px!important;font-size:10px!important;}
+@media(max-height:430px){#sv-screen header{flex-basis:36px!important;height:36px!important;min-height:36px!important;}
+#sv-screen .sv-stat{line-height:10px!important;margin-bottom:2px!important;}
+#sv-screen .sv-hud-left{width:142px!important;}
+#sv-screen #sv-message{top:116px!important;}
+#sv-screen #sv-minimap-3d{width:72px!important;height:72px!important;}}</style>
 
-<style id="zona-survival-v143-compact">
-/* Compact HUD; input targets and gameplay remain unchanged. */
-#sv-screen header{flex:0 0 28px!important;height:28px!important;min-height:28px!important;padding:1px 4px!important;border-top:0!important;box-shadow:none!important}
-#sv-screen header .sv-head-copy{gap:0!important;flex:1!important}
-#sv-screen header .sv-head-copy small{display:none!important}
-#sv-screen header::after{display:none!important}
-#sv-screen #sv-title{font:700 11px/1.2 Arial,sans-serif!important;max-width:calc(100vw - 80px)!important;letter-spacing:0!important}
-#sv-screen #sv-pause{width:68px!important;min-width:68px!important;height:24px!important;min-height:24px!important;padding:1px 3px!important;border-radius:4px!important;font-size:8px!important;letter-spacing:0!important;box-shadow:none!important}
-#sv-screen .sv-hud-left{top:3px!important;left:3px!important;width:134px!important;padding:4px!important;border-radius:5px!important;box-shadow:0 2px 5px #0006!important}
-#sv-screen .sv-brand{font-size:8px!important;margin-bottom:3px!important}
-#sv-screen .sv-brand b{font-size:7px!important;padding:1px 2px!important}
-#sv-screen .sv-stat{grid-template-columns:47px minmax(0,1fr) 29px!important;line-height:10px!important;margin-bottom:2px!important;gap:2px!important}
-#sv-screen .sv-stat span,#sv-screen .sv-stat em{font-size:8px!important}
-#sv-screen .sv-money{margin-top:3px!important;padding-top:3px!important;font-size:7px!important}
-#sv-screen .sv-hud-right{width:100px!important;padding:3px 4px!important;border-radius:4px!important;box-shadow:none!important}
-#sv-screen .sv-weapon-box{padding:0!important;margin:0!important}
-#sv-screen .sv-weapon-box small{display:none!important}
-#sv-screen .sv-weapon-box strong{display:block!important;font:700 9px/11px Arial,sans-serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;margin:0!important}
-#sv-screen #sv-weapon-ammo{font:8px/10px Arial,sans-serif!important;margin:1px 0 0!important}
+<style id="zona-survival-v143-compact">#sv-screen header{flex:0 0 28px!important;height:28px!important;min-height:28px!important;padding:1px 4px!important;border-top:0!important;box-shadow:none!important;}
+#sv-screen header .sv-head-copy{gap:0!important;flex:1!important;}
+#sv-screen header .sv-head-copy small{display:none!important;}
+#sv-screen header::after{display:none!important;}
+#sv-screen #sv-title{font:700 11px/1.2 Arial,sans-serif!important;max-width:calc(100vw - 80px)!important;letter-spacing:0!important;}
+#sv-screen #sv-pause{width:68px!important;min-width:68px!important;height:24px!important;min-height:24px!important;padding:1px 3px!important;border-radius:4px!important;font-size:8px!important;letter-spacing:0!important;box-shadow:none!important;}
+#sv-screen .sv-hud-left{top:3px!important;left:3px!important;width:134px!important;padding:4px!important;border-radius:5px!important;box-shadow:0 2px 5px #0006!important;}
+#sv-screen .sv-brand{font-size:8px!important;margin-bottom:3px!important;}
+#sv-screen .sv-brand b{font-size:7px!important;padding:1px 2px!important;}
+#sv-screen .sv-stat{grid-template-columns:47px minmax(0,1fr) 29px!important;line-height:10px!important;margin-bottom:2px!important;gap:2px!important;}
+#sv-screen .sv-stat span,#sv-screen .sv-stat em{font-size:8px!important;}
+#sv-screen .sv-money{margin-top:3px!important;padding-top:3px!important;font-size:7px!important;}
+#sv-screen .sv-hud-right{width:100px!important;padding:3px 4px!important;border-radius:4px!important;box-shadow:none!important;}
+#sv-screen .sv-weapon-box{padding:0!important;margin:0!important;}
+#sv-screen .sv-weapon-box small{display:none!important;}
+#sv-screen .sv-weapon-box strong{display:block!important;font:700 9px/11px Arial,sans-serif!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;margin:0!important;}
+#sv-screen #sv-weapon-ammo{font:8px/10px Arial,sans-serif!important;margin:1px 0 0!important;}</style>
+
+
+<style id="survival-phone-menu">
+html.proportion-v2 body #app #kpk-survival{background:#10140f!important;border:1px solid #62583c!important;border-radius:2px!important;overflow:hidden;margin:10px 0 14px!important;color:#d8d1bb;font-family:var(--st-body)!important}
+html.proportion-v2 body #app #kpk-survival *{box-sizing:border-box}
+html.proportion-v2 body #app #kpk-survival>summary.zone-hero{min-height:132px!important;border:0!important;border-radius:0!important}
+html.proportion-v2 body #app #kpk-survival .hero-copy{max-width:none!important;padding:12px!important}
+html.proportion-v2 body #app #kpk-survival .hero-copy h1{display:flex;align-items:center;gap:9px;font:700 30px/1.1 var(--st-head)!important;letter-spacing:1.4px!important;margin:6px 0!important}
+html.proportion-v2 body #app #kpk-survival .sv-version-badge{display:inline-flex;align-items:center;font:500 9px/1 var(--st-head)!important;letter-spacing:1px!important;color:#b6a47b;background:#171b13b8;border:1px solid #6b614345;border-left:2px solid #8b7951;border-radius:1px;padding:3px 5px;box-shadow:none;text-shadow:none}
+html.proportion-v2 body #app #kpk-survival .hero-copy p{font:12px/1.4 var(--st-body)!important;color:#d0c8b2!important;margin:5px 0!important}
+html.proportion-v2 body #app #kpk-survival .eyebrow,html.proportion-v2 body #app #kpk-survival .hero-meta{font-family:var(--st-mono)!important;font-size:8px!important;letter-spacing:.5px!important}
+html.proportion-v2 body #app #kpk-survival .hero-meta{display:flex!important;justify-content:space-between;gap:8px!important;margin-top:9px!important}
+html.proportion-v2 body #app #kpk-survival .sv-body{padding:10px!important;background:linear-gradient(140deg,#171c14,#0e130f)!important}
+html.proportion-v2 body #app #kpk-survival .sv-intro{font:11px/1.4 var(--st-body)!important;color:#aeb5a1;margin:0 0 9px!important}
+html.proportion-v2 body #app #kpk-survival .sv-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+html.proportion-v2 body #app #kpk-survival .sv-card{padding:8px!important;border:1px solid #464a36!important;border-radius:2px!important;background:#11170f!important;min-width:0;box-shadow:inset 0 1px #b1a16b0c!important}
+html.proportion-v2 body #app #kpk-survival .section-label{font:500 11px/1.3 var(--st-head)!important;letter-spacing:.8px!important;margin:0 0 7px!important;color:#bfa873}
+html.proportion-v2 body #app #kpk-survival .section-label small{font:8px var(--st-mono)!important;letter-spacing:0!important;color:#81886f}
+html.proportion-v2 body #app #kpk-survival button,html.proportion-v2 body #app #kpk-survival input{font-family:var(--st-body)!important}
+html.proportion-v2 body #app #kpk-survival .sv-picker-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:46px!important;padding:6px 9px!important;text-align:left;border:1px solid #776b48!important;border-radius:2px!important;background:linear-gradient(#242a1c,#151b12)!important;color:#e4d7b8;box-shadow:inset 0 1px #c6b17d1a!important}
+html.proportion-v2 body #app #kpk-survival .sv-picker-trigger>span{min-width:0}html.proportion-v2 body #app #kpk-survival #sv-location-current{display:block;font:500 13px/1.2 var(--st-head)!important}
+html.proportion-v2 body #app #kpk-survival #sv-location-sub{display:block;font:10px/1.2 var(--st-body)!important;color:#9fa88f;margin-top:3px!important;letter-spacing:0!important}
+html.proportion-v2 body #app #kpk-survival .sv-picker-trigger>b{font-size:16px;color:#bca773}
+html.proportion-v2 body #app #kpk-survival .sv-location-menu{margin-top:5px;background:#0c120d;border:1px solid #59573c;border-radius:2px;overflow:hidden}
+html.proportion-v2 body #app #kpk-survival .sv-location-menu[hidden]{display:none!important}
+html.proportion-v2 body #app #kpk-survival .sv-sector-search{display:block;padding:6px;border-bottom:1px solid #343d2d}
+html.proportion-v2 body #app #kpk-survival .sv-sector-search>span{display:none}html.proportion-v2 body #app #kpk-survival .sv-sector-search input{display:block;width:100%;min-height:36px;border:1px solid #414c35;border-radius:2px;background:#171f14;color:#dfd5ba;padding:6px 8px;font-size:12px!important;letter-spacing:0}
+html.proportion-v2 body #app #kpk-survival #sv-location-options{max-height:min(240px,38dvh);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+html.proportion-v2 body #app #kpk-survival .sv-location-option{display:grid!important;grid-template-columns:36px minmax(0,1fr) 15px!important;gap:7px!important;align-items:center;width:100%;min-height:48px!important;padding:5px 7px!important;background:#10170f;border:0;border-bottom:1px solid #2d3827;text-align:left;color:#cdcdb8;border-radius:0!important}
+html.proportion-v2 body #app #kpk-survival .sv-loc-thumb{display:block;width:36px!important;height:34px!important;object-fit:cover;border:1px solid #464a32;filter:saturate(.55) brightness(.8)}
+html.proportion-v2 body #app #kpk-survival .sv-loc-copy{display:block;min-width:0}html.proportion-v2 body #app #kpk-survival .sv-loc-copy strong{display:block;font:500 12px/1.2 var(--st-head)!important;letter-spacing:.1px}
+html.proportion-v2 body #app #kpk-survival .sv-loc-copy small{display:block;font:9px/1.2 var(--st-body)!important;color:#979f87;margin-top:3px!important;letter-spacing:0!important}
+html.proportion-v2 body #app #kpk-survival .sv-loc-mark{font-size:12px;color:#ae9965;text-align:center}
+html.proportion-v2 body #app #kpk-survival .sv-location-option.is-active{background:#262e1b!important;box-shadow:inset 2px 0 #b9a069}
+html.proportion-v2 body #app #kpk-survival button:disabled{opacity:.5}html.proportion-v2 body #app #kpk-survival .sv-location-option:disabled .sv-loc-thumb{filter:grayscale(1) brightness(.6)}
+html.proportion-v2 body #app #kpk-survival .sv-note,html.proportion-v2 body #app #kpk-survival .sv-route-status{font:10px/1.35 var(--st-body)!important;color:#949f86;margin:7px 0 0!important}
+html.proportion-v2 body #app #kpk-survival .sv-location-visual{position:relative;height:76px!important;overflow:hidden;border:1px solid #414a32;margin:0 0 7px;background:#0c130d}
+html.proportion-v2 body #app #kpk-survival .sv-location-visual img{width:100%;height:100%;object-fit:cover;object-position:center 45%;filter:saturate(.65) brightness(.75)}
+html.proportion-v2 body #app #kpk-survival .sv-location-visual span{position:absolute;left:5px;bottom:5px;padding:2px 5px;font:9px var(--st-body);background:#0c130ee6;color:#c6bb99;border-left:2px solid #8c8054}
+html.proportion-v2 body #app #kpk-survival .sv-meta-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:4px!important;margin:0 0 7px!important}
+html.proportion-v2 body #app #kpk-survival .sv-meta-pill{display:flex;align-items:center;justify-content:space-between;gap:5px;min-height:30px;padding:5px 6px!important;border:1px solid #323e2a;border-radius:1px;background:#182014}
+html.proportion-v2 body #app #kpk-survival .sv-meta-pill small{font:8px var(--st-body)!important;letter-spacing:.2px!important;color:#929f81}html.proportion-v2 body #app #kpk-survival .sv-meta-pill b{font:500 10px var(--st-head)!important;color:#c8bb95;text-align:right}
+html.proportion-v2 body #app #kpk-survival .sv-detail-fold{border-top:1px solid #343d2a}html.proportion-v2 body #app #kpk-survival .sv-detail-fold summary{display:flex;align-items:center;justify-content:space-between;min-height:36px;list-style:none;font:11px var(--st-head);color:#b9ad87;cursor:pointer}html.proportion-v2 body #app #kpk-survival .sv-detail-fold summary::-webkit-details-marker{display:none}html.proportion-v2 body #app #kpk-survival .sv-detail-fold[open] summary span{transform:rotate(45deg)}
+html.proportion-v2 body #app #kpk-survival .sv-detail-copy{display:grid;gap:5px;font:11px/1.4 var(--st-body)!important;color:#a7b199;padding-bottom:7px}html.proportion-v2 body #app #kpk-survival .sv-detail-copy strong{color:#c2b28a}
+html.proportion-v2 body #app #kpk-survival #sv-start{width:100%;min-height:44px!important;margin-top:8px!important;border:1px solid #867344!important;border-radius:2px!important;background:linear-gradient(#4b4930,#2a301c)!important;color:#e1d1a3!important;font:500 13px var(--st-head)!important;letter-spacing:1px!important;box-shadow:inset 0 1px #d7bf7833!important}
+html.proportion-v2 body #app #kpk-survival button:active:not(:disabled){filter:brightness(1.15)}html.proportion-v2 body #app #kpk-survival input:focus{outline:1px solid #aa9460;outline-offset:1px}
+html.proportion-v2 body #app #kpk-survival .sv-empty-sectors{font:12px var(--st-body);padding:10px;color:#a4af93}
 </style>
 
 </body>
