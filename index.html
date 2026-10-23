@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z — СНАРЯЖЕНИЕ 5.0</title>
+<title>ZONA Z v12.1 — Survival 3D</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -1452,7 +1452,7 @@ body::selection{background:#bda46a;color:#091009}
 @media(prefers-reduced-motion:reduce){#app .btn{transition:none!important}#sv-screen .sv-actions button{transition:none!important}}
 </style>
 </head>
-<body><div id="zona-startup-screen" role="status" aria-live="polite"><div class="startup-weather" aria-hidden="true"><div class="startup-rain"></div><div class="startup-fog"></div><div class="startup-lamp"></div></div><div class="startup-content"><div class="startup-eyebrow">КПК СТАЛКЕРА / ТЕРРИТОРИЯ ОТЧУЖДЕНИЯ</div><strong class="startup-title">ZONA Z</strong><div class="startup-caption">У ЗОНЫ ЕСТЬ СВОИ ПРАВИЛА</div><div class="startup-panel"><div class="startup-line"><span>ЗАГРУЗКА КПК</span><span id="zona-startup-percent">0%</span></div><div id="zona-startup-progress" class="startup-track" role="progressbar" aria-label="Подготовка к запуску" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="zona-startup-fill" class="startup-fill"></div></div><p id="zona-startup-message">Устанавливаем связь с КПК…</p><div class="startup-tip" aria-live="off"><strong>СОВЕТ СТАЛКЕРУ</strong><span id="zona-startup-tip">Сюжетное снаряжение нельзя продать или разобрать.</span></div></div><p class="startup-note">Подготовка занимает около 20 секунд.<br>Дождитесь завершения связи перед выходом в Зону.</p><p class="startup-version"><span class="startup-version-tag" aria-label="Версия игры 2026.10.23.8"><span class="startup-version-label">ВЕРСИЯ</span><span>2026.10.23.8</span></span></p></div></div>
+<body><div id="zona-startup-screen" role="status" aria-live="polite"><div class="startup-weather" aria-hidden="true"><div class="startup-rain"></div><div class="startup-fog"></div><div class="startup-lamp"></div></div><div class="startup-content"><div class="startup-eyebrow">КПК СТАЛКЕРА / ТЕРРИТОРИЯ ОТЧУЖДЕНИЯ</div><strong class="startup-title">ZONA Z</strong><div class="startup-caption">У ЗОНЫ ЕСТЬ СВОИ ПРАВИЛА</div><div class="startup-panel"><div class="startup-line"><span>ЗАГРУЗКА КПК</span><span id="zona-startup-percent">0%</span></div><div id="zona-startup-progress" class="startup-track" role="progressbar" aria-label="Подготовка к запуску" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="zona-startup-fill" class="startup-fill"></div></div><p id="zona-startup-message">Устанавливаем связь с КПК…</p><div class="startup-tip" aria-live="off"><strong>СОВЕТ СТАЛКЕРУ</strong><span id="zona-startup-tip">Сюжетное снаряжение нельзя продать или разобрать.</span></div></div><p class="startup-note">Подготовка занимает около 20 секунд.<br>Дождитесь завершения связи перед выходом в Зону.</p><p class="startup-version"><span class="startup-version-tag" aria-label="Версия игры 12.1"><span class="startup-version-label">ВЕРСИЯ</span><span>12.1</span></span></p></div></div>
 <div class="scanlines"></div>
 <div id="toast-box"></div>
 <div id="app">
@@ -6864,7 +6864,13 @@ for(const light of scene.lights||[]){m.box(light.x,56,light.y,35,3,12,'#91876b')
 if(!low){for(let x=24;x<scene.w;x+=60)for(let z=20;z<scene.h;z+=60){const k=((x*37+z*23)%19);if(k<5)m.plane(x,.09,z,50,44,k<3?'#333a34':'#3d4038');if(k===4)m.rail(x-19,z-17,x+12,z+18,.2,'#232622',.8)}}
 if(!low){for(let k=0;k<9;k++){const x=35+((k*89)%680),z=25+((k*73)%530);m.box(x,0,z,14+(k%3)*7,4,8,'#4b4940',2);if(k%3===0)m.box(x+8,0,z+10,5,8,5,'#645345',3)}
 for(let k=0;k<6;k++){m.rail(25+k*120,20,75+k*120,45,.22,'#45423b',1,3)}}
-for(const p of scene.props||[]){const color=({table:'#685a43',locker:'#6d7770',shelf:'#766149',bed:'#67726f',box:'#8d7149',machine:'#4a6569',cabinet:'#665f51'})[p.kind]||'#655e48';m.box(p.x+p.w/2,0,p.y+p.h/2,p.w,p.kind==='locker'?47:p.kind==='machine'?39:20,p.h,color);
+for(const p of scene.props||[]){const color=({table:'#685a43',locker:'#6d7770',shelf:'#766149',bed:'#67726f',box:'#8d7149',machine:'#4a6569',cabinet:'#665f51'})[p.kind]||'#655e48';if(p.kind==='table'||p.kind==='bed'||p.kind==='shelf'){
+ const cx=p.x+p.w/2,cz=p.y+p.h/2;
+ for(const dx of [-p.w*.42,p.w*.42])for(const dz of [-p.h*.38,p.h*.38])m.box(cx+dx,0,cz+dz,2.4,p.kind==='shelf'?38:20,2.4,'#41483c',3);
+ m.box(cx,18,cz,p.w,2,p.h,color,4);
+ if(p.kind==='shelf')m.box(cx,4,cz,p.w,2,p.h,'#65553e',4);
+ if(p.kind==='bed'){for(const dx of [-p.w*.44,p.w*.44])m.box(cx+dx,0,cz,2,27,p.h,'#535d52',3);}
+}else m.box(p.x+p.w/2,0,p.y+p.h/2,p.w,p.kind==='locker'?47:p.kind==='machine'?39:20,p.h,color);
 if(p.kind==='bed'){m.box(p.x+p.w/2,21,p.y+p.h/2,p.w*.9,4,p.h*.9,'#a7a698');m.box(p.x+p.w/2,25,p.y+7,p.w*.64,5,12,'#8b8879')}if(p.kind==='machine'){m.box(p.x+p.w/2,30,p.y+p.h/2+p.h/2+1,p.w*.4,8,2,'#8ab6ad');m.box(p.x+p.w/2,42,p.y+p.h/2,16,3,8,'#a0a58c')}if(p.kind==='locker'&&!low)m.box(p.x+p.w/2+2,14,p.y+p.h,3,14,3,'#a0a68f');if(p.kind==='table'&&!low)m.box(p.x+p.w/2,20,p.y+p.h/2,16,3,12,'#9c8f71',4);
 if(p.kind==='shelf'&&!low){m.box(p.x+p.w/2,34,p.y+p.h/2,p.w,3,p.h*.7,'#635c4f',4);for(let k=0;k<3;k++)m.box(p.x+10+k*p.w/3,23,p.y+p.h/2,8,12,9,k%2?'#6e5d48':'#455951',3)}
 if(p.kind==='cabinet'&&!low){m.box(p.x+p.w/2,18,p.y+p.h+2,p.w*.72,3,3,'#b49e70',3)}
@@ -6874,6 +6880,46 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 // Room enclosing walls are low enough to preserve the camera view; access at front exit.
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
+}
+// v12.1: structural joints and small equipment, shared by every sector.
+if(room==null)for(const o of map.landmarks||[]){
+ const x=o.x,z=o.y;
+ if(['tower','watch','crane','antenna','radar'].includes(o.kind)){
+  const h=['tower','watch'].includes(o.kind)?86:o.kind==='crane'?150:110,r=['tower','watch'].includes(o.kind)?27:8;
+  for(let y=4;y<h-15;y+=23){
+   for(const side of [-1,1]){
+    m.branch(x-r,y,z+side*r,x+r,y+22,z+side*r,1.1,'#635747',5,3);
+    m.branch(x+side*r,y,z-r,x+side*r,y+22,z+r,1.1,'#635747',5,3);
+   }
+   m.branch(x-r,y,z-r,x+r,y,z-r,1.2,'#7c6b50',5,3);
+  }
+  for(let y=3;y<h;y+=7)m.branch(x+r+3,y,z-6,x+r+3,y,z+6,.9,'#8c8066',4,3);
+  for(const dz of [-7,7])m.branch(x+r+3,0,z+dz,x+r+3,h,z+dz,1.3,'#5b5d4c',5,3);
+  if(['tower','watch'].includes(o.kind))for(const side of [-1,1]){
+   m.branch(x-30,104,z+side*30,x+30,104,z+side*30,1.3,'#605f4e',5,3);
+   for(const dx of [-30,0,30])m.branch(x+dx,90,z+side*30,x+dx,104,z+side*30,1,'#79715b',5,3);
+  }
+ }
+ if(o.kind==='pipes')for(const dz of [-12,14]){
+  m.branch(x-83,17,z+dz,x+83,17,z+dz,7,'#6e6655',12,3);
+  for(const dx of [-65,-20,25,65]){
+   m.branch(x+dx-1.5,17,z+dz,x+dx+1.5,17,z+dz,8.5,'#4b5147',12,3);
+   m.box(x+dx,0,z+dz,12,7,22,'#65675b',2);
+  }
+ }
+ if(['generator','server'].includes(o.kind)){
+  for(let j=0;j<8;j++)m.box(x-21+j*6,13,z+28.5,2,30,1,'#262e29',3);
+  for(const dx of [-34,34])for(const yy of [7,57])m.ellipsoid(x+dx,yy,z+28,1.5,1.5,.7,'#aaa58c',3,5,3);
+  m.branch(x+31,46,z-12,x+31,84,z-12,2.5,'#494b40',8,3);
+ }
+ if(['camp','safebase'].includes(o.kind)){
+  const cx=x-(o.kind==='safebase'?14:0),cz=z-(o.kind==='safebase'?2:0);
+  for(let j=0;j<6;j++){const t=j*Math.PI/3;m.branch(cx+Math.cos(t)*12,3,cz+Math.sin(t)*12,cx-Math.cos(t)*9,5,cz-Math.sin(t)*9,2.8,'#30291f',7,4);}
+ }
+}
+if(!low)for(const c of scene.crates||[]){
+ // Small surrounding debris only: the actual loot box is still dynamic.
+ for(let k=0;k<3;k++)m.plank(c.x-21+k*5,c.y+16,8,1.5,k*.7,'#66533b');
 }
 // Architectural detail follows existing footprints; no new interactive objects.
 if(room==null){
@@ -7010,6 +7056,13 @@ function mutant(x,z){
  m.branch(x,25,z+22,x,35,z+33,2.2,'#4e4238',5,3);
 }
 for(const c of w.crates){m.shadow(c.x,c.y,17,14);const opened=run.opened.includes(c.id);if(!opened)m.disk(c.x,.55,c.y,26,'#8b764a',10);m.box(c.x,0,c.y,29,20,25,opened?'#434239':'#a1844a');if(!opened){m.box(c.x,21,c.y,32,4,27,'#c19e63');m.box(c.x,0,c.y+14,36,6,3,'#d0b579')}}
+for(const c of w.crates){
+ const opened=run.opened.includes(c.id),col=opened?'#4b493b':'#8b754d';
+ for(const dx of [-11,11]){m.box(c.x+dx,0,c.y+13,2.5,20,1.5,'#424a3c',3);m.box(c.x+dx,20,c.y,2.5,1,24,'#424a3c',3);}
+ for(let yy=4;yy<20;yy+=5)m.box(c.x,yy,c.y+13.2,27,.6,.7,'#372f24',4);
+ m.box(c.x,10,c.y+14,4,5,2,opened?'#4b5045':'#ac9c70',3);
+ for(const dx of [-10,10])m.box(c.x+dx,17,c.y-13,4,4,1.5,col,3);
+}
 for(const p of w.people){m.disk(p.x,.7,p.y,16,'#344d4b',12,8);human(p.x,p.y,'#468f92')}
 for(const e of w.enemies){if(run.defeated.includes(e.id))continue;const v=enemyData(e);if(Math.hypot(run.x-v.x,run.y-v.y)>440)continue;m.disk(v.x,.7,v.y,16,'#4e3932',12,8);if(/крыс|собак|кабан|плот|химер|кот|тушкан|псевдо/i.test(e.name||''))mutant(v.x,v.y);else human(v.x,v.y,'#9d5349')}
 // Extraction portal and visible marker, same coordinates as game's actual exit.
@@ -7051,7 +7104,10 @@ vec3 atlasSample(float mat,vec3 normal){
  vec2 uv=fract(texPos*texScale);
  float col=mod(mat,4.0),row=floor(mat/4.0);
  vec2 st=vec2((col+.025+uv.x*.95)/4.0,1.0-(row+.025+uv.y*.95)/2.0);
- return texture2D(uAtlas,st).rgb;
+ vec3 tex=texture2D(uAtlas,st).rgb;
+ vec2 uv2=fract(texPos*texScale*.371+vec2(.23,.61));
+ vec3 macroTex=texture2D(uAtlas,vec2((col+.025+uv2.x*.95)/4.,1.-(row+.025+uv2.y*.95)/2.)).rgb;
+ return mix(tex,tex*(.68+macroTex*.65),.35);
 }
 void main(){
  float mat=floor(vMaterial+.5);vec3 normal=normalize(vNormal);
@@ -7065,13 +7121,22 @@ void main(){
 
  vec2 surface=abs(normal.y)>.55?vWorldPos.xz:(abs(normal.x)>.55?vWorldPos.zy:vWorldPos.xy);
  float coarse=noise21(surface*.047),fine=noise21(surface*.61);
+ if(mat<7.5&&mat!=5.0){
+  float relief=mat<2.5?.18:mat<3.5?.085:mat<4.5?.12:.035;
+  vec2 slope=vec2(noise21(surface*.61+vec2(.33,0.))-fine,noise21(surface*.61+vec2(0.,.33))-fine)*relief;
+  if(abs(normal.y)>.55)normal=normalize(normal+vec3(slope.x,0.,slope.y));
+  else if(abs(normal.x)>.55)normal=normalize(normal+vec3(0.,slope.y,slope.x));
+  else normal=normalize(normal+vec3(slope.x,slope.y,0.));
+ }
+
  if(mat<2.5){
   base*=.72+.34*coarse+.18*fine;
   float seam=abs(noise21(surface*.038+noise21(surface*.011)*2.0)-.5);
   float cracks=1.0-smoothstep(.009,.026,seam);
   base*=1.0-cracks*.22;
   base=mix(base,base*vec3(.62,.68,.72),smoothstep(.58,.79,coarse)*.43);
- }else if(mat<3.5){base=mix(base,vec3(.23,.115,.055),smoothstep(.52,.76,coarse)*.46);}
+ }else if(mat<3.5){base=mix(base,vec3(.23,.115,.055),smoothstep(.52,.76,coarse)*.46);float rib=.5+.5*sin(surface.x*1.15);base*=.88+.14*rib;}
+
  else if(mat<4.5){base*=.74+.19*fine+.15*sin(surface.x*2.4+noise21(surface*.1)*5.0);}
  else if(mat<5.5){base*=.8+.25*fine;}
  // Directional lighting works on 3D surfaces even with vertex-colour models.
@@ -7139,13 +7204,22 @@ void main(){
 
  vec2 surface=abs(normal.y)>.55?vWorldPos.xz:(abs(normal.x)>.55?vWorldPos.zy:vWorldPos.xy);
  float coarse=noise21(surface*.047),fine=noise21(surface*.61);
+ if(mat<7.5&&mat!=5.0){
+  float relief=mat<2.5?.18:mat<3.5?.085:mat<4.5?.12:.035;
+  vec2 slope=vec2(noise21(surface*.61+vec2(.33,0.))-fine,noise21(surface*.61+vec2(0.,.33))-fine)*relief;
+  if(abs(normal.y)>.55)normal=normalize(normal+vec3(slope.x,0.,slope.y));
+  else if(abs(normal.x)>.55)normal=normalize(normal+vec3(0.,slope.y,slope.x));
+  else normal=normalize(normal+vec3(slope.x,slope.y,0.));
+ }
+
  if(mat<2.5){
   base*=.72+.34*coarse+.18*fine;
   float seam=abs(noise21(surface*.038+noise21(surface*.011)*2.0)-.5);
   float cracks=1.0-smoothstep(.009,.026,seam);
   base*=1.0-cracks*.22;
   base=mix(base,base*vec3(.62,.68,.72),smoothstep(.58,.79,coarse)*.43);
- }else if(mat<3.5){base=mix(base,vec3(.23,.115,.055),smoothstep(.52,.76,coarse)*.46);}
+ }else if(mat<3.5){base=mix(base,vec3(.23,.115,.055),smoothstep(.52,.76,coarse)*.46);float rib=.5+.5*sin(surface.x*1.15);base*=.88+.14*rib;}
+
  else if(mat<4.5){base*=.74+.19*fine+.15*sin(surface.x*2.4+noise21(surface*.1)*5.0);}
  else if(mat<5.5){base*=.8+.25*fine;}
 
@@ -7385,7 +7459,7 @@ function fallback(canvas,map,options={}){
  return{draw,project,rotate,movement,changeZoom,resetCamera,dispose,get yaw(){return yaw},get zoom(){return zoom},get pitch(){return 1.05},get overhead(){return true},get webgl(){return false},get triangles(){return 0}}
 }
 
-window.ZonaSurvival3D={init,fallback,version:'12.0-survival-visual-details'};
+window.ZonaSurvival3D={init,fallback,version:'12.1'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -7394,9 +7468,9 @@ window.addEventListener('zona:ready',()=>{
 const g=window.game;if(!g||document.getElementById('kpk-survival'))return;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
-panel.innerHTML='<summary class="sv-cover"><small>КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</small><h2>SURVIVAL</h2><p>Исследуйте мрачные трёхмерные сектора Зоны, заходите в здания и возвращайтесь с добычей.</p><div><span>28 СЕКТОРОВ · 3D / СОВМЕСТИМОСТЬ · ВИД СВЕРХУ</span><span class="sv-toggle"><i class="sv-closed">ОТКРЫТЬ</i><i class="sv-open">СВЕРНУТЬ</i> <b>⌄</b></span></div></summary><div class="sv-picker"><p>Джойстик — движение. «Действие» — ящики, двери и выжившие. «Атака» — ближайший видимый противник. На компьютере: WASD, E, пробел. В 3D камера смотрит сверху под углом: ведите пальцем или мышью для поворота, колесо мыши или кнопки +/− меняют масштаб. Кнопка «СЕВЕР» возвращает обычный обзор.</p><p>Добыча остаётся в полевом рюкзаке до возвращения к выходу. При поражении она теряется. Пауза сохраняет маршрут.</p><label class="sv-quality-row">ДЕТАЛИЗАЦИЯ <select id="sv-quality"><option value="high">Высокая — текстуры, свет, тени и детали</option><option value="eco">Эконом — для слабых телефонов</option></select></label><label>Локация <select id="sv-location"></select></label><p id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></div>';
+panel.innerHTML='<summary class="sv-cover"><small>КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</small><h2>SURVIVAL <span style="font-size:14px;color:#cbb77c;white-space:nowrap">v12.1</span></h2><p>Исследуйте мрачные трёхмерные сектора Зоны, заходите в здания и возвращайтесь с добычей.</p><div><span>28 СЕКТОРОВ · 3D / СОВМЕСТИМОСТЬ · ВИД СВЕРХУ</span><span class="sv-toggle"><i class="sv-closed">ОТКРЫТЬ</i><i class="sv-open">СВЕРНУТЬ</i> <b>⌄</b></span></div></summary><div class="sv-picker"><p>Джойстик — движение. «Действие» — ящики, двери и выжившие. «Атака» — ближайший видимый противник. На компьютере: WASD, E, пробел. В 3D камера смотрит сверху под углом: ведите пальцем или мышью для поворота, колесо мыши или кнопки +/− меняют масштаб. Кнопка «СЕВЕР» возвращает обычный обзор.</p><p>Добыча остаётся в полевом рюкзаке до возвращения к выходу. При поражении она теряется. Пауза сохраняет маршрут.</p><label class="sv-quality-row">ДЕТАЛИЗАЦИЯ <select id="sv-quality"><option value="high">Высокая — текстуры, свет, тени и детали</option><option value="eco">Эконом — для слабых телефонов</option></select></label><label>Локация <select id="sv-location"></select></label><p id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div><small>SURVIVAL / LAST SIGNAL 3D</small><strong id="sv-title"></strong></div><button id="sv-pause" class="btn btn-dark">Пауза / КПК</button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div id="sv-camera-tools" aria-label="Камера сверху" hidden><button type="button" id="sv-cam-in" aria-label="Приблизить">+</button><button type="button" id="sv-cam-out" aria-label="Отдалить">−</button><button type="button" id="sv-cam-north" aria-label="Вернуть камеру к северу">СЕВЕР</button></div><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA: LAST SIGNAL 3D <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action">Обыск</button><button id="sv-attack">Атака</button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div><small>SURVIVAL 3D · v12.1</small><strong id="sv-title"></strong></div><button id="sv-pause" class="btn btn-dark">Пауза / КПК</button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div id="sv-camera-tools" aria-label="Камера сверху" hidden><button type="button" id="sv-cam-in" aria-label="Приблизить">+</button><button type="button" id="sv-cam-out" aria-label="Отдалить">−</button><button type="button" id="sv-cam-north" aria-label="Вернуть камеру к северу">СЕВЕР</button></div><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · v12.1 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action">Обыск</button><button id="sv-attack">Атака</button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 const $=id=>document.getElementById(id);let canvas=$('sv-canvas');let renderer3d=null,mode3d=false,visible=false,frame=0,last=0,saveTimer=0,hudTimer=0,shot=0,hitLine=null,noteUntil=0;const keys=new Set(),stick={x:0,y:0,id:null};let map=null,rand=null;
 const state=()=>g.state.survival||(g.state.survival={version:1,visits:{},run:null});const run=()=>state().run;
