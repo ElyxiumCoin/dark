@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v15.11 — Survival Material Remaster</title>
+<title>ZONA Z v15.12 — Global Sector Visual Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -6745,7 +6745,7 @@ class Mesh{
  plank(x,z,w,d,angle=0,color='#67523c'){const c=Math.cos(angle),q=Math.sin(angle),a=[-w/2,-d/2],b=[w/2,-d/2],g=[w/2,d/2],h=[-w/2,d/2],pt=p=>[x+p[0]*c-p[1]*q,.8,z+p[0]*q+p[1]*c];this.quad(pt(a),pt(b),pt(g),pt(h),color,.9,4)}
  puddle(x,z,rx,rz){const surface=3.9+(Math.abs(x*17+z*31)%97)/97*.12;for(let i=0;i<20;i++){const a=i*Math.PI/10,b=(i+1)*Math.PI/10,r=t=>.83+.11*Math.sin(t*3+x)+.06*Math.cos(t*7+z);this.tri([x,surface,z],[x+Math.cos(a)*rx*r(a),surface,z+Math.sin(a)*rz*r(a)],[x+Math.cos(b)*rx*r(b),surface,z+Math.sin(b)*rz*r(b)],'#29343b',1,6)}}
 }
-function decorateLandmark(m,l,hi){const x=l.x,z=l.y,s=l.size||55,kind=l.kind,metal='#62655c',rust='#79563d',concrete='#6b6e64',dark='#303933',glow='#95cbb4',canvas='#5e6553',wood='#66543d',amber='#d8a45c';
+function decorateLandmark(m,l,hi){const x=l.x,z=l.y,s=l.size||55,kind=l.kind,metal='#62655c',rust='#79563d',concrete='#6b6e64',dark='#303933',glow='#677e77',canvas='#5e6553',wood='#66543d',amber='#d8a45c';
 const building=(w,d,h)=>m.box(x,0,z,w,h,d,concrete);
 const tent=(dx,dz,w=56,d=42,h=26,col=canvas)=>{
  const tx=x+dx,tz=z+dz;m.box(tx,0,tz,w,3,d,'#473d2d',4);
@@ -6871,7 +6871,7 @@ case 'fountain':m.cylinder(x,0,z,59,14,concrete,10);m.cylinder(x,14,z,27,30,rust
 case 'barricade':for(let k=-2;k<=2;k++)m.box(x+k*30,0,z,31,15,17,'#786b4d');m.box(x,14,z,120,8,22,metal);m.box(x-40,0,z+34,20,14,20,'#5b4b39');break;
 case 'deadtrees':for(let k=-2;k<=2;k++){const a=k*19;m.cylinder(x+a,0,z+a/2,6,65,metal);m.cone(x+a,39,z+a/2,13,22,rust)}m.box(x+58,0,z-24,16,12,16,'#554a3e');break;
 case 'totem':m.box(x,0,z,13,105,13,rust);m.box(x,70,z,49,13,12,concrete);m.box(x-20,0,z+16,18,12,16,wood);break;
-case 'crystal':case 'monolith':case 'portal':m.cone(x,0,z,kind==='monolith'?35:55,kind==='portal'?190:137,kind==='monolith'?'#95abd0':glow,7);m.cylinder(x,0,z,65,5,rust,12);for(let i=0;i<4;i++){const a=i*Math.PI/2;m.box(x+Math.cos(a)*72,0,z+Math.sin(a)*72,14,16,14,'#4f4a3f')}break;
+case 'crystal':case 'monolith':case 'portal':m.cone(x,0,z,kind==='monolith'?35:55,kind==='portal'?190:137,kind==='monolith'?'#6e7b86':glow,7);m.cylinder(x,0,z,65,5,rust,12);for(let i=0;i<4;i++){const a=i*Math.PI/2;m.box(x+Math.cos(a)*72,0,z+Math.sin(a)*72,14,16,14,'#4f4a3f')}break;
 case 'wheel':{m.cylinder(x,0,z,6,95,metal);const n=12;for(let j=0;j<n;j++){const a=2*Math.PI*j/n;m.rail(x,z,x+Math.sin(a)*75,z+Math.cos(a)*75,100,metal,2);m.box(x+Math.sin(a)*75,30,z+Math.cos(a)*75,13,13,13,rust)}m.box(x-46,0,z+68,18,16,18,wood);break}
 }
 }
@@ -6921,7 +6921,7 @@ function detailSurvivalEnvironment(m,map,scene,room,low){
  };
  const avoid=(x,z)=>outdoor&&(map.buildings||[]).some(b=>x>b.x-15&&x<b.x+b.w+15&&z>b.y-15&&z<b.y+b.h+15);
  // Irregular stones, chipped seams, road cracks, sparse shrubs and flattened litter.
- const pieces=outdoor?(low?240:1580):(low?110:520);
+ const pieces=outdoor?(low?195:1370):(low?100:460);
  for(let i=0;i<pieces;i++){
   const x=11+rnd()*(scene.w-22),z=11+rnd()*(scene.h-22);if(avoid(x,z))continue;
   if(i%11===0){surfaceCrack(x,z);continue}
@@ -7005,6 +7005,232 @@ function detailSurvivalEnvironment(m,map,scene,room,low){
  }
 }
 
+// v15.12 — SECTOR VISUAL REMASTER. Renderer-only additions; no collision or gameplay registration.
+// Procedurally seeded by existing sector identifiers. Works in WebGL1 and compact mobile shaders.
+function sectorVisualRemaster(m,map,scene,room,low){
+ const id=String(map.theme.id||''),out=room==null;
+ let seed=2166136261;
+ for(let i=0;i<id.length;i++)seed=Math.imul(seed^id.charCodeAt(i),16777619);
+ seed^=(room==null?0x4571:room*1637+0x9821);
+ const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296};
+ const pick=a=>a[Math.floor(random()*a.length)];
+ const urban=/deadcity|limansk|pripyat|hospital|jupiter_janov/.test(id);
+ const industrial=/dump|jupiter|wild|valley|agroprom_inst|military|barrier|radar|chaes|reactor|generators/.test(id);
+ const wet=/swamp|skadovsk|yantar/.test(id);
+ const underground=/under|lab|bunker|tunnel|sarcophagus/.test(id);
+ const rural=/kordon|swamp|skadovsk/.test(id);
+ const forest=/redforest|kordon|barrier|swamp/.test(id);
+ const metal=['#564c40','#755b45','#515e5a','#88745e','#3c4745'];
+ const stone=['#4b514b','#6b675b','#7d7262','#464c47','#63594c'];
+ const grime=['#3c433b','#48463e','#645b4c','#3d4945'];
+ const rust=['#6c4933','#836044','#4d483d','#9b6e4c'];
+ const bounds=(x,z,pad=12)=>x>pad&&z>pad&&x<scene.w-pad&&z<scene.h-pad;
+ // Existing buildings keep exactly the same footprint and door interaction locations.
+ if(out)for(const b of map.buildings||[]){
+   const front=b.y+b.h+5,back=b.y,edge=b.x+b.w,high=b.style==='institute'||urban;
+   const n=low?3:Math.max(5,Math.min(14,Math.floor(b.w/19)));
+   // Brick courses, edge spalling and individual repair sections—not flat tint overlays.
+   for(let j=0;j<n;j++){
+     const px=b.x+8+((j*31+random()*11)%(Math.max(20,b.w-16)));
+     const y=9+((j*23)%(high?67:58));
+     if(Math.abs(px-b.door.x)<28&&y<57)continue;
+     m.box(px,y,front,6+j%4*2,1.7,1.1,j%4===0?pick(rust):pick(stone),2);
+     if(!low&&j%3===0){m.box(px+3,y+4,front+.35,2.8,7,1.1,'#484339',2);m.box(px+9,y+3,front+.5,3,3,1.2,'#8c7760',2)}
+   }
+   // Corner pillars, detached plaster, damaged cornices, vertical oxidation streaks.
+   for(const px of [b.x+3,edge-3]){
+     m.box(px,2,front-1,5,79,2.1,'#67695d',2);
+     for(let k=0;k<(low?2:5);k++){
+       const yy=11+k*14+(Math.round(random()*4));
+       m.box(px+(k%2?2:-1),yy,front+1.6,4,2.4,1.3,pick(grime),2);
+     }
+   }
+   // Visually inset frames and missing glazing for the actual window positions.
+   for(const w of b.windows||[]){
+     const wx=w.x+w.w/2,ww=w.w;
+     m.box(wx,32,front+1.5,ww+10,2.8,4,'#6b695c',2);
+     m.box(wx,34+w.h+2,front+1.5,ww+8,2.4,3,'#4d514a',2);
+     if(!low){
+       m.box(wx,35,front+3.3,1,Math.max(10,w.h-1),1.1,'#9d9a82',3);
+       const glass=ww*.29;
+       m.tri([wx-glass,39,front+3.6],[wx+2,48,front+3.6],[wx-glass*.4,51,front+3.6],w.lit?'#8e907a':'#607679',1,8);
+       m.branch(wx-ww*.42,34,front+4,wx-ww*.19,44,front+4,.8,pick(metal),4,3);
+       if(random()>.55)m.box(wx+ww*.47,34,front+4,2,22,2,'#675a49',3);
+     }
+   }
+   // A shallow canopy sits above—but does not cover—the existing entrance.
+   m.box(b.door.x,59,front+2,55,2.8,9,'#5c5e50',3);
+   for(const ox of [-22,22])m.branch(b.door.x+ox,51,front,b.door.x+ox,59,front+8,.9,'#765e48',5,3);
+   if(!low){
+     const count=urban?2:(industrial?1:0);
+     for(let i=0;i<count;i++){
+       const bx=b.x+Math.min(b.w-29,31+i*77),y=urban?71:75;
+       if(Math.abs(bx-b.door.x)<34)continue;
+       // Railings and narrow brackets are facade decoration: no physical balcony collision.
+       m.box(bx,y,front+7,39,2.2,14,'#595b50',2);
+       for(const dx of [-17,-8,2,11,18])m.branch(bx+dx,y+2,front+14,bx+dx,y+14,front+14,.72,'#655d4e',5,3);
+       m.branch(bx-19,y+14,front+14,bx+19,y+14,front+14,1,'#7c6f5d',5,3);
+       m.branch(bx-18,y,front+11,bx-18,y-17,front-1,1,'#504b40',4,3);
+     }
+   }
+   if(industrial){
+     for(let k=0;k<(low?1:3);k++){
+       const px=b.x+23+((k*79)%(Math.max(24,b.w-36))),pz=back+22+k*12;
+       m.box(px,92,pz,12,3,28,pick(metal),3);
+       m.box(px,94,pz,8,3,19,'#353f3b',3);
+     }
+   }
+   if(rural&&!low){
+     for(let k=0;k<3;k++){
+       const px=b.x+14+k*27,pz=front+8+k%2*4;
+       m.ellipsoid(px,2,pz,3+k%2,2,2,pick(stone),4,6,2);
+       m.cone(px+5,0,pz+2,2.8,9,pick(['#49563b','#5a5b3b','#6b623e']),4,5);
+     }
+   }
+ }
+ if(out){
+   // Differentiated sector dressing: no identical prefab clutter carpet.
+   const total=low?24:125;
+   for(let k=0;k<total;k++){
+     const x=30+random()*(scene.w-60),z=30+random()*(scene.h-60);
+     if(!bounds(x,z,30)||(map.buildings||[]).some(b=>x>b.x-25&&x<b.x+b.w+25&&z>b.y-17&&z<b.y+b.h+26))continue;
+     // Avoid important escape and interaction nodes; all pieces are draw-only.
+     if(Math.hypot(x-map.exit.x,z-map.exit.y)<82)continue;
+     const s=1.2+random()*4.3;
+     if(wet){
+       if(k%4===0){for(let j=0;j<3;j++)m.branch(x+j*2,1,z,x+j*3-4,8+random()*12,z+3+j*2,.55,'#77795b',4,5);}
+       else if(k%4===1)m.ellipsoid(x,.75,z,s,1.3,s*.65,'#575a4a',4,7,2);
+       else m.ellipsoid(x,.5,z,s,1,s*.7,pick(['#4b5a4d','#3b4943','#626149']),4,7,2);
+     }else if(urban){
+       if(k%4===0)m.box(x,.4,z,5+s,1.2,2+s*.35,pick(stone),2);
+       else if(k%4===1)m.plank(x,z,8+s,1.8,random()*6.28,'#6c5a45');
+       else m.ellipsoid(x,.6,z,s,.9,s*.7,pick(stone),3,5,2);
+     }else if(industrial){
+       if(k%5===0)m.cylinder(x,1,z,1.2,3,'#594b3c',5,3);
+       else if(k%4===0)m.box(x,.5,z,7,1.2,2,'#73624e',3);
+       else m.ellipsoid(x,.4,z,s,1.2,s*.5,pick(stone),3,5,2);
+     }else{
+       if(k%5===0)m.cone(x,0,z,2.5,6+random()*11,pick(['#5a6944','#596349','#6b6950']),4,5);
+       else m.ellipsoid(x,.45,z,s,1,s*.6,pick(stone),3,6,2);
+     }
+   }
+   for(const a of map.landmarks||[]){
+     const x=a.x,z=a.y,k=a.kind;
+     if(['laboratory','factory','facade','med','generator','server'].includes(k)){
+       // Vent housings, handrails, structural plating, damaged equipment faces.
+       for(let j=0;j<(low?3:7);j++){
+         const dx=-40+j*13;
+         m.box(x+dx,20,z+50,7,13,1.5,j%3===0?'#303d3a':pick(metal),3);
+         if(j%2===0)m.box(x+dx,34,z+50,11,2,3,'#88745c',3);
+       }
+       if(!low){
+         for(let j=0;j<4;j++)m.branch(x-50+j*29,79,z-20,x-50+j*29,98,z-20,1.7,'#62594d',6,3);
+         m.branch(x-55,98,z-20,x+40,98,z-20,2.6,'#766858',6,3);
+       }
+     }else if(['antenna','radar','tower','watch'].includes(k)){
+       const h=k==='tower'||k==='watch'?90:137;
+       for(let j=0;j<(low?3:6);j++){
+         const y=9+j*(h-14)/6;
+         m.branch(x-18,y,z+5,x+18,y+12,z+5,.9,j%3===0?'#8b6748':'#66665a',4,3);
+       }
+     }else if(['rail','wagon','crane'].includes(k)){
+       for(let j=0;j<(low?3:9);j++){
+         const px=x-65+j*15;
+         m.box(px,1.2,z+36,9,2,3,pick(metal),3);
+       }
+     }else if(['wreck','truck','ambulance','helicopter'].includes(k)){
+       for(let j=0;j<(low?3:8);j++){
+         const px=x-43+random()*86,pz=z+32+random()*18;
+         m.box(px,.8,pz,3+random()*8,1.2,3+random()*4,pick(rust),3);
+       }
+     }else if(['ship','pier','boat','pond'].includes(k)){
+       for(let j=0;j<(low?4:13);j++){
+         const p=j*6.28/(low?4:13),rad=57+random()*34;
+         m.cone(x+Math.sin(p)*rad,0,z+Math.cos(p)*rad,1.4,10+random()*18,'#686a4a',3,5);
+       }
+     }else if(['reactor','pipes','shaft'].includes(k)){
+       for(let j=0;j<(low?2:5);j++){
+         const xx=x-57+j*21;
+         m.branch(xx,7,z+57,xx+14,7,z+57,2.3,'#746957',6,3);
+         m.box(xx,0,z+57,3,11,3,'#5f6257',3);
+       }
+     }else if(['monolith','crystal','portal'].includes(k)){
+       // Muted faceted mineral shards rather than neon rectangular markers.
+       for(let j=0;j<(low?3:7);j++){
+         const ang=j*2.399,rad=33+random()*19,xx=x+Math.cos(ang)*rad,zz=z+Math.sin(ang)*rad;
+         m.cone(xx,1,zz,3+random()*3,11+random()*21,pick(['#53615c','#6c776c','#4b5959']),5,2);
+       }
+     }
+   }
+   if(forest&&!low)for(let i=0;i<Math.min(22,map.trees?.length||0);i+=2){
+     const tree=map.trees[i];if(!tree)continue;
+     const x=tree.x+26,z=tree.y-11;if(!bounds(x,z,22))continue;
+     m.branch(x,3,z,x+12,3,z+7,2,'#5c4938',5,4);
+     m.ellipsoid(x+7,.9,z+4,4,1.4,3,'#4c5942',4,6,5);
+   }
+   // Sparse, real 3D verge stones leave all existing road edges and collisions unchanged.
+   for(const rd of map.roads||[]){
+     const horizontal=rd.w>rd.h,n=low?5:16;
+     for(let j=0;j<n;j++){
+       const f=(j+.5)/n,px=horizontal?rd.x+f*rd.w:rd.x+rd.w+(j%2?7:13),pz=horizontal?rd.y+rd.h+(j%2?7:13):rd.y+f*rd.h;
+       if(!bounds(px,pz))continue;
+       m.ellipsoid(px,1.0,pz,2+random()*4,1.1,3,pick(stone),3,5,2);
+       if(j%5===0&&!low)m.branch(px-7,1,pz+4,px+8,1.15,pz-3,.65,'#252927',4,1);
+     }
+   }
+ }else{
+   // Existing interior rooms only: damp tile seams, pipes and practical fixtures.
+   // Along walls, never block doors, furniture, NPC routes or cover interactive objects.
+   const step=low?140:74;
+   for(let x=28;x<scene.w-28;x+=step){
+     const p=x+random()*8;
+     for(const z of [11,scene.h-11]){
+       m.box(p,28,z,26,1.6,1.4,pick(grime),2);
+       m.box(p,48,z,16,2,2,'#6f6b5d',3);
+       if(!low){m.branch(p-10,8,z+1,p+11,8,z+1,1.3,pick(metal),6,3);m.box(p+8,9,z+2,3,6,2,'#83745c',3)}
+     }
+   }
+   for(let z=35;z<scene.h-32;z+=step){
+     for(const x of [9,scene.w-9]){
+       m.box(x,19,z,2,16,19,pick(grime),2);
+       if(!low)m.branch(x,35,z-13,x,35,z+13,1.5,'#6b5f4e',6,3);
+     }
+   }
+   for(const p of scene.props||[]){
+     if(p.kind==='machine'||p.kind==='cabinet'||p.kind==='locker'){
+       const x=p.x+p.w/2,z=p.y+p.h+.8;
+       m.box(x,9,z,Math.min(24,p.w*.7),1.2,1.2,'#9e917a',3);
+       if(!low)for(let k=0;k<3;k++)m.box(x-8+k*8,13,z+1.5,2.3,3.1,1.6,pick(['#555a4e','#746e58','#434f4c']),3);
+     }
+   }
+ }
+}
+
+// Front walls are tessellated around existing windows and the unchanged gameplay door.
+// The rear/side walls and roof keep exactly the original world-space bounds.
+function renderOnlyBuildingShell(m,b,color){
+ const x0=b.x,x1=b.x+b.w,z0=b.y,z1=b.y+b.h,h=82;
+ m.quad([x0,h,z0],[x0,h,z1],[x1,h,z1],[x1,h,z0],color,1.1,2);
+ m.quad([x1,0,z0],[x0,0,z0],[x0,h,z0],[x1,h,z0],color,.78,2);
+ m.quad([x0,0,z0],[x0,0,z1],[x0,h,z1],[x0,h,z0],color,.82,2);
+ m.quad([x1,0,z1],[x1,0,z0],[x1,h,z0],[x1,h,z1],color,.8,2);
+ const holes=[{l:b.door.x-22,r:b.door.x+22,b:0,t:53}];
+ for(const win of b.windows||[])holes.push({l:win.x-2,r:win.x+win.w+2,b:33,t:Math.min(81,35+win.h)});
+ const xs=[x0,x1],ys=[0,h];
+ for(const o of holes){xs.push(Math.max(x0,o.l),Math.min(x1,o.r));ys.push(Math.max(0,o.b),Math.min(h,o.t))}
+ xs.sort((a,b)=>a-b);ys.sort((a,b)=>a-b);
+ const uniq=a=>a.filter((v,i)=>!i||v-a[i-1]>.01),xx=uniq(xs),yy=uniq(ys);
+ for(let a=1;a<xx.length;a++)for(let b=1;b<yy.length;b++){
+   const l=xx[a-1],r=xx[a],lo=yy[b-1],hi=yy[b],cx=(l+r)/2,cy=(lo+hi)/2;
+   if(r-l<.01||hi-lo<.01||holes.some(o=>cx>o.l&&cx<o.r&&cy>o.b&&cy<o.t))continue;
+   m.quad([l,lo,z1],[r,lo,z1],[r,hi,z1],[l,hi,z1],color,1,2);
+ }
+ // Dark window recesses are physically inset, not co-planar decal panels.
+ for(const o of holes){const l=Math.max(x0,o.l),r=Math.min(x1,o.r);if(r-l<1)continue;
+  m.quad([l,o.b,z1-9],[r,o.b,z1-9],[r,o.t,z1-9],[l,o.t,z1-9],'#222d2a',.7,8);
+ }
+}
+
 function staticMesh(map,room,eco){const scene=room==null?map:map.rooms[room],t=map.theme,m=new Mesh(),low=eco;
 const alt=t.groundAlt||t.ground,ground=room==null?t.ground:t.roomGround;
 m.plane(scene.w/2,-1,scene.h/2,scene.w,scene.h,ground,room==null?0:2);m.plane(scene.w/2,-3,scene.h/2,scene.w+140,scene.h+140,t.groundAlt||ground,0);
@@ -7016,7 +7242,7 @@ for(const a of map.landmarks||[])decorateLandmark(m,a,!low);
 // Lamp posts give a physical source to the warm pools of light.
 for(const l of map.lights||[]){m.shadow(l.x,l.y,8,8);m.cylinder(l.x,0,l.y,2.5,37,'#454a42',6);m.box(l.x+6,36,l.y,15,3,4,'#575848');m.box(l.x+12,35,l.y,7,6,7,'#d5ab69');if(!low)m.box(l.x+12,30,l.y,4,4,4,'#8a7449')}
 for(const b of map.buildings){const cx=b.x+b.w/2,cz=b.y+b.h/2,base=t.building;
-m.shadow(cx,cz,b.w*.66,b.h*.66);m.box(cx,0,cz,b.w,82,b.h,base,2);
+m.shadow(cx,cz,b.w*.66,b.h*.66);renderOnlyBuildingShell(m,b,base);
 if(b.style==='residential'||b.style==='shop')m.roof(cx,82,cz,b.w+9,b.h+11,b.style==='shop'?'#565347':'#464f44');
 else{m.box(cx,82,cz,b.w+6,10,b.h+6,'#4a4c41',3);m.box(cx,90,cz,b.w*.72,8,b.h*.72,'#5b5b4b',3)}
 m.box(cx,0,cz+b.h/2+10,b.w*.42,7,20,'#71614c',2);
@@ -7240,6 +7466,7 @@ for(const o of (room==null?map.buildings:scene.props)||[]){
  }
 }
 detailSurvivalEnvironment(m,map,scene,room,low);
+sectorVisualRemaster(m,map,scene,room,low);
 return new Float32Array(m.data)}
 const MOB_PROFILES={"rat":{"family":"quad","size":0.47,"width":0.87,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d"},"dog":{"family":"quad","size":1.035,"width":0.925,"crest":1,"gear":1,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148"},"flesh":{"family":"quad","size":1.09,"width":0.98,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"boar":{"family":"quad","size":1.145,"width":1.035,"crest":3,"gear":3,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55"},"maroder":{"family":"soldier","size":1.2,"width":1.09,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550"},"pseudodog":{"family":"quad","size":0.98,"width":1.145,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61"},"zombie":{"family":"mutant","size":1.035,"width":1.2,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d"},"snork":{"family":"crawler","size":1.09,"width":0.87,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148"},"fracture":{"family":"mutant","size":1.145,"width":0.925,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":true,"coat":false,"heavy":false,"color":"#726b58"},"mercenary":{"family":"soldier","size":1.2,"width":0.98,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55"},"bloodsucker":{"family":"mutant","size":0.98,"width":1.035,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550"},"poltergeist":{"family":"spirit","size":1.035,"width":1.09,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61"},"psydog":{"family":"quad","size":1.09,"width":1.145,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d"},"burer":{"family":"caster","size":1.145,"width":1.2,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#4b5148"},"monolith":{"family":"soldier","size":1.2,"width":0.87,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"pseudogiant":{"family":"quad","size":0.98,"width":0.925,"crest":3,"gear":3,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55"},"controller":{"family":"caster","size":1.035,"width":0.98,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550"},"exo_monolith":{"family":"soldier","size":1.09,"width":1.035,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61"},"chimera":{"family":"quad","size":1.145,"width":1.09,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d"},"phantom":{"family":"spirit","size":1.2,"width":1.145,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148"},"tushkano":{"family":"quad","size":0.47,"width":1.2,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"swamp_flesh":{"family":"quad","size":1.035,"width":0.87,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55"},"blind_dog_pack":{"family":"quad","size":1.09,"width":0.925,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550"},"bandit_sniper":{"family":"soldier","size":1.145,"width":0.98,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61"},"bandit_chief":{"family":"soldier","size":1.2,"width":1.035,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d"},"snork_stalker":{"family":"crawler","size":0.98,"width":1.09,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148"},"swamp_beast":{"family":"quad","size":1.035,"width":1.145,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"military_spetsnaz":{"family":"soldier","size":1.09,"width":1.2,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55"},"merc_sniper":{"family":"soldier","size":1.145,"width":0.87,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550"},"merc_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61"},"pyro_poltergeist":{"family":"spirit","size":0.98,"width":0.98,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d"},"electric_poltergeist":{"family":"spirit","size":1.035,"width":1.035,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148"},"bloodsucker_black":{"family":"mutant","size":1.09,"width":1.09,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"burer_elder":{"family":"caster","size":1.145,"width":1.145,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#555a55"},"controller_master":{"family":"caster","size":1.2,"width":1.2,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550"},"mutant_bear":{"family":"quad","size":1.617,"width":0.87,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61"},"monolith_gauss_sniper":{"family":"soldier","size":1.035,"width":0.925,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d"},"giant_titan":{"family":"giant","size":1.798,"width":0.98,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148"},"chimera_shadow":{"family":"quad","size":1.145,"width":1.035,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"dark_stalker_boss":{"family":"soldier","size":1.2,"width":1.09,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55"},"master_zone":{"family":"caster","size":0.98,"width":1.145,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550"},"cat_bayun":{"family":"quad","size":1.035,"width":1.2,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61"},"zombie_civilian":{"family":"mutant","size":1.09,"width":0.87,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d"},"zombie_soldier":{"family":"mutant","size":1.145,"width":0.925,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148"},"renegade_scout":{"family":"soldier","size":1.2,"width":0.98,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"renegade_veteran":{"family":"soldier","size":0.98,"width":1.035,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55"},"pseudodog_stalker":{"family":"quad","size":1.035,"width":1.09,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550"},"swamp_snork":{"family":"crawler","size":1.09,"width":1.145,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61"},"dark_stalker_novice":{"family":"soldier","size":1.145,"width":1.2,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d"},"military_heavy":{"family":"soldier","size":1.2,"width":0.87,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#4b5148"},"merc_infiltrator":{"family":"quad","size":0.47,"width":0.925,"crest":2,"gear":2,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"bloodsucker_swamp":{"family":"mutant","size":1.035,"width":0.98,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#555a55"},"poltergeist_frost":{"family":"spirit","size":1.09,"width":1.035,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550"},"burer_telekinesis":{"family":"caster","size":1.145,"width":1.09,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61"},"controller_psystorm":{"family":"caster","size":1.2,"width":1.145,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d"},"mutant_boar_iron":{"family":"quad","size":0.98,"width":1.2,"crest":3,"gear":1,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148"},"pseudogiant_fury":{"family":"quad","size":1.035,"width":0.87,"crest":0,"gear":2,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"monolith_berserk":{"family":"soldier","size":1.09,"width":0.925,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#555a55"},"monolith_commander":{"family":"soldier","size":1.145,"width":0.98,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550"},"chimera_frost":{"family":"quad","size":1.2,"width":1.035,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61"},"chimera_blood":{"family":"quad","size":0.98,"width":1.09,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d"},"phantom_monolith":{"family":"spirit","size":1.035,"width":1.145,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148"},"gargoyle_mutant":{"family":"wing","size":1.09,"width":1.2,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58"},"spectral_stalker":{"family":"soldier","size":1.145,"width":0.87,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55"},"titan_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#6d5550"},"avatar_noosphere_prime":{"family":"spirit","size":0.98,"width":0.98,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61"}};
 function entityMesh(world,map,run,enemyData,time,eco,animation={}){const m=new Mesh(),room=run.room==null?null:map.rooms[run.room];
@@ -7440,7 +7667,7 @@ float visibility(){
  if(uShadowReady<.5)return 1.;vec3 q=vShadow.xyz/vShadow.w*.5+.5;
  if(q.x<.002||q.x>.998||q.y<.002||q.y>.998||q.z>1.||q.z<0.)return 1.;
  vec2 t=vec2(uShadowTexel*.8,0.);float v=shadowTap(q.xy+t,q.z)+shadowTap(q.xy-t,q.z)+shadowTap(q.xy+t.yx,q.z)+shadowTap(q.xy-t.yx,q.z);
- return .38+.62*v*.25;
+ return .52+.48*v*.25;
 }
 
 vec2 reliefUV(float mat,vec3 normal){
@@ -7517,8 +7744,8 @@ void main(){
  normal=reliefNormal(mat,normal);
  // Directional lighting works on 3D surfaces even with vertex-colour models.
  vec3 sun=normalize(vec3(-.44,.82,.38));float lambert=max(0.0,dot(normal,sun));
- float ao=clamp(.82+.18*normal.y-.0015*max(vHeight-18.0,0.0),.58,1.0);
- float shade=mix(.48+.52*lambert,.36+.30*lambert,uNight);base*=shade*ao;base=pow(max(base,vec3(.005)),vec3(.90));
+ float ao=clamp(.88+.12*normal.y-.0011*max(vHeight-18.0,0.0),.71,1.0);
+ float shade=mix(.57+.43*lambert,.48+.34*lambert,uNight);base*=shade*ao;base=pow(max(base,vec3(.005)),vec3(.90));
  float tileGrain=mat<7.5?(.956+.09*detail):1.0;base*=tileGrain;
  float wetMask=(mat<2.5?1.0:0.0)+(mat>5.5&&mat<6.5?1.0:0.0);
  if(mat>5.5&&mat<6.5){base*=.36;}
@@ -7596,7 +7823,7 @@ float visibility(){
  if(uShadowReady<.5)return 1.;vec3 q=vShadow.xyz/vShadow.w*.5+.5;
  if(q.x<.002||q.x>.998||q.y<.002||q.y>.998||q.z>1.||q.z<0.)return 1.;
  vec2 t=vec2(uShadowTexel*.8,0.);float v=shadowTap(q.xy+t,q.z)+shadowTap(q.xy-t,q.z)+shadowTap(q.xy+t.yx,q.z)+shadowTap(q.xy-t.yx,q.z);
- return .38+.62*v*.25;
+ return .52+.48*v*.25;
 }
 
 vec2 reliefUV(float mat,vec3 normal){
@@ -7674,8 +7901,8 @@ void main(){
  }
  normal=reliefNormal(mat,normal);
  float sun=max(0.,dot(normal,normalize(vec3(-.42,.86,.35))));
- base*=mix(.47+.46*sun,.36+.28*sun,uNight);
- base*=vec3(.88,.94,1.);
+ base*=mix(.57+.43*sun,.48+.32*sun,uNight);
+ base*=vec3(.97,1.0,1.02);
  base*=visibility();vec3 light=vec3(0.);
  for(int i=0;i<3;i++){
   vec2 delta=(vWorld-uLights[i].xy)/max(1.,uLights[i].z);
@@ -7823,7 +8050,7 @@ const M=mul(orthographic(-zoom*asp,zoom*asp,-zoom,zoom,1,2100),lookAt(eye,target
 const dyn=entityMesh(w,map,run,enemyData,time,eco,animation);bindBuffer(dynamicBuffer,dyn,gl.DYNAMIC_DRAW);
 if(!shadowValid)renderShadow(target,asp,dyn.length/10);
 gl.viewport(0,0,canvas.width,canvas.height);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthFunc(gl.LEQUAL);gl.disable(gl.BLEND);const sky=rgb(map.theme.sky||'#080c0d').map(v=>Math.min(.12,v*.40+.006));gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.uniformMatrix4fv(U.mvp,false,new Float32Array(M));
-gl.uniformMatrix4fv(U.shadowMatrix,false,new Float32Array(shadowMatrix));gl.uniform1f(U.shadowReady,shadowValid?1:0);gl.uniform1f(U.shadowTexel,1/shadowSize);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadowTexture||atlasTexture);gl.uniform1i(U.shadowMap,1);gl.activeTexture(gl.TEXTURE0);gl.uniform3fv(U.cam,new Float32Array(target));if(U.eye)gl.uniform3fv(U.eye,new Float32Array(eye));gl.uniform3fv(U.sky,new Float32Array(sky));gl.uniform1f(U.fog,eco?700:900);gl.uniform3fv(U.tint,new Float32Array(run.room==null?[.82,.88,.90]:[1.06,.95,.84]));const phase=((run.worldTime||0)+((run.seed%94)*1.6))/520*Math.PI*2;const night=clamp(.34+(.5-.5*Math.cos(phase))*.66,.34,.96);const l=sceneLights(run,time);if(U.lights)gl.uniform4fv(U.lights,compactMode?l.pos.subarray(0,12):l.pos);if(U.lightColors)gl.uniform3fv(U.lightColors,compactMode?l.colors.subarray(0,9):l.colors);gl.uniform1f(U.night,night);gl.uniform1f(U.storm,stormState(run.worldTime||0,run.seed,run.room!=null,window.matchMedia?.('(prefers-reduced-motion: reduce)').matches).flash);gl.uniform1f(U.time,time);
+gl.uniformMatrix4fv(U.shadowMatrix,false,new Float32Array(shadowMatrix));gl.uniform1f(U.shadowReady,shadowValid?1:0);gl.uniform1f(U.shadowTexel,1/shadowSize);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadowTexture||atlasTexture);gl.uniform1i(U.shadowMap,1);gl.activeTexture(gl.TEXTURE0);gl.uniform3fv(U.cam,new Float32Array(target));if(U.eye)gl.uniform3fv(U.eye,new Float32Array(eye));gl.uniform3fv(U.sky,new Float32Array(sky));gl.uniform1f(U.fog,eco?700:900);gl.uniform3fv(U.tint,new Float32Array(run.room==null?[.96,1.0,1.02]:[1.02,1.0,.97]));const phase=((run.worldTime||0)+((run.seed%94)*1.6))/520*Math.PI*2;const night=clamp(.34+(.5-.5*Math.cos(phase))*.66,.34,.96);const l=sceneLights(run,time);if(U.lights)gl.uniform4fv(U.lights,compactMode?l.pos.subarray(0,12):l.pos);if(U.lightColors)gl.uniform3fv(U.lightColors,compactMode?l.colors.subarray(0,9):l.colors);gl.uniform1f(U.night,night);gl.uniform1f(U.storm,stormState(run.worldTime||0,run.seed,run.room!=null,window.matchMedia?.('(prefers-reduced-motion: reduce)').matches).flash);gl.uniform1f(U.time,time);
  const tx=Math.sin(pose.angle),tz=-Math.cos(pose.angle);let reach=215;
  for(let d=15;d<215;d+=8){const x=run.x+tx*d,z=run.y+tz*d;if((w.walls||[]).some(o=>x>=o.x&&x<=o.x+o.w&&z>=o.y&&z<=o.y+o.h)){reach=d;break}}
  if(U.torch)gl.uniform4fv(U.torch,new Float32Array([run.x,run.y,tx*reach,tz*reach]));gl.uniform1f(U.detail,eco?0:1);if(U.shadows)gl.uniform4fv(U.shadows,compactMode?sceneShadows(run).subarray(0,8):sceneShadows(run));gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.uniform1i(U.atlas,0);gl.uniform1f(U.textureReady,textureReady?1:0);drawBuffer(staticBuffer,staticData.length/10);
@@ -7853,7 +8080,7 @@ function collisionParts(landmark){
  m.branch=(ax,ay,az,bx,by,bz,r)=>{if(r>=2&&Math.min(ay,by)<22)box((ax+bx)/2,Math.min(ay,by),(az+bz)/2,Math.abs(bx-ax)+r*2,Math.max(7,Math.abs(by-ay)),Math.abs(bz-az)+r*2)};
  m.face=()=>{};decorateLandmark(m,landmark,true);return parts;
 }
-window.ZonaSurvival3D={init,collisionParts,stormState,version:'15.11'};
+window.ZonaSurvival3D={init,collisionParts,stormState,version:'15.12'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -8305,7 +8532,7 @@ const addLight=(x,y,z,color,radius,alpha=.32)=>{if(!renderer3d?.project)return;c
 if(map&&r.room===null){for(const lamp of map.lights||[])addLight(lamp.x,26,lamp.y,/120,210,255/.test(lamp.c)?'#87cfee':(/255,120,120/.test(lamp.c)?'#d36e5a':'#e0af63'),(eco?70:118)+(lamp.r||40)*.7,.20);
 for(const b of map.buildings||[]){addLight(b.door.x,24,b.y+b.h+6,'#d6aa66',eco?60:95,.18);for(const win of b.windows||[])if(win.lit)addLight(win.x+win.w/2,44,b.y+b.h+4,'#c9bd82',eco?44:68,.11)}
 for(const o of map.landmarks||[]){const warm=['camp','shack','well','tower','watch','truck','ambulance','ship','boat','pier','fountain'];const cold=['laboratory','factory','med','server','generator','portal','monolith','radar','antenna','reactor'];if(warm.includes(o.kind))addLight(o.x,18,o.y,'#e0a35a',eco?86:140,o.kind==='camp'?.36:.22);if(cold.includes(o.kind))addLight(o.x,30,o.y,['portal','monolith'].includes(o.kind)?'#8bb4ff':'#7fc0ce',eco?72:126,['portal','monolith'].includes(o.kind)?.24:.16)}
-for(const a of map.anomalies||[])addLight(a.x,20,a.y,a.type==='acid'?'#8ed780':a.type==='electric'?'#76b8d4':'#8da3e0',eco?65:110,.15)}
+for(const a of map.anomalies||[])addLight(a.x,20,a.y,a.type==='acid'?'#71846b':a.type==='electric'?'#7897a0':'#898a9a',eco?65:110,.15)}
 addLight(r.x,26,r.y,'#f2edd0',eco?72:112,.20);
 if(!eco){c.fillStyle='rgba(2,5,4,.07)';c.fillRect(0,0,w,h)}
 c.globalCompositeOperation='lighter';
@@ -8315,7 +8542,7 @@ c.globalCompositeOperation='source-over';
 const projected=(x,y,z)=>{const q=renderer3d?.project(x,y,z);return q?.visible?{x:q.x*w/Math.max(1,canvas.width),y:q.y*h/Math.max(1,canvas.height)}:null};
 // Soft translucent anomaly haze replaces the opaque animated cones.
 if(r.room===null)for(const a of map.anomalies||[]){
- const color=a.type==='acid'?'142,167,102':a.type==='electric'?'120,166,184':'150,143,171';
+ const color=a.type==='acid'?'116,137,106':a.type==='electric'?'113,143,154':'132,130,145';
  const flash=r.anomalyState?.[String(map.anomalies.indexOf(a))]?.flashUntil||0;
  if(flash>(r.worldTime||0)){
   const q=projected(a.x,8,a.y),edge=projected(a.x+a.r,8,a.y);if(q&&edge){
