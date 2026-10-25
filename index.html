@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.7 — Survival Material Remaster</title>
+<title>ZONA Z v16.11 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -7341,17 +7341,52 @@ function drawWorldScrap(m,s,low){
  return false;
 }
 
+function roomPalette(name=''){
+ if(/Палат|Мед|Аптек|врач|Операц|Перевяз|Изолятор|Морг|Диагност/.test(name))return {floor:21,wall:12,trim:'#7c9389',service:true};
+ if(/лаборатор|образц|Вычисл|испытан|Наблюдат/.test(name))return {floor:50,wall:23,trim:'#6d8580',service:true};
+ if(/Электро|Насос|Машин|Вентиляц|цех|бокс|Инструмент|Верстак/.test(name))return {floor:18,wall:16,trim:'#6e7568',service:true};
+ if(/Кух|Камбуз/.test(name))return {floor:21,wall:12,trim:'#8a8b74',service:false};
+ if(/Спаль|Гостин|Кают|Спальное|отдыха/.test(name))return {floor:29,wall:24,trim:'#817158',service:false};
+ if(/Склад|Стеллаж|Оружейн|Хранил|Трюм/.test(name))return {floor:22,wall:16,trim:'#76765e',service:false};
+ return {floor:21,wall:23,trim:'#858170',service:false};
+}
+function roomFinish(m,scene,low){
+ for(const z of scene.zones||[]){
+  const palette=roomPalette(z.name),left=z.x<scene.w/2,wallX=left?z.x+z.w+12:z.x-12,cx=wallX+6;
+  // Jambs sit on the existing wall ends; the 68-unit doorway remains open.
+  for(const dz of [55,125])m.box(cx,0,z.y+dz,12,54,2,palette.trim,27);
+  m.box(cx,54,z.y+90,12,4,70,palette.trim,27);
+  m.box(cx,-.1,z.y+90,12,.25,68,'#756f5d',27);
+  if(!low){
+   const faceX=left?wallX-1:wallX+13;
+   m.box(faceX,33,z.y+45,1.4,5,3.2,'#9a9a82',8);
+   m.box(faceX,34,z.y+45,1.7,2,1.1,'#323d34',8);
+   // Localised wear at room edges replaces large random squares over the flooring.
+   for(let j=0;j<4;j++){
+    const x=z.x+13+j*(z.w-26)/4,pz=z.y+z.h-11;
+    m.rail(x,pz,x+8,pz-3,.12,'#403e34',.6,8);
+   }
+   if(palette.service){
+    m.box(z.x+z.w*.7,25,z.y+3,18,17,3,'#626f62',27);
+    m.box(z.x+z.w*.7,28,z.y+4.8,12,9,.8,'#343e34',8);
+    for(let j=0;j<3;j++)m.box(z.x+z.w*.7-4+j*4,29,z.y+5.3,1.5,1.8,.4,j===0?'#a39459':'#798974',8);
+   }
+  }
+ }
+ for(const wall of scene.walls||[])m.box(wall.x+wall.w/2,0,wall.y+wall.h/2,wall.w+.8,3,wall.h+.8,'#535a4e',27);
+}
+
 function applySurfacePack(m,map,room){
  const id=map.theme?.id||'',inside=room!=null,scene=inside?map.rooms[room]:map;
  const swamp=/swamp|skadovsk/.test(id),forest=/redforest|kordon_village/.test(id),industrial=/dump|jupiter|wild|valley|chaes/.test(id),military=/military|barrier|kordon_post|radar/.test(id),city=/deadcity|limansk|pripyat_center/.test(id);
- const floor=inside?(/hospital/.test(id)?12:/lab/.test(id)?41:/under|tunnel/.test(id)?9:industrial?13:20):swamp?10:forest?21:city?35:industrial?26:24;
+ const floor=inside?(/hospital|agroprom_inst/.test(id)?12:/lab/.test(id)?41:/under|tunnel/.test(id)?9:industrial?13:20):swamp?10:forest?21:city?35:industrial?26:24;
  for(let i=0;i<m.data.length;i+=30){
   const kind=Math.round(m.data[i+9]);if(kind>=8)continue;
   const x=(m.data[i]+m.data[i+10]+m.data[i+20])/3,y=(m.data[i+1]+m.data[i+11]+m.data[i+21])/3,z=(m.data[i+2]+m.data[i+12]+m.data[i+22])/3,up=Math.abs(m.data[i+7])>.55;
   let number=kind===0?floor:kind===1?(forest?27:industrial?31:city?32:5):kind===2?1:kind===3?18:kind===4?20:kind===5?23:kind===7?48:0;
   if(kind===6)continue; // Water keeps its original shader and its own atlas tile.
   if(kind===2){
-   if(inside){number=up&&y<4?floor:scene.zones?.some(q=>/Кух|Спаль|Гостин|Кают/.test(q.name||''))?15:14;}
+   if(inside){const zone=(scene.zones||[]).find(q=>x>=q.x-14&&x<=q.x+q.w+14&&z>=q.y-14&&z<=q.y+q.h+14);number=up&&y<4?floor:zone?roomPalette(zone.name).wall-9:14;}
    else if(y>5){const b=(map.buildings||[]).find(q=>x>q.x-12&&x<q.x+q.w+12&&z>q.y-12&&z<q.y+q.h+12);if(b)number=y>=80&&up?8:b.style==='residential'?((b.id||0)%2?3:4):b.style==='storage'?7:military?14:1;else number=city?39:25;}
    else number=city?34:industrial?13:30;
   }
@@ -7429,12 +7464,13 @@ for(const peb of map.pebbles||[])if(peb.r<24)m.disk(peb.x,.18,peb.y,Math.max(8,p
 for(const fp of map.footprints||[])m.plane(fp.x,.24,fp.y,10,3,'#29251f');for(let i=0;i<map.roads.length;i++){const rd=map.roads[i];for(let k=1;k<10;k++){const x=rd.kind==='h'?rd.x+k*rd.w/10:rd.x+(k%3)*10-10,z=rd.kind==='h'?rd.y+(k%3)*9-12:rd.y+k*rd.h/10;m.rail(x-12,z-7,x+10,z+8,.86,'#30322c',.6)}}for(const sc of map.scraps||[])if(sc.s>23&&sc.kind==='wreck')m.plank(sc.x+16,sc.y+8,30,5,sc.rot,'#6b553d');
 for(const grass of map.reeds||[])m.cone(grass.x,0,grass.y,2,grass.h,grass.c,3,5)}
 }else{
-for(const zone of scene.zones||[])m.plane(zone.x+zone.w/2,-.5,zone.y+zone.h/2,zone.w,zone.h,zone.color,2);
+for(const zone of scene.zones||[])m.plane(zone.x+zone.w/2,-.5,zone.y+zone.h/2,zone.w,zone.h,zone.color,roomPalette(zone.name).floor);
 for(const wall of scene.walls){m.shadow(wall.x+wall.w/2,wall.y+wall.h/2,wall.w*.55,wall.h*.6);m.box(wall.x+wall.w/2,0,wall.y+wall.h/2,wall.w,58,wall.h,t.roomWall);m.box(wall.x+wall.w/2,58,wall.y+wall.h/2,wall.w+1,4,wall.h+1,'#a69b80')}
 for(const light of scene.lights||[]){m.box(light.x,56,light.y,35,3,12,'#91876b');m.box(light.x,54,light.y,26,3,8,'#d9c697')}
-if(!low){for(let x=24;x<scene.w;x+=60)for(let z=20;z<scene.h;z+=60){const k=((x*37+z*23)%19);if(k<5)m.plane(x,.09,z,50,44,k<3?'#333a34':'#3d4038');if(k===4)m.rail(x-19,z-17,x+12,z+18,.2,'#232622',.8)}}
+if(!low&&!scene.zones){for(let x=24;x<scene.w;x+=60)for(let z=20;z<scene.h;z+=60){const k=((x*37+z*23)%19);if(k<5)m.plane(x,.09,z,50,44,k<3?'#333a34':'#3d4038');if(k===4)m.rail(x-19,z-17,x+12,z+18,.2,'#232622',.8)}}
 if(!low){for(let k=0;k<9;k++){const x=35+((k*89)%680),z=25+((k*73)%530);m.box(x,0,z,14+(k%3)*7,4,8,'#4b4940',2);if(k%3===0)m.box(x+8,0,z+10,5,8,5,'#645345',3)}
 for(let k=0;k<6;k++){m.rail(25+k*120,20,75+k*120,45,.22,'#45423b',1,3)}}
+roomFinish(m,scene,low);
 for(const p of scene.props||[])drawRoomFurniture(m,p,scene,t,low);
 for(const d of scene.debris||[])if(!low)m.box(d.x,0,d.y,Math.max(2,d.size),1.8,Math.max(2,d.size*.4),d.c);
 for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3128');
@@ -7442,7 +7478,7 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v16.7: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v16.11: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop';
  if(sloped){
@@ -7611,28 +7647,56 @@ function human(x,z,c,isPlayer=false){
  m.ellipsoid(x,39+bob,z-1,7.7,8.2,8.4,isPlayer?'#737e66':'#6a7064',6,11,8);
  m.ellipsoid(x,44+bob,z-1,8.7,3.6,9,'#424e42',5,10,8); // helmet
  m.ellipsoid(x,39+bob,z-9,6.8,3.1,2.3,'#1b2c30',4,9,8); // visor
- m.ellipsoid(x,34+bob,z-11,4,4.3,3.3,'#515c50',5,8,3); // respirator
+ m.ellipsoid(x,34+bob,z-11,4,4.3,3.3,'#515c50',5,8,8); // respirator
  m.box(x-6.2,35+bob,z-11.5,2.3,2,1.8,'#9eb4ad',8);
  m.box(x+6.2,35+bob,z-11.5,2.3,2,1.8,'#9eb4ad',8);
- for(const side of [-1,1]){
-  const ax=x+side*13;const back=(isPlayer?stride*side*.35:0);
-  m.branch(ax,31+bob,z,ax+side*2,16+bob,z-3+back,4.1,c,7,8);
-  m.ellipsoid(ax,29+bob,z,5,5,5,isPlayer?'#68735c':'#586055',4,8,8);
-  m.ellipsoid(ax+side*2,16+bob,z-3+back,4,4,4,'#484d44',4,7,8);
+ // A single articulated pair of arms follows the actual weapon family.
+ const weaponId=isPlayer?(window.game?.state?.equipment?.weapon||''):'rifle_ak74';
+ const family=!weaponId?'none':weaponId.startsWith('knife_')?'knife':weaponId.startsWith('pistol_')?'pistol':weaponId.startsWith('shotgun_')?'shotgun':weaponId.startsWith('sniper_')||/mosin|vintorez/.test(weaponId)?'sniper':'rifle';
+ const kick=recoil*3,gx=x+10,gy=25+bob,gz=z-14+kick;
+ const twoHanded=['rifle','shotgun','sniper'].includes(family);
+ const hands=twoHanded?[[x-12,23+bob,z-6],[gx-2,gy-1,gz-9],[x+15,22+bob,z-3],[gx,gy-2,gz+3]]:family==='pistol'?[[x-12,24+bob,z-5],[gx-2,gy-1,gz],[x+15,24+bob,z-5],[gx,gy-1,gz]]:[[x-14,22+bob,z],[x-15,16+bob,z-3+stride*.3],[x+14,23+bob,z-4],[x+13,family==='knife'?24+bob:16+bob,family==='knife'?z-14:z-3-stride*.3]];
+ for(let side=0;side<2;side++){
+  const sign=side?1:-1,elbow=hands[side*2],hand=hands[side*2+1];
+  m.branch(x+sign*12,31+bob,z,elbow[0],elbow[1],elbow[2],3.9,c,6,57);
+  m.branch(...elbow,...hand,3.1,c,6,57);
+  m.ellipsoid(x+sign*12,31+bob,z,4.6,4.3,4.8,isPlayer?'#64705a':'#586055',3,7,8);
+  m.ellipsoid(...hand,3.4,2.8,3.5,'#343e34',3,7,8);
  }
- // Sling and a low profile long gun, dark neutral metal.
- m.branch(x+16,28+bob,z-7,x+20,12+bob,z-21,1.7,'#222724',6,3);
- m.branch(x+20,19+bob,z-15,x+19,18+bob,z-29,2.4,'#353932',6,3);
- m.box(x+1,35+bob,z+11,9,7,5,'#333f35',4);
- // Webbing, pack seams, filter cartridges and a shouldered weapon.
- for(const dx of [-7,7]){m.branch(x+dx,34+bob,z-8,x+dx,18+bob,z-8,1.1,'#272e25',4,4);m.box(x+dx,21+bob,z-10,5,6,3,'#5d6149',4);}
- for(const dy of [22,30])m.box(x,dy+bob,z+11,17,1.2,1,'#73735a',4);
- for(const dx of [-5,5])m.ellipsoid(x+dx,34+bob,z-12,3,3,3,'#303a34',4,6,3);
- m.box(x+11,24+bob,z-13+recoil*3,4,5,18,'#303733',3);
- m.branch(x+11,25+bob,z-20+recoil*3,x+11,25+bob,z-39+recoil*3,1.2,'#202724',6,3);
- m.box(x+11,19+bob,z-14+recoil*3,3,6,5,'#3c453c',3);
- m.branch(x-12,27+bob,z-2,x+8,24+bob,z-22+recoil*3,3,'#525b46',6,8);
- m.branch(x+14,27+bob,z-1,x+11,24+bob,z-12+recoil*3,3,'#525b46',6,8);
+ if(family==='pistol'){
+  m.box(gx,gy,gz-3,3.2,3.2,12,'#303a37',8);
+  m.box(gx,gy-5,gz+1,2.8,6,3.8,'#443f34',8);
+  m.box(gx,gy+3.2,gz-7,1,1.2,1,'#899082',8);
+ }else if(family==='knife'){
+  m.box(x+13,24+bob,z-18,2,2,7,'#4b4637',8);
+  m.box(x+13,24+bob,z-22,5,1.2,1.5,'#77796c',8);
+  m.tri([x+12,25+bob,z-23],[x+14.5,25+bob,z-23],[x+13.5,25+bob,z-36],'#b4bab0',1,8);
+ }else if(twoHanded){
+  const barrel=family==='sniper'?30:family==='shotgun'?23:20;
+  m.box(gx,gy-2,gz,3.6,4.5,16,'#344039',8);
+  m.box(gx,gy-2,gz+12,4,5,9,'#4d4a38',8);
+  m.box(gx,gy-4,gz+3,2.7,6,3,'#2c3430',8);
+  m.branch(gx,gy,gz-8,gx,gy,gz-8-barrel,1.1,'#29332f',6,8);
+  m.box(gx,gy-2,gz-9,4,3.4,10,family==='shotgun'?'#695842':'#4e5744',8);
+  if(family==='shotgun')m.branch(gx,gy-2.2,gz-10,gx,gy-2.2,gz-25,.8,'#39443a',5,8);
+  else m.box(gx,gy-9,gz-1,3,8,4,'#3b4439',8);
+  if(family==='sniper'){
+   m.box(gx,gy+3,gz,2,3,5,'#343e37',8);
+   m.branch(gx,gy+6,gz+3,gx,gy+6,gz-8,1.9,'#283930',7,8);
+   m.ellipsoid(gx,gy+6,gz+3,1.5,1.5,.4,'#526d6a',3,6,8);
+  }else m.box(gx,gy+2.8,gz-5,1.4,1.8,3,'#626b5d',8);
+  m.box(gx,gy+1,gz-7-barrel,1.5,2,1.2,'#636c5e',8);
+ }
+ // Fabric webbing and buckles, with no second weapon mesh over the held gun.
+ for(const dx of [-7,7]){
+  m.branch(x+dx,34+bob,z-8,x+dx,18+bob,z-8,.9,'#303b2e',4,8);
+  m.box(x+dx,21+bob,z-10,5,6,3,'#5d6149',28);
+  m.box(x+dx,24+bob,z-11.7,2.2,1.5,.6,'#8c8d72',8);
+ }
+ for(const dy of [22,30])m.box(x,dy+bob,z+11,17,.8,1,'#73735a',8);
+ for(const dx of [-10,10])m.box(x+dx,24+bob,z+8,3,9,4,'#58614a',28);
+ m.box(x,37+bob,z+9,12,2,5,'#536047',28);
+ for(const dx of [-5,5])m.ellipsoid(x+dx,34+bob,z-12,3,3,3,'#303a34',3,6,8);
  const angle=pose?.angle||0,cs=Math.cos(angle),sn=Math.sin(angle);
  for(let i=first;i<m.data.length;i+=10){const dx=m.data[i]-x,dz=m.data[i+2]-z,nx=m.data[i+6],nz=m.data[i+8];m.data[i]=x+dx*cs-dz*sn;m.data[i+2]=z+dx*sn+dz*cs;m.data[i+6]=nx*cs-nz*sn;m.data[i+8]=nx*sn+nz*cs;}
 
@@ -7766,6 +7830,24 @@ function stormState(time,seed,indoors=false,reduced=false){
  const flash=indoors||age<0?0:(age<.10?age/.10:Math.exp(-(age-.10)*5.5));
  return {flash:flash*(reduced?.22:1),wind:Math.sin(time*.13+seed%7)*.55+Math.sin(time*.037)*.45,cycle:Math.floor((Math.max(0,time)+(seed>>>0)%17)/period)};
 }
+function torchRanges(scene,x,z,angle,reach=215){
+ const ranges=new Float32Array(9);
+ const obstacles=(scene.walls||[]).concat((scene.props||[]).filter(p=>['locker','machine','cabinet','shelf'].includes(p.kind))).filter(o=>o.x<=x+reach&&o.x+o.w>=x-reach&&o.y<=z+reach&&o.y+o.h>=z-reach);
+ for(let i=0;i<9;i++){
+  const a=angle-.65+i*1.3/8,dx=Math.sin(a),dz=-Math.cos(a);let best=reach;
+  for(const o of obstacles){
+   let near=0,far=reach,hit=true;
+   for(const [origin,direction,lo,hi] of [[x,dx,o.x,o.x+o.w],[z,dz,o.y,o.y+o.h]]){
+    if(Math.abs(direction)<1e-7){if(origin<lo||origin>hi){hit=false;break}}
+    else{let a=(lo-origin)/direction,b=(hi-origin)/direction;if(a>b){const t=a;a=b;b=t}near=Math.max(near,a);far=Math.min(far,b);if(near>far){hit=false;break}}
+   }
+   if(hit&&near>1&&near<best)best=near;
+  }
+  ranges[i]=best;
+ }
+ return ranges;
+}
+
 function packStaticChunks(data){
  const groups=new Map();
  for(let i=0;i<data.length;i+=30){
@@ -7801,9 +7883,9 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uSky;uniform vec3 uEye;uniform vec4 uShadows[12];uniform vec4 uLights[5];uniform vec3 uLightColors[5];uniform float uNight;uniform float uStorm;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;uniform sampler2D uAtlas;uniform float uTextureReady;
+varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform vec3 uEye;uniform vec4 uShadows[12];uniform vec4 uLights[5];uniform vec3 uLightColors[5];uniform float uNight;uniform float uStorm;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;uniform sampler2D uAtlas;uniform float uTextureReady;
 varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;
-float surfaceKind(float tile){if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.7){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
+float surfaceKind(float tile){if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.11){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
 float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise21(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash21(i),hash21(i+vec2(1.0,0.0)),f.x),mix(hash21(i+vec2(0.0,1.0)),hash21(i+vec2(1.0,1.0)),f.x),f.y);}
 vec3 atlasSample(float tile,vec3 normal){
@@ -7841,6 +7923,17 @@ vec3 reliefNormal(float tile,vec3 n,vec2 encoded){
 }
 
 vec3 gradeScene(vec3 c){c=max(c,vec3(0.));return pow(c*1.14/(vec3(1.)+c*.28),vec3(.95));}
+float beamLimit(float theta){
+ float t=clamp((theta+.65)/1.3*8.,0.,8.);
+ if(t<1.)return mix(uTorchBands[0].x,uTorchBands[0].y,t);
+ if(t<2.)return mix(uTorchBands[0].y,uTorchBands[0].z,t-1.);
+ if(t<3.)return mix(uTorchBands[0].z,uTorchBands[1].x,t-2.);
+ if(t<4.)return mix(uTorchBands[1].x,uTorchBands[1].y,t-3.);
+ if(t<5.)return mix(uTorchBands[1].y,uTorchBands[1].z,t-4.);
+ if(t<6.)return mix(uTorchBands[1].z,uTorchBands[2].x,t-5.);
+ if(t<7.)return mix(uTorchBands[2].x,uTorchBands[2].y,t-6.);
+ return mix(uTorchBands[2].y,uTorchBands[2].z,t-7.);
+}
 float rainRipple(vec2 p){
  vec2 cell=floor(p*.038);vec2 center=(cell+vec2(.2+.6*hash21(cell),.2+.6*hash21(cell+17.)))/.038;
  float age=fract(uTime*.72+hash21(cell+31.));float radius=age*10.;
@@ -7973,9 +8066,18 @@ void main(){
 
  vec2 torchDelta=vWorld-uTorch.xy;float torchDist=length(torchDelta);
  float torchReach=max(1.,length(uTorch.zw));
- float beam=smoothstep(.83,.97,dot(torchDelta/max(1.,torchDist),uTorch.zw/torchReach));
- beam*=pow(max(0.,1.-torchDist/torchReach),1.2)*smoothstep(0.,18.,torchDist);
- base+=vec3(.99,.92,.79)*beam*(base*1.20+.21);
+ vec2 forward=uTorch.zw/torchReach,ray=torchDelta/max(1.,torchDist);
+ float theta=atan(ray.x*(-forward.y)+ray.y*forward.x,dot(ray,forward));
+ float limit=beamLimit(theta);if(limit<1.)limit=torchReach;
+ float cone=1.-smoothstep(.39,.65,abs(theta));
+ float blocker=1.-smoothstep(limit+1.,limit+7.,torchDist);
+ float beam=cone*pow(max(0.,1.-torchDist/torchReach),1.25)*smoothstep(0.,12.,torchDist)*blocker;
+ vec3 lampDirection=normalize(vec3(uTorch.x,28.,uTorch.y)-vWorldPos);
+ float facing=.28+.72*max(0.,dot(normal,lampDirection));
+ base+=vec3(.97,.93,.83)*beam*facing*(base*1.08+.19);
+ // Close bounce light stays subtle and does not fill the entire room.
+ base+=vec3(.018,.020,.018)*max(0.,1.-torchDist/32.);
+
 
  float contact=1.0;
  if(vHeight<3.0&&mat<7.5){
@@ -8001,12 +8103,12 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uSky;uniform float uNight;uniform float uStorm;uniform vec3 uEye;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;
+varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform float uNight;uniform float uStorm;uniform vec3 uEye;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;
 uniform sampler2D uAtlas;uniform float uTextureReady;
 uniform vec4 uLights[3];uniform vec3 uLightColors[3];uniform vec4 uShadows[2];
 varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;
 varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;
-float surfaceKind(float tile){if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.7){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
+float surfaceKind(float tile){if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.11){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
 float hash21(vec2 p){p=fract(p*vec2(.1031,.11369));p+=dot(p,p.yx+19.19);return fract(p.x*p.y);}
 float noise21(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),mix(hash21(i+vec2(0.,1.)),hash21(i+vec2(1.)),f.x),f.y);}
 
@@ -8032,6 +8134,17 @@ vec3 reliefNormal(float tile,vec3 n,vec2 encoded){
 }
 
 vec3 gradeScene(vec3 c){c=max(c,vec3(0.));return pow(c*1.14/(vec3(1.)+c*.28),vec3(.95));}
+float beamLimit(float theta){
+ float t=clamp((theta+.65)/1.3*8.,0.,8.);
+ if(t<1.)return mix(uTorchBands[0].x,uTorchBands[0].y,t);
+ if(t<2.)return mix(uTorchBands[0].y,uTorchBands[0].z,t-1.);
+ if(t<3.)return mix(uTorchBands[0].z,uTorchBands[1].x,t-2.);
+ if(t<4.)return mix(uTorchBands[1].x,uTorchBands[1].y,t-3.);
+ if(t<5.)return mix(uTorchBands[1].y,uTorchBands[1].z,t-4.);
+ if(t<6.)return mix(uTorchBands[1].z,uTorchBands[2].x,t-5.);
+ if(t<7.)return mix(uTorchBands[2].x,uTorchBands[2].y,t-6.);
+ return mix(uTorchBands[2].y,uTorchBands[2].z,t-7.);
+}
 float rainRipple(vec2 p){
  vec2 cell=floor(p*.038);vec2 center=(cell+vec2(.2+.6*hash21(cell),.2+.6*hash21(cell+17.)))/.038;
  float age=fract(uTime*.72+hash21(cell+31.));float radius=age*10.;
@@ -8160,9 +8273,18 @@ void main(){
 
  vec2 torchDelta=vWorld-uTorch.xy;float torchDist=length(torchDelta);
  float torchReach=max(1.,length(uTorch.zw));
- float beam=smoothstep(.83,.97,dot(torchDelta/max(1.,torchDist),uTorch.zw/torchReach));
- beam*=pow(max(0.,1.-torchDist/torchReach),1.2)*smoothstep(0.,18.,torchDist);
- base+=vec3(.99,.92,.79)*beam*(base*1.20+.21);
+ vec2 forward=uTorch.zw/torchReach,ray=torchDelta/max(1.,torchDist);
+ float theta=atan(ray.x*(-forward.y)+ray.y*forward.x,dot(ray,forward));
+ float limit=beamLimit(theta);if(limit<1.)limit=torchReach;
+ float cone=1.-smoothstep(.39,.65,abs(theta));
+ float blocker=1.-smoothstep(limit+1.,limit+7.,torchDist);
+ float beam=cone*pow(max(0.,1.-torchDist/torchReach),1.25)*smoothstep(0.,12.,torchDist)*blocker;
+ vec3 lampDirection=normalize(vec3(uTorch.x,28.,uTorch.y)-vWorldPos);
+ float facing=.28+.72*max(0.,dot(normal,lampDirection));
+ base+=vec3(.97,.93,.83)*beam*facing*(base*1.08+.19);
+ // Close bounce light stays subtle and does not fill the entire room.
+ base+=vec3(.018,.020,.018)*max(0.,1.-torchDist/32.);
+
 
  if(vHeight<3.)for(int i=0;i<2;i++){
   vec4 o=uShadows[i];vec2 q=(vWorld-o.xy-vec2(5.,9.))/max(vec2(1.),o.zw);
@@ -8192,7 +8314,7 @@ try{
  catch(fallbackError){console.warn('Survival 3D shader unsupported:',fallbackError);return null}
 }
 try{staticBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer()}catch(e){console.warn('Survival 3D buffers:',e);return null}
-const A={position:gl.getAttribLocation(program,'aPosition'),color:gl.getAttribLocation(program,'aColor'),normal:gl.getAttribLocation(program,'aNormal'),material:gl.getAttribLocation(program,'aMaterial')},U={shadowMatrix:gl.getUniformLocation(program,'uShadowMatrix'),shadowMap:gl.getUniformLocation(program,'uShadowMap'),shadowReady:gl.getUniformLocation(program,'uShadowReady'),shadowTexel:gl.getUniformLocation(program,'uShadowTexel'),torch:gl.getUniformLocation(program,'uTorch'),mvp:gl.getUniformLocation(program,'uMVP'),cam:gl.getUniformLocation(program,'uCamera'),fog:gl.getUniformLocation(program,'uFog'),sky:gl.getUniformLocation(program,'uSky'),eye:gl.getUniformLocation(program,'uEye'),shadows:gl.getUniformLocation(program,'uShadows[0]'),tint:gl.getUniformLocation(program,'uTint'),lights:gl.getUniformLocation(program,'uLights[0]'),lightColors:gl.getUniformLocation(program,'uLightColors[0]'),night:gl.getUniformLocation(program,'uNight'),wetness:gl.getUniformLocation(program,'uWetness'),storm:gl.getUniformLocation(program,'uStorm'),cutaway:gl.getUniformLocation(program,'uCutaway'),cutFade:gl.getUniformLocation(program,'uCutFade'),time:gl.getUniformLocation(program,'uTime'),detail:gl.getUniformLocation(program,'uDetail'),atlas:gl.getUniformLocation(program,'uAtlas'),surfaceAtlas:gl.getUniformLocation(program,'uSurfaceAtlas'),surfaceReady:gl.getUniformLocation(program,'uSurfaceReady'),textureReady:gl.getUniformLocation(program,'uTextureReady')};
+const A={position:gl.getAttribLocation(program,'aPosition'),color:gl.getAttribLocation(program,'aColor'),normal:gl.getAttribLocation(program,'aNormal'),material:gl.getAttribLocation(program,'aMaterial')},U={shadowMatrix:gl.getUniformLocation(program,'uShadowMatrix'),shadowMap:gl.getUniformLocation(program,'uShadowMap'),shadowReady:gl.getUniformLocation(program,'uShadowReady'),shadowTexel:gl.getUniformLocation(program,'uShadowTexel'),torchBands:gl.getUniformLocation(program,'uTorchBands[0]'),torch:gl.getUniformLocation(program,'uTorch'),mvp:gl.getUniformLocation(program,'uMVP'),cam:gl.getUniformLocation(program,'uCamera'),fog:gl.getUniformLocation(program,'uFog'),sky:gl.getUniformLocation(program,'uSky'),eye:gl.getUniformLocation(program,'uEye'),shadows:gl.getUniformLocation(program,'uShadows[0]'),tint:gl.getUniformLocation(program,'uTint'),lights:gl.getUniformLocation(program,'uLights[0]'),lightColors:gl.getUniformLocation(program,'uLightColors[0]'),night:gl.getUniformLocation(program,'uNight'),wetness:gl.getUniformLocation(program,'uWetness'),storm:gl.getUniformLocation(program,'uStorm'),cutaway:gl.getUniformLocation(program,'uCutaway'),cutFade:gl.getUniformLocation(program,'uCutFade'),time:gl.getUniformLocation(program,'uTime'),detail:gl.getUniformLocation(program,'uDetail'),atlas:gl.getUniformLocation(program,'uAtlas'),surfaceAtlas:gl.getUniformLocation(program,'uSurfaceAtlas'),surfaceReady:gl.getUniformLocation(program,'uSurfaceReady'),textureReady:gl.getUniformLocation(program,'uTextureReady')};
 const shadowSize=eco?256:(compactMode?512:1024);let shadowProgram=null,shadowFBO=null,shadowTexture=null,shadowDepth=null,shadowMatrix=orthographic(-1,1,-1,1,1,2),shadowTick=0,shadowValid=false,shadowPosition=-1,shadowUniform=null;
 const shadowVS=`attribute vec3 aPosition;uniform mat4 uLightMatrix;void main(){gl_Position=uLightMatrix*vec4(aPosition,1.);}`;
 const shadowFS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -8253,13 +8375,14 @@ function movement(dx,dy){const amount=Math.min(1,Math.hypot(dx,dy));dy/=Math.sin
 function bindBuffer(buf,vertices,usage){gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,vertices,usage);}
 function sceneLights(run,time){const l=[],room=run.room!=null?map.rooms[run.room]:null;
 const add=(x,z,r,c,power)=>l.push({x,z,r,c,power,d:(x-run.x)**2+(z-run.y)**2});
-const flicker=.93+.07*Math.sin(time*6);
-add(run.x,run.y,185,[1,.86,.67],eco?.62:.88);
+const flicker=.94+.04*Math.sin(time*3.1)+.02*Math.sin(time*7.3);
+
 if(room){for(const a of room.lights||[])add(a.x,a.y,205,[1,.76,.48],1.14);for(const a of room.lights||[])if(a.r>70)add(a.x+8,a.y-4,132,[.45,.78,.84],.34)}else{
  for(const a of map.landmarks||[])if(a.kind==='safebase'){add(a.x-14,a.y-2,150,[1,.42,.09],3.2*flicker);for(const [dx,dz] of [[-114,-86],[118,-84],[120,86],[-118,82]])add(a.x+dx,a.y+dz,114,[1,.58,.24],1.9)}
  for(const a of map.landmarks||[])if(['camp','shack','tower','watch','well','ship','pier'].includes(a.kind))add(a.x,a.y,a.kind==='safebase'?320:268,[1,.56,.22],a.kind==='camp'?2.32*flicker:(a.kind==='safebase'?1.95*flicker:1.06));
  for(const a of map.landmarks||[])if(['generator','lab','server','reactor','portal','monolith','radar'].includes(a.kind))add(a.x,a.y,240,[.33,.73,.96],1.02);
  for(const a of map.anomalies||[])add(a.x,a.y,120,a.type==='acid'?[.50,.65,.33]:a.type==='electric'?[.38,.65,.78]:[.56,.49,.68],.42);
+ for(const b of map.buildings||[])for(const win of b.windows||[])if(win.lit)add(win.x+win.w/2,b.y+b.h+8,100,[1,.74,.39],.58);
  for(const a of map.lights||[])add(a.x,a.y,210,/120,210,255/.test(a.c)?[.44,.73,.90]:/255,120,120/.test(a.c)?[.83,.39,.28]:[1,.72,.34],.92);
 }
 l.sort((a,b)=>a.d-b.d);const pos=new Float32Array(20),colors=new Float32Array(15);
@@ -8296,8 +8419,8 @@ const dyn=entityMesh(w,map,run,enemyData,time,eco,animation);bindBuffer(dynamicB
 if(!shadowValid)renderShadow(target,asp,dyn.length/10);
 gl.viewport(0,0,canvas.width,canvas.height);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthFunc(gl.LEQUAL);gl.disable(gl.BLEND);const sky=rgb(map.theme.sky||'#080c0d').map(v=>Math.min(.12,v*.40+.006));gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.uniformMatrix4fv(U.mvp,false,new Float32Array(M));
 gl.uniformMatrix4fv(U.shadowMatrix,false,new Float32Array(shadowMatrix));gl.uniform1f(U.shadowReady,shadowValid?1:0);gl.uniform1f(U.shadowTexel,1/shadowSize);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadowTexture||atlasTexture);gl.uniform1i(U.shadowMap,1);gl.activeTexture(gl.TEXTURE0);gl.uniform3fv(U.cam,new Float32Array(target));if(U.eye)gl.uniform3fv(U.eye,new Float32Array(eye));gl.uniform3fv(U.sky,new Float32Array(sky));gl.uniform1f(U.fog,eco?700:900);gl.uniform3fv(U.tint,new Float32Array(run.room==null?[.82,.88,.90]:[1.06,.95,.84]));const phase=((run.worldTime||0)+((run.seed%94)*1.6))/520*Math.PI*2;const night=clamp(.34+(.5-.5*Math.cos(phase))*.66,.34,.96);const l=sceneLights(run,time);if(U.lights)gl.uniform4fv(U.lights,compactMode?l.pos.subarray(0,12):l.pos);if(U.lightColors)gl.uniform3fv(U.lightColors,compactMode?l.colors.subarray(0,9):l.colors);gl.uniform4fv(U.cutaway,new Float32Array(cutBuilding?[cutBuilding.x-10,cutBuilding.y-10,cutBuilding.x+cutBuilding.w+10,cutBuilding.y+cutBuilding.h+12]:[0,0,0,0]));gl.uniform1f(U.cutFade,cutFade);gl.uniform1f(U.night,night);gl.uniform1f(U.wetness,run.room==null?1:0);gl.uniform1f(U.storm,stormState(run.worldTime||0,run.seed,run.room!=null,window.matchMedia?.('(prefers-reduced-motion: reduce)').matches).flash);gl.uniform1f(U.time,time);
- const tx=Math.sin(pose.angle),tz=-Math.cos(pose.angle);let reach=215;
- for(let d=15;d<215;d+=8){const x=run.x+tx*d,z=run.y+tz*d;if((w.walls||[]).some(o=>x>=o.x&&x<=o.x+o.w&&z>=o.y&&z<=o.y+o.h)){reach=d;break}}
+ const tx=Math.sin(pose.angle),tz=-Math.cos(pose.angle),reach=215;
+ if(U.torchBands)gl.uniform3fv(U.torchBands,torchRanges(w,run.x,run.y,pose.angle,reach));
  if(U.torch)gl.uniform4fv(U.torch,new Float32Array([run.x,run.y,tx*reach,tz*reach]));gl.uniform1f(U.detail,eco?0:1);if(U.shadows)gl.uniform4fv(U.shadows,compactMode?sceneShadows(run).subarray(0,8):sceneShadows(run));gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.uniform1i(U.atlas,0);gl.uniform1f(U.textureReady,textureReady?1:0);gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);gl.uniform1i(U.surfaceAtlas,2);gl.uniform1f(U.surfaceReady,surfaceReady?1:0);gl.activeTexture(gl.TEXTURE0);drawBuffer(staticBuffer,staticData.length/10,staticChunks,M);
 drawBuffer(dynamicBuffer,dyn.length/10);
 }
@@ -8351,7 +8474,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,collisionParts,dressingParts,stormState,version:'16.7'};
+window.ZonaSurvival3D={init,collisionParts,dressingParts,stormState,version:'16.11'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -8362,7 +8485,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.7</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.7 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.11</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.11 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
@@ -8595,7 +8718,7 @@ function dressSector(w){
  const dims={garden:[62,68],laundry:[64,12],well:[36,36],bench:[52,20],rail:[44,156],wagon:[48,112],pit:[38,94],console:[40,30],turbine:[56,56],sandbags:[58,24],mosaic:[90,90],memorial:[38,32],reeds:[40,38],ruin:[64,54]};
  const protectedPoints=[w.exit,...w.buildings.map(b=>b.door),...w.crates,...w.people,...w.enemies];
  const overlap=(a,b,pad=0)=>a.x<b.x+b.w+pad&&a.x+a.w+pad>b.x&&a.y<b.y+b.h+pad&&a.y+a.h+pad>b.y;
- for(let i=0;i<(w.theme.id==='loc_kordon_village'?24:16)+(w.expanded?16:0);i++){
+ for(let i=0;i<(w.theme.id==='loc_kordon_village'?24:16)+(w.expanded?16:0)+(w.outerDistrict?20:0);i++){
   const selected=kit[i%kit.length],kind=w.theme.id==='loc_kordon_village'&&selected==='well'&&w.dressing.some(p=>p.kind==='well')?'garden':selected,[width,height]=dims[kind];
   for(let j=0;j<90;j++){
    const b=w.buildings[i%w.buildings.length],x=j===0?b.x-85:65+((i*317+j*173)%(w.expanded?w.w-210:1550)),y=j===0?b.y+12:80+((i*233+j*101)%(w.expanded?w.h-280:1160)),p={x,y,w:width,h:height,kind};
@@ -8649,6 +8772,42 @@ function expandSector(w){
  for(let i=0;i<90;i++){const p=point(5);if(p)w.reeds.push({...p,h:5+rand()*13,a:rand()*6.28,c:choose(w.theme.grass)})}
  for(let i=0;i<18;i++){const p=point(15);if(p)w.pebbles.push({...p,r:12+rand()*18})}
  w.expansionEntrances=[{x:1863,y:1380},{x:1630,y:1540}];
+}
+
+function expandOuterDistrict(w){
+ if((run()?.layoutVersion||1)<5)return;
+ const previousWidth=w.w,previousHeight=w.h;w.w=3306;w.h=2705;w.outerDistrict=true;
+ const programs=EXTENSION_PROGRAMS[w.theme.id]||['warehouse','workshop','office'],village=w.theme.id==='loc_kordon_village',urban=/deadcity|limansk|pripyat_center|hospital|agroprom_inst/.test(w.theme.id),natural=/redforest|swamp/.test(w.theme.id);
+ const count=village?8:urban?6:natural?3:4,start=w.buildings.length;
+ const slots=[[2760,180],[2780,720],[2760,1260],[2780,1800],[280,2350],[940,2350],[1640,2350],[2300,2350]];
+ const order=count===3?[0,2,5]:count===4?[0,2,4,7]:count===6?[0,1,3,4,5,7]:[0,1,2,3,4,5,6,7];
+ const lane=(x,y,width,height)=>w.roads.push({x,y,w:width,h:height,kind:width>height?'h':'v'});
+ lane(2560,80,88,2540);lane(160,2150,3040,84);lane(180,2610,2950,64);lane(2350,1930,290,70);lane(2260,1940,72,290);
+ const captions={home:'Дом на окраине',apartment:'Жилой квартал',shop:'Продуктовый магазин',warehouse:'Дальний склад',workshop:'Сервисная мастерская',lab:'Исследовательский блок',institute:'Учебный корпус',hospital:'Больничное отделение',clinic:'Амбулатория',archive:'Фондохранилище',barracks:'Резервная казарма',office:'Служебный корпус',factory:'Ремонтный цех',tunnel:'Техническая станция'};
+ for(let i=0;i<count;i++){
+  const slot=order[i],[x,y]=slots[slot],type=programs[(i+1)%programs.length],id=w.buildings.length;
+  const b={id,x,y,w:['institute','hospital'].includes(type)?360:type==='home'?220:300,h:175+i%2*20,interior:type,style:['home','apartment'].includes(type)?'residential':type==='shop'?'shop':['lab','institute','hospital'].includes(type)?'institute':'storage',name:(captions[type]||'Дальний корпус')+' '+(i+1)};
+  b.door={x:x+b.w/2,y:y+b.h+25};b.windows=[.18,.82].map((t,j)=>({x:x+b.w*t-12,y:y+28,w:24,h:23,lit:(i+j)%3===0}));w.buildings.push(b);w.walls.push(b);
+  const room=furnishedInterior(b,id,w.theme,start+count);room.crates=[];room.enemies=[];room.people=[];room.debris=[];room.markings=[];room.dust=[];
+  for(let j=0;j<60;j++)room.debris.push({x:24+rand()*(room.w-48),y:24+rand()*(room.h-48),size:1+rand()*6,c:j%3?'#625e50':'#3e493f'});
+  w.rooms.push(room);
+  if(slot<4)lane(2560,b.door.y+10,b.door.x-2560+42,58);else lane(b.door.x-28,b.door.y,56,2630-b.door.y);
+  w.lights.push({x:b.door.x,y:b.door.y,r:90,c:'rgba(255,190,130,.14)'});
+  // Weathered yard surfaces break up the road/doorway junctions.
+  w.patches.push({x:b.door.x,y:b.door.y+42,r:68,color:w.theme.mud,alpha:.2});
+ }
+ const caches=w.rooms.slice(0,start).flatMap(r=>r.crates.map(c=>({r,c}))).slice(-3);
+ caches.forEach(({r,c},i)=>{r.crates=r.crates.filter(q=>q!==c);const room=w.rooms[start+i],z=room.zones[1];c.x=z.x+z.w/2;c.y=z.y+88;room.crates.push(c)});
+ const free=(p,r)=>p.x>35&&p.y>35&&p.x<w.w-35&&p.y<w.h-35&&(p.x>previousWidth+30||p.y>previousHeight+30)&&!w.walls.some(o=>rectHit(p.x,p.y,o,r))&&!w.roads.some(o=>rectHit(p.x,p.y,o,r))&&w.buildings.every(b=>distance(p,b.door)>110)&&w.scraps.every(q=>distance(p,q)>q.s+r)&&[...w.crates,...w.people,...w.enemies].every(q=>distance(p,q)>70);
+ const point=(r=30)=>{for(let j=0;j<160;j++){const east=rand()<.5,p={x:east?2500+rand()*730:70+rand()*(w.w-140),y:east?70+rand()*(w.h-140):2070+rand()*560};if(free(p,r))return p}return null};
+ for(let i=0;i<3;i++){const p=point(55),cache=w.crates[w.crates.length-1-i];if(p&&cache)Object.assign(cache,p)}
+ for(let i=0;i<2;i++){const p=point(60),enemy=w.enemies[w.enemies.length-1-i];if(p&&enemy)Object.assign(enemy,p,{homeX:p.x,homeY:p.y})}
+ for(let i=0;i<(natural?28:18);i++){const p=point(35);if(p){const tree={x:p.x-15,y:p.y-15,w:30,h:30,size:25+rand()*16};w.trees.push(tree);w.walls.push(tree)}}
+ for(let i=0;i<64;i++){const p=point(24);if(p)w.scraps.push({...p,kind:choose(['rock','barrel','cratejunk','scrap','wreck','bush','stump']),s:11+rand()*18,rot:rand()*6.28})}
+ for(let i=0;i<130;i++){const p=point(5);if(p)w.reeds.push({...p,h:5+rand()*14,a:rand()*6.28,c:choose(w.theme.grass)})}
+ for(let i=0;i<24;i++){const p=point(15);if(p)w.pebbles.push({...p,r:13+rand()*22})}
+ for(let i=0;i<28;i++){const p=point(8);if(p)w.patches.push({...p,r:32+rand()*75,color:i%3?w.theme.groundAlt:w.theme.mud,alpha:.18})}
+ w.expansionEntrances.push({x:2604,y:1965},{x:2296,y:2192});
 }
 
 function build(seed){rand=random(seed);const theme=themeFor(loc()?.id),w={w:1760,h:1440,walls:[],trees:[],buildings:[],crates:[],people:[],enemies:[],rooms:[],exit:{x:140,y:1290},theme,patches:[],scraps:[],reeds:[],roads:[],anomalies:[],lights:[],fences:[],particles:[]};
@@ -8723,7 +8882,7 @@ for(let i=0;i<42;i++)w.scraps.push({...freePoint(),kind:choose(['rock','barrel',
 for(let i=0;i<86;i++)w.decals.push({x:rand()*w.w,y:rand()*w.h,w:4+rand()*20,h:2+rand()*8,rot:rand()*6.28,kind:choose(['soil','scorch','scratch','stone','leaf']),a:.09+rand()*.19});
 for(let i=0;i<6;i++)w.lights.push({...freePoint(),r:34+rand()*48,c:choose(['rgba(255,214,144,.11)','rgba(113,181,163,.10)','rgba(201,141,110,.09)'])});
 for(const room of w.rooms){if(!architectural)for(let i=0;i<14;i++)room.props.push({x:35+rand()*(room.w-70),y:35+rand()*(room.h-70),w:16+rand()*46,h:10+rand()*29,kind:choose(['table','locker','shelf','bed','box','machine','cabinet']),rot:rand()<.35});for(let i=0;i<68;i++)room.debris.push({x:25+rand()*(room.w-50),y:25+rand()*(room.h-50),size:1+rand()*7.8,rot:rand()*6.28,c:choose(['#5b584e','#8a795d','#30342e','#766447','#43483d'])});}
-expandSector(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}installWorldCollisions(w);dressSector(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
+expandSector(w);expandOuterDistrict(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}installWorldCollisions(w);dressSector(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
 function enter(id){
  // Never create a second renderer over an already running Survival session.
  if(visible){return true}
@@ -8743,7 +8902,7 @@ function enter(id){
  if(!oldRun){
   st.visits=st.visits||{};st.visits[id]=(st.visits[id]||0)+1;
   st.selectedLoc=id;
-  st.run={layoutVersion:4,locId:id,seed:seedOf(id+':'+st.visits[id]),room:null,
+  st.run={layoutVersion:5,locId:id,seed:seedOf(id+':'+st.visits[id]),room:null,
    x:id==='loc_kordon_village'?535:140,y:id==='loc_kordon_village'?1110:1260,
    opened:[],talked:[],defeated:[],enemyState:{},bag:{},rubles:0,gram:0,kills:0,
    worldTime:id==='loc_kordon_village'?300:170};
