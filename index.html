@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.2 — Survival Material Remaster</title>
+<title>ZONA Z v16.4 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -7071,6 +7071,141 @@ function detailSurvivalEnvironment(m,map,scene,room,low){
  }
 }
 
+function drawRoomFurniture(m,p,scene,theme,low){
+ const x=p.x+p.w/2,z=p.y+p.h/2,w=p.w,d=p.h,k=p.kind;
+ const zone=(scene.zones||[]).find(q=>x>=q.x&&x<=q.x+q.w&&z>=q.y&&z<=q.y+q.h);
+ const name=zone?.name||'',medical=/hospital|Мед|Палат|Операц/i.test(theme.id+' '+name),lab=/lab|agroprom|Лаб|Исслед|Прибор/i.test(theme.id+' '+name);
+ const wood=29,metal=27,cloth=57,paint=medical?'#98a194':'#626d5f';
+ m.shadow(x,z,w*.52,d*.53);
+ if(['table','bed','shelf'].includes(k)){
+  for(const a of [-1,1])for(const b of [-1,1])m.box(x+a*w*.43,0,z+b*d*.4,2, k==='shelf'?39:19,2,'#495248',metal);
+ }
+ if(k==='table'){
+  m.box(x,18,z,w,2,d,lab||medical?'#8a9586':'#817054',lab||medical?metal:wood);
+  m.box(x,11,z-d*.35,w*.9,4,2,'#514f40',wood);
+  if(lab){
+   m.box(x-w*.15,20,z,Math.min(18,w*.38),10,Math.min(12,d*.5),'#626f65',metal);
+   m.box(x-w*.15,23,z+Math.min(12,d*.5)/2+.3,Math.min(12,w*.25),5,.5,'#385e58',8);
+   m.box(x+w*.22,20,z,Math.min(13,w*.24),1.2,Math.min(9,d*.4),'#b3ac91',8);
+  }else if(medical){
+   m.box(x,20,z,Math.min(20,w*.65),1,Math.min(12,d*.7),'#8e9d95',metal);
+   for(let j=0;j<(low?2:4);j++)m.cylinder(x-w*.23+j*w*.14,21,z,1.4,4+j%2,'#75866a',10,8);
+  }else{
+   m.box(x-w*.13,20,z,Math.min(18,w*.45),.6,Math.min(12,d*.6),'#a39c80',8);
+   m.cylinder(x+w*.23,20,z-d*.12,2.2,3,'#626f5c',10,8);
+  }
+ }else if(k==='bed'){
+  m.box(x,17,z,w,3,d,'#5c685a',metal);
+  m.box(x,20,z,w*.92,4,d*.94,'#a09c85',cloth);
+  m.box(x,24,z+d*.16,w*.9,1.3,d*.55,medical?'#728c83':'#6c7559',cloth);
+  m.ellipsoid(x,25,z-d*.34,w*.32,2.5,d*.12,'#b4b29d',3,8,8);
+  for(const side of [-1,1]){
+   m.box(x,25,z+side*d*.47,w,1.6,1.6,'#657268',metal);
+   for(const offset of [-.43,.43])m.box(x+w*offset,18,z+side*d*.47,1.5,10,1.5,'#657268',metal);
+  }
+ }else if(k==='shelf'){
+  for(const height of [4,19,35]){
+   m.box(x,height,z,w,1.5,d,'#76634a',wood);
+   for(let j=0;j<(low?2:3);j++){
+    const bx=x+w*((j+.5)/(low?2:3)-.5);
+    m.box(bx,height+1.6,z,w*.2,5+(j%2)*5,d*.7,medical?'#a1a694':j%2?'#6d654e':'#4e625a',medical?8:28);
+    if(!low)m.box(bx,height+3,z+d*.355,w*.12,2,.3,'#aaa38a',8);
+   }
+  }
+ }else if(k==='locker'||k==='cabinet'){
+  const height=k==='locker'?47:25;
+  m.box(x,0,z,w,height,d,paint,k==='locker'?20:wood);
+  const doors=k==='locker'?2:3;
+  for(let j=0;j<doors;j++){
+   const dx=x+w*((j+.5)/doors-.5);
+   m.box(dx,2,z+d/2+.25,w/doors-1.5,height-4,.7,paint,k==='locker'?20:wood);
+   m.box(dx+w/doors*.28,height*.42,z+d/2+1,1.1,5,1,'#aba48c',8);
+   if(k==='locker')for(let v=0;v<(low?2:4);v++)m.box(dx,height-7-v*2,z+d/2+.8,w/doors*.52,.65,.3,'#222d28',8);
+  }
+ }else if(k==='machine'){
+  m.box(x,0,z,w,39,d,'#56685e',20);
+  m.box(x,27,z+d*.5+.3,w*.75,10,1,'#202d28',8);
+  m.box(x-w*.16,29,z+d*.5+1,w*.3,6,.5,'#476e61',8);
+  for(let j=0;j<3;j++)m.box(x+w*(.08+j*.13),29,z+d*.5+1,w*.065,2,.8,j===0?'#b99b5c':'#727f67',8);
+  for(let j=0;j<(low?3:6);j++)m.box(x,7+j*2.4,z+d*.5+.3,w*.65,.8,.7,'#27332d',8);
+  m.box(x,39,z,w*.7,1.4,d*.65,'#6b7564',metal);
+ }else{
+  m.box(x,0,z,w,20,d,'#756147',wood);
+  for(const offset of [-.32,.32])m.box(x+w*offset,20,z,Math.max(1,w*.07),1.2,d,'#514838',wood);
+ }
+}
+
+function drawWorldScrap(m,s,low){
+ const x=s.x,z=s.y,d=s.s,k=s.kind,detail=low?6:10;
+ if(k==='barrel'){
+  const r=d*.35,h=d*1.2;m.shadow(x,z,d*.48,d*.48);
+  m.cylinder(x,0,z,r,h,'#775b40',detail,27);
+  for(const y of [d*.08,d*.45,d*.95,h-.7])m.cylinder(x,y,z,r+.3,.7,'#41463e',detail,8);
+  m.cylinder(x,h+.05,z,r*.89,.2,'#615746',detail,27);
+  m.cylinder(x+r*.45,h+.3,z-r*.2,Math.max(.6,r*.14),.6,'#252e29',10,8);
+  return true;
+ }
+ if(k==='cratejunk'){
+  m.shadow(x,z,d*.46,d*.45);m.box(x,0,z,d*.76,d*.65,d*.76,'#3d352a',29);
+  const count=low?3:5;
+  for(let j=0;j<count;j++){
+   const o=d*.76*((j+.5)/count-.5),width=d*.76/count-.35;
+   m.box(x+o,d*.65,z,width,1.2,d*.79,'#8b7250',29);
+   for(const side of [-1,1])m.box(x+o,1,z+side*d*.39,width,d*.62,.65,'#736044',29);
+  }
+  for(const side of [-1,1]){
+   m.box(x+side*d*.27,d*.65+1.3,z,d*.09,.8,d*.8,'#514938',29);
+   m.box(x+side*d*.27,0,z+d*.405,d*.09,d*.65,.6,'#514938',29);
+   if(!low)for(const y of [d*.13,d*.51])m.box(x+side*d*.27,y,z+d*.42,.7,.7,.3,'#242b27',8);
+  }
+  return true;
+ }
+ if(k==='wreck'){
+  m.shadow(x,z,d*.9,d*.5);
+  m.box(x,2,z,d*1.58,8,d*.76,'#514d41',20);
+  m.box(x-d*.49,10,z,d*.55,3,d*.74,'#685747',20);
+  m.box(x+d*.24,10,z,d*.59,9,d*.53,'#373e37',20);
+  // Recessed dark glazing and narrow pillars keep the cabin separate from the body.
+  for(const side of [-1,1]){
+   m.box(x+d*.23,13,z+side*d*.272,d*.44,4.5,.6,'#172b2c',8);
+   m.box(x+d*.22,12.7,z+side*d*.285,1,5,.6,'#6b6654',20);
+   for(const wheel of [-.52,.52]){
+    m.ellipsoid(x+d*wheel,4,z+side*d*.36,d*.17,4,d*.085,'#202723',3,8,8);
+    if(!low)m.ellipsoid(x+d*wheel,4,z+side*d*.424,d*.085,2,.4,'#676357',2,6,27);
+   }
+  }
+  m.box(x+d*.24,19,z,d*.64,1.3,d*.57,'#5c5949',20);
+  m.box(x-d*.80,3,z,1,2,d*.82,'#3d423b',27);
+  if(!low)for(const side of [-1,1])m.box(x-d*.805,7,z+side*d*.27,.6,2.4,d*.12,'#777467',8);
+  return true;
+ }
+ if(k==='stump'){
+  m.cylinder(x,0,z,d*.3,d*.6,'#67533e',detail,31);
+  m.cylinder(x,d*.6+.04,z,d*.26,.25,'#99825c',detail,29);
+  for(let j=0;j<4;j++){const a=j*1.57+.4;m.branch(x,1,z,x+Math.cos(a)*d*.29,d*.38,z+Math.sin(a)*d*.29,d*.065,'#554837',5,31)}
+  return true;
+ }
+ if(k==='bag'){
+  m.shadow(x,z,d*.36,d*.35);m.ellipsoid(x,d*.15,z,d*.31,d*.18,d*.3,'#827b5b',low?3:5,detail,25);
+  m.ellipsoid(x+d*.18,d*.18,z-d*.1,d*.07,d*.07,d*.09,'#70684d',3,6,25);return true;
+ }
+ if(k==='bones'){
+  m.branch(x-d*.25,1.3,z,x+d*.25,1.3,z,.65,'#aaa18b',5,8);
+  for(let j=0;j<(low?3:5);j++){const px=x-d*.18+j*d*.075;for(const side of [-1,1])m.branch(px,1.3,z,px+d*.05,.6,z+side*d*.16,.5,'#9e9783',4,8)}
+  m.ellipsoid(x+d*.29,1.6,z,2,1.6,1.5,'#aaa18b',3,6,8);return true;
+ }
+ if(k==='rock'){
+  m.shadow(x,z,d*.4,d*.35);m.ellipsoid(x,d*.12,z,d*.325,d*.22,d*.31,'#636458',3,low?5:7,34);return true;
+ }
+ if(k==='scrap'){
+  m.box(x,0,z,d*.65,1.1,d*.62,'#584e42',27);
+  m.quad([x-d*.3,1,z],[x+d*.3,1,z],[x+d*.27,d*.3,z+d*.22],[x-d*.24,d*.25,z+d*.24],'#716454',1,27);
+  if(!low)for(const side of [-1,1])m.branch(x+side*d*.2,1,z-d*.24,x+side*d*.2,d*.3,z+d*.25,.6,'#393d36',4,27);
+  return true;
+ }
+ return false;
+}
+
 function applySurfacePack(m,map,room){
  const id=map.theme?.id||'',inside=room!=null,scene=inside?map.rooms[room]:map;
  const swamp=/swamp|skadovsk/.test(id),forest=/redforest|kordon_village/.test(id),industrial=/dump|jupiter|wild|valley|chaes/.test(id),military=/military|barrier|kordon_post|radar/.test(id),city=/deadcity|limansk|pripyat_center/.test(id);
@@ -7139,11 +7274,8 @@ if(!low){for(let j=0;j<5;j++){m.box(b.x+20+j*40,84,b.y+25,7,2,13,'#654f3e');m.bo
 for(const tr of map.trees){const x=tr.x+15,z=tr.y+15,s=tr.size||28;m.shadow(x,z,s*.70,s*.53);m.foliage(x,0,z,s,[t.treeDark,t.treeMid,t.treeLight||t.treeMid],low,(x*17+z*11)%53)}
 for(const s of map.scraps||[]){if(low&&s.s<15)continue;const x=s.x,z=s.y,k=s.kind,d=s.s;
 if(k==='bush'){m.shadow(x,z,d*.72,d*.62);m.ellipsoid(x,8,z,d*.58,d*.56,d*.48,t.treeMid,5,8,5);m.ellipsoid(x-d*.3,9,z+d*.25,d*.44,d*.4,d*.37,t.treeDark,5,8,5);m.ellipsoid(x+d*.24,12,z-d*.1,d*.34,d*.46,d*.38,t.treeLight,5,8,5);continue}
-if(k==='barrel'){m.shadow(x,z,d*.48,d*.48);m.cylinder(x,0,z,d*.35,d*1.2,'#775b40');m.cylinder(x,d*.45,z,d*.355,2,'#383b34');m.cylinder(x,d*.95,z,d*.355,2,'#343832');continue}
-if(k==='wreck'){m.box(x,0,z,d*1.7,13,d*.9,'#55564c');m.box(x+d*.24,9,z,d*.6,9,d*.55,'#6a5847');continue}
-if(k==='stump'){m.cylinder(x,0,z,d*.3,d*.6,'#746049');continue}
-if(k==='cratejunk'){m.shadow(x,z,d*.46,d*.45);m.box(x,0,z,d*.8,d*.65,d*.8,'#836742',4);m.box(x,d*.65,z,d*.85,2,d*.83,'#c1a16c');continue}
-m.box(x,0,z,d*.65,Math.max(2,d*.34),d*.62,k==='bones'?'#afa38a':'#5f6157')}
+if(drawWorldScrap(m,s,low))continue;
+m.box(x,0,z,d*.65,Math.max(2,d*.34),d*.62,'#5f6157')}
 for(const f of map.fences||[]){if(f.dir==='h'){m.box(f.x+f.w/2,20,f.y, f.w,4,5,'#625a48');for(let v=0;v<f.w;v+=27)m.box(f.x+v,0,f.y,4,28,4,'#8b7b59')}
 else{m.box(f.x,20,f.y+f.w/2,5,4,f.w,'#625a48');for(let v=0;v<f.w;v+=27)m.box(f.x,0,f.y+v,4,28,4,'#8b7b59')}}
 if(!low){for(const d of map.decals||[])m.plane(d.x,.22,d.y,d.w,d.h,d.kind==='leaf'?'#424935':(d.kind==='soil'?'#35392f':'#292d27'));
@@ -7157,24 +7289,14 @@ for(const light of scene.lights||[]){m.box(light.x,56,light.y,35,3,12,'#91876b')
 if(!low){for(let x=24;x<scene.w;x+=60)for(let z=20;z<scene.h;z+=60){const k=((x*37+z*23)%19);if(k<5)m.plane(x,.09,z,50,44,k<3?'#333a34':'#3d4038');if(k===4)m.rail(x-19,z-17,x+12,z+18,.2,'#232622',.8)}}
 if(!low){for(let k=0;k<9;k++){const x=35+((k*89)%680),z=25+((k*73)%530);m.box(x,0,z,14+(k%3)*7,4,8,'#4b4940',2);if(k%3===0)m.box(x+8,0,z+10,5,8,5,'#645345',3)}
 for(let k=0;k<6;k++){m.rail(25+k*120,20,75+k*120,45,.22,'#45423b',1,3)}}
-for(const p of scene.props||[]){const color=({table:'#685a43',locker:'#6d7770',shelf:'#766149',bed:'#67726f',box:'#8d7149',machine:'#4a6569',cabinet:'#665f51'})[p.kind]||'#655e48';if(p.kind==='table'||p.kind==='bed'||p.kind==='shelf'){
- const cx=p.x+p.w/2,cz=p.y+p.h/2;
- for(const dx of [-p.w*.42,p.w*.42])for(const dz of [-p.h*.38,p.h*.38])m.box(cx+dx,0,cz+dz,2.4,p.kind==='shelf'?38:20,2.4,'#41483c',3);
- m.box(cx,18,cz,p.w,2,p.h,color,4);
- if(p.kind==='shelf')m.box(cx,4,cz,p.w,2,p.h,'#65553e',4);
- if(p.kind==='bed'){for(const dx of [-p.w*.44,p.w*.44])m.box(cx+dx,0,cz,2,27,p.h,'#535d52',3);}
-}else m.box(p.x+p.w/2,0,p.y+p.h/2,p.w,p.kind==='locker'?47:p.kind==='machine'?39:20,p.h,color);
-if(p.kind==='bed'){m.box(p.x+p.w/2,21,p.y+p.h/2,p.w*.9,4,p.h*.9,'#a7a698');m.box(p.x+p.w/2,25,p.y+7,p.w*.64,5,12,'#8b8879')}if(p.kind==='machine'){m.box(p.x+p.w/2,30,p.y+p.h/2+p.h/2+1,p.w*.4,8,2,'#8ab6ad');m.box(p.x+p.w/2,42,p.y+p.h/2,16,3,8,'#a0a58c')}if(p.kind==='locker'&&!low)m.box(p.x+p.w/2+2,14,p.y+p.h,3,14,3,'#a0a68f');if(p.kind==='table'&&!low)m.box(p.x+p.w/2,20,p.y+p.h/2,16,3,12,'#9c8f71',4);
-if(p.kind==='shelf'&&!low){m.box(p.x+p.w/2,34,p.y+p.h/2,p.w,3,p.h*.7,'#635c4f',4);for(let k=0;k<3;k++)m.box(p.x+10+k*p.w/3,23,p.y+p.h/2,8,12,9,k%2?'#6e5d48':'#455951',3)}
-if(p.kind==='cabinet'&&!low){m.box(p.x+p.w/2,18,p.y+p.h+2,p.w*.72,3,3,'#b49e70',3)}
-}
+for(const p of scene.props||[])drawRoomFurniture(m,p,scene,t,low);
 for(const d of scene.debris||[])if(!low)m.box(d.x,0,d.y,Math.max(2,d.size),1.8,Math.max(2,d.size*.4),d.c);
 for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3128');
 // Room enclosing walls are low enough to preserve the camera view; access at front exit.
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v16.2: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v16.4: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop';
  if(sloped){
@@ -7299,11 +7421,6 @@ if(room==null){
   }
  }
 }else{
- for(const p of scene.props||[])if(['machine','cabinet','locker'].includes(p.kind)){
-  const x=p.x+p.w/2,z=p.y+p.h+1;
-  for(let j=0;j<5;j++)m.box(x,22+j*3,z,p.w*.65,1,1,'#252e29',3);
-  if(p.kind==='machine'){m.box(x,34,z+1,12,7,2,'#3a8d83',9);for(let j=0;j<3;j++)m.box(x-7+j*7,29,z+2,2,2,1,j%2?'#d2a74d':'#6ba995',9);}
- }
  for(const wire of scene.wires||[])m.branch(wire.x1,1.4,wire.y1,wire.x2,1.4,wire.y2,.6,'#252c28',4,3);
 }
 // Render-only weathering across every exterior and room. No gameplay objects.
@@ -7312,7 +7429,7 @@ const vr=()=>{visualSeed=(Math.imul(visualSeed,1664525)+1013904223)>>>0;return v
 const count=Math.min(low?110:420,Math.floor(scene.w*scene.h/(low?18000:6000)));
 for(let i=0;i<count;i++){
  const x=12+vr()*(scene.w-24),z=12+vr()*(scene.h-24),r=2+vr()*5;
- if(i%7===0){m.puddle(x,z,12+vr()*22,5+vr()*11);continue}
+ if(i%7===0&&room==null){m.puddle(x,z,12+vr()*22,5+vr()*11);continue}
  if(i%3===0){for(let j=0;j<3;j++)m.plank(x+vr()*9,z+vr()*9,3+vr()*6,1+vr()*2,vr()*6.28,['#62503b','#4a4032','#716049'][j]);}
  else{m.ellipsoid(x,1.1,z,r,1+vr()*2,r*.6,i%2?'#58554d':'#3f4342',3,5,2)}
 }
@@ -8049,7 +8166,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,collisionParts,dressingParts,stormState,version:'16.2'};
+window.ZonaSurvival3D={init,collisionParts,dressingParts,stormState,version:'16.4'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -8060,7 +8177,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.2</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.2 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.4</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.4 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
