@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.17 — Survival Material Remaster</title>
+<title>ZONA Z v16.21 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -7209,16 +7209,57 @@ function detailSurvivalEnvironment(m,map,scene,room,low){
    if(i%3===0)surfaceCrack(x,z,.55);
    else m.plane(x,.25,z,3+rnd()*10,1+rnd()*4,pick(['#48453d','#555348','#363c38']),2);
   }
-  if(!low)for(const light of scene.lights||[]){
-   m.puddle(light.x+18,light.y+14,15,5);
-  }
+  // Indoor fixtures do not create decorative puddles.
  }
 }
 
+function roomUse(name='',fallback=''){
+ const text=name||fallback;
+ if(/hospital|Мед|Палат|Операц|Перевяз|Морг|Аптек|Изолятор|Диагност/i.test(text))return 'medical';
+ if(/lab|Лаб|Исслед|Прибор|Вычисл|образц|испытан/i.test(text))return 'lab';
+ if(/Электро|Машин|Насос|цех|Верстак|Инструмент|Вентиляц|Склад|Техническ/i.test(text))return 'service';
+ return 'domestic';
+}
+function selectLightSlots(lights,count,state,time,key){
+ const ranked=lights.map((light,index)=>({...light,id:index})).sort((a,b)=>a.d-b.d||a.id-b.id),desired=ranked.slice(0,count);
+ if(state.key!==key||!state.slots||state.slots.length!==count){
+  state.key=key;state.time=time;state.slots=Array.from({length:count},(_,i)=>desired[i]?{id:desired[i].id,weight:1,light:desired[i]}:{id:-1,weight:0,light:null});
+ }
+ const dt=Math.max(0,Math.min(.05,time-state.time));state.time=time;
+ const wanted=new Set(desired.map(a=>a.id)),byId=new Map(ranked.map(a=>[a.id,a]));
+ for(const slot of state.slots){
+  if(byId.has(slot.id))slot.light=byId.get(slot.id);
+  slot.weight=clamp(slot.weight+(wanted.has(slot.id)?1:-1)*dt*5,0,1);
+ }
+ const occupied=new Set(state.slots.filter(s=>s.weight>0).map(s=>s.id));
+ for(const slot of state.slots)if(slot.weight===0){
+  const next=desired.find(a=>!occupied.has(a.id));slot.id=next?.id??-1;slot.light=next||null;if(next)occupied.add(next.id);
+ }
+ return state.slots.filter(s=>s.light).map(s=>({...s.light,power:s.light.power*s.weight}));
+}
+function roomLightBounds(scene,x,z){
+ const zones=scene?.zones||[],zone=zones.find(q=>x>=q.x&&x<=q.x+q.w&&z>=q.y&&z<=q.y+q.h);
+ if(zone)return [zone.x-8,zone.y-8,zone.x+zone.w+8,zone.y+zone.h+8];
+ return [0,0,0,0];
+}
+function roomLampProfile(scene,light){
+ const zone=(scene.zones||[]).find(q=>light.x>=q.x&&light.x<=q.x+q.w&&light.y>=q.y&&light.y<=q.y+q.h),kind=roomUse(zone?.name||'');
+ return kind==='medical'?{kind,color:[.86,.95,1],paint:'#bdc9c1',power:.95}:kind==='lab'?{kind,color:[.69,.86,1],paint:'#a2b9c6',power:1.02}:kind==='service'?{kind,color:[1,.79,.49],paint:'#c5ad76',power:.94}:{kind,color:[1,.85,.62],paint:'#cfc09b',power:1.02};
+}
+function roomFixture(m,scene,light,low){
+ const p=roomLampProfile(scene,light),x=light.x,z=light.y;
+ m.box(x,56,z,35,3,12,'#667067',27);m.box(x,54,z,28,2,9,p.paint,8);
+ if(p.kind==='medical'||p.kind==='lab'){
+  for(const side of [-1,1])m.branch(x-12,53.8,z+side*2,x+12,53.8,z+side*2,1.1,p.paint,low?4:6,9);
+ }else{
+  m.box(x,53.8,z,22,.4,6,p.paint,9);
+  for(let dx=-12;dx<=12;dx+=6)m.box(x+dx,53.3,z,.8,.8,10,'#424c43',27);
+ }
+}
 function drawRoomFurniture(m,p,scene,theme,low){
  const x=p.x+p.w/2,z=p.y+p.h/2,w=p.w,d=p.h,k=p.kind;
  const zone=(scene.zones||[]).find(q=>x>=q.x&&x<=q.x+q.w&&z>=q.y&&z<=q.y+q.h);
- const name=zone?.name||'',medical=/hospital|Мед|Палат|Операц/i.test(theme.id+' '+name),lab=/lab|agroprom|Лаб|Исслед|Прибор/i.test(theme.id+' '+name);
+ const name=zone?.name||'',profile=roomUse(name,zone?'':theme.id),medical=profile==='medical',lab=profile==='lab';
  const wood=29,metal=27,cloth=57,paint=medical?'#98a194':'#626d5f';
  m.shadow(x,z,w*.52,d*.53);
  if(['table','bed','shelf'].includes(k)){
@@ -7238,10 +7279,26 @@ function drawRoomFurniture(m,p,scene,theme,low){
    m.box(x-w*.13,20,z,Math.min(18,w*.45),.6,Math.min(12,d*.6),'#a39c80',8);
    m.cylinder(x+w*.23,20,z-d*.12,2.2,3,'#626f5c',10,8);
   }
+  if(!low){
+   if(lab){
+    const px=x+w*.26,pz=z-d*.20;
+    m.box(px,20,pz,8,1,7,'#4b5851',27);
+    m.branch(px,21,pz+2,px,31,pz-1,1.1,'#8b9689',6,27);
+    m.branch(px,31,pz-1,px+3,34,pz-3,1.6,'#475b53',6,27);
+   }else if(medical){
+    m.box(x+w*.2,21,z+d*.2,6,2,4,'#b5b9a7',8);
+    m.box(x+w*.2,23.1,z+d*.2,1.3,.2,3,'#83544d',8);
+    m.box(x+w*.2,23.35,z+d*.2,3,.2,1,'#83544d',8);
+   }else{
+    for(let j=0;j<3;j++)m.box(x-w*.25,20.6+j*.7,z+d*.16,8+j%2,.5,6,j%2?'#7e8269':'#b2ac8c',8);
+    m.branch(x-w*.18,23,z+d*.15,x-w*.07,23,z+d*.22,.35,'#3f4940',4,8);
+   }
+  }
  }else if(k==='bed'){
   m.box(x,17,z,w,3,d,'#5c685a',metal);
   m.box(x,20,z,w*.92,4,d*.94,'#a09c85',cloth);
   m.box(x,24,z+d*.16,w*.9,1.3,d*.55,medical?'#728c83':'#6c7559',cloth);
+  if(!low)for(let j=-1;j<=1;j++)m.branch(x-w*.38,25.4,z+d*(.16+j*.13),x+w*.38,25.6,z+d*(.18+j*.13),.45,medical?'#879d94':'#7d8568',4,cloth);
   m.ellipsoid(x,25,z-d*.34,w*.32,2.5,d*.12,'#b4b29d',3,8,8);
   for(const side of [-1,1]){
    m.box(x,25,z+side*d*.47,w,1.6,1.6,'#657268',metal);
@@ -7424,6 +7481,51 @@ function terrainMesh(m,map,low){
   [0,1,2,0,2,3].forEach((v,j)=>{const color=colors[indices[v]];for(let k=0;k<3;k++)m.data[offset+j*10+3+k]=color[k]});
  }
 }
+function sectorTint(id,inside=false){
+ if(inside)return [1.03,.98,.91];
+ if(/swamp|skadovsk/.test(id))return [.83,.94,.92];
+ if(/redforest/.test(id))return [.96,.87,.79];
+ if(/kordon_village/.test(id))return [.94,.95,.86];
+ if(/lab|under|sarcophagus|generators/.test(id))return [.81,.91,.99];
+ if(/dump|jupiter|wild|valley|chaes/.test(id))return [.97,.90,.83];
+ if(/deadcity|limansk|pripyat|hospital/.test(id))return [.90,.93,.96];
+ return [.88,.94,.89];
+}
+function streetFixture(m,l,low){
+ const x=l.x,z=l.y,col=/120,210,255/.test(l.c)?'#a6c9d0':/255,120,120/.test(l.c)?'#c58a65':'#dbc093';
+ m.cylinder(x-12,0,z,3,42,'#4c554b',low?5:7,27);
+ m.box(x-12,0,z,8,3,8,'#6e7265',34);
+ m.branch(x-12,41,z,x,43,z,1.5,'#6b7265',5,27);
+ m.box(x,43,z,15,3,11,'#4a5149',27);
+ m.box(x,39,z,11,4,8,col,8);m.box(x,38.6,z,9,.35,6,col,9);
+ for(const dx of [-5,5])m.box(x+dx,38,z,1,6,9,'#465046',27);
+ if(!low){m.box(x-11.8,17,z+3,4,8,1,'#707667',27);m.box(x-11.8,20,z+3.6,1,2,.4,'#242e27',8);}
+}
+function facadeDetails(m,b,low){
+ const front=b.y+b.h,cx=b.x+b.w/2,door=b.door.x,high=b.style==='institute';
+ // Shallow wall details and high canopies keep the established doorway footprint clear.
+ m.box(cx,1,front+1.8,b.w,6,2.6,'#62695d',34);
+ for(const side of [-1,1])m.box(door+side*25,0,front+3,3,54,3,'#8e907c',34);
+ if(b.style==='residential'){
+  const rise=Math.min(34,Math.max(17,(b.w+9)*.15));
+  m.branch(b.x+5,84,front+6,cx,81+rise,front+6,1.5,'#76684d',4,29);
+  m.branch(cx,81+rise,front+6,b.x+b.w-5,84,front+6,1.5,'#76684d',4,29);
+  m.branch(cx,84,front+6,cx,81+rise,front+6,1.1,'#6c6048',4,29);
+ }
+ if(b.style==='residential'||high){
+  m.quad([door-34,62,front+3],[door+34,62,front+3],[door+34,58,front+27],[door-34,58,front+27],'#657165',1,high?27:11);
+  for(const side of [-1,1])m.branch(door+side*29,45,front+3,door+side*29,58,front+23,1.1,'#555f52',5,27);
+ }
+ if(high){
+  for(let j=20;j<b.w-12;j+=80)m.box(b.x+j,7,front+2.5,5,145,3,'#777c6e',34);
+  if(!low)m.box(door,73,front+2,48,9,2,'#4a625d',27);
+ }else if(b.style==='storage'||b.style==='checkpoint'){
+  const x=b.x+b.w+2,z=b.y+b.h*.55;
+  m.box(x,20,z,3,21,18,'#677362',53);
+  m.branch(x,42,z,x,73,z,1,'#767968',5,27);
+  if(!low)for(let j=0;j<3;j++)m.box(x+2,24+j*4,z,1,1,10,'#252e28',8);
+ }
+}
 function staticMesh(map,room,eco){const scene=room==null?map:map.rooms[room],t=map.theme,m=new Mesh(),low=eco;
 const alt=t.groundAlt||t.ground,ground=room==null?t.ground:t.roomGround;
 if(room==null)terrainMesh(m,map,low);else m.plane(scene.w/2,-1,scene.h/2,scene.w,scene.h,ground,2);m.plane(scene.w/2,-3,scene.h/2,scene.w+140,scene.h+140,t.groundAlt||ground,0);
@@ -7444,9 +7546,9 @@ for(const rd of map.roads||[]){
 }
 for(const a of map.landmarks||[])decorateLandmark(m,a,!low);
 // Lamp posts give a physical source to the warm pools of light.
-for(const l of map.lights||[]){m.shadow(l.x,l.y,8,8);m.cylinder(l.x,0,l.y,2.5,37,'#454a42',6);m.box(l.x+6,36,l.y,15,3,4,'#575848');m.box(l.x+12,35,l.y,7,6,7,'#d5ab69');if(!low)m.box(l.x+12,30,l.y,4,4,4,'#8a7449')}
+for(const l of map.lights||[])streetFixture(m,l,low);
 for(const b of map.buildings){const cx=b.x+b.w/2,cz=b.y+b.h/2,base=t.id==='loc_kordon_village'?['#7b7661','#677266','#82715c','#686c65'][(Number(b.id)||0)%4]:t.building;
-m.shadow(cx,cz,b.w*.66,b.h*.66);m.box(cx,0,cz,b.w,82,b.h,base,2);
+m.shadow(cx,cz,b.w*.66,b.h*.66);m.box(cx,0,cz,b.w,82,b.h,base,2);facadeDetails(m,b,low);
 if(b.style==='residential'||b.style==='shop')m.roof(cx,82,cz,b.w+9,b.h+11,b.style==='shop'?'#565347':['#50594b','#66584b','#535e5b'][b.id%3||0],b.style==='shop'||b.id%3===0?11:17);
 else{m.box(cx,82,cz,b.w+6,10,b.h+6,'#4a4c41',17);m.box(cx,90,cz,b.w*.72,8,b.h*.72,'#5b5b4b',17)}
 m.box(cx,0,cz+b.h/2+10,b.w*.42,7,20,'#71614c',2);
@@ -7496,7 +7598,7 @@ for(const grass of map.reeds||[])m.grassClump(grass.x,grass.y,grass.h,grass.c,lo
 }else{
 for(const zone of scene.zones||[])m.plane(zone.x+zone.w/2,-.5,zone.y+zone.h/2,zone.w,zone.h,zone.color,roomPalette(zone.name).floor);
 for(const wall of scene.walls){m.shadow(wall.x+wall.w/2,wall.y+wall.h/2,wall.w*.55,wall.h*.6);m.box(wall.x+wall.w/2,0,wall.y+wall.h/2,wall.w,58,wall.h,t.roomWall);m.box(wall.x+wall.w/2,58,wall.y+wall.h/2,wall.w+1,4,wall.h+1,'#a69b80')}
-for(const light of scene.lights||[]){m.box(light.x,56,light.y,35,3,12,'#91876b');m.box(light.x,54,light.y,26,3,8,'#d9c697')}
+for(const light of scene.lights||[])roomFixture(m,scene,light,low);
 if(!low&&!scene.zones){for(let x=24;x<scene.w;x+=60)for(let z=20;z<scene.h;z+=60){const k=((x*37+z*23)%19);if(k<5)m.plane(x,.09,z,50,44,k<3?'#333a34':'#3d4038');if(k===4)m.rail(x-19,z-17,x+12,z+18,.2,'#232622',.8)}}
 if(!low){for(let k=0;k<9;k++){const x=35+((k*89)%680),z=25+((k*73)%530);m.box(x,0,z,14+(k%3)*7,4,8,'#4b4940',2);if(k%3===0)m.box(x+8,0,z+10,5,8,5,'#645345',3)}
 for(let k=0;k<6;k++){m.rail(25+k*120,20,75+k*120,45,.22,'#45423b',1,3)}}
@@ -7508,7 +7610,7 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v16.17: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v16.21: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop',roofTop=b.style==='institute'?161:98;
  if(sloped){
@@ -7954,7 +8056,7 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform vec3 uEye;uniform vec4 uShadows[12];uniform vec4 uLights[5];uniform vec3 uLightColors[5];uniform float uNight;uniform float uStorm;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;uniform sampler2D uAtlas;uniform float uTextureReady;
+varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform vec3 uEye;uniform vec4 uShadows[12];uniform vec4 uLights[5];uniform vec4 uLightBounds[5];uniform vec3 uLightColors[5];uniform float uNight;uniform float uStorm;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;uniform sampler2D uAtlas;uniform float uTextureReady;
 varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;
 float surfaceKind(float tile){if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.5){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
 float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -8037,6 +8139,11 @@ vec3 atmosphericScene(vec3 base){
  float haze=clamp(depth*.50+lowMist*smoothstep(.05,.65,depth)*.12,0.,.68);
  vec3 air=max(uSky,vec3(.055,.071,.079));
  return mix(base,air,haze);
+}
+float lampMask(vec4 bounds){
+ if(bounds.z<=bounds.x)return 1.;
+ vec2 edge=min(vWorld-bounds.xy,bounds.zw-vWorld);
+ return smoothstep(-2.,6.,min(edge.x,edge.y));
 }
 void main(){
  if(uCutFade>.001&&vHeight>30.&&vWorld.x>uCutaway.x&&vWorld.y>uCutaway.y&&vWorld.x<uCutaway.z&&vWorld.y<uCutaway.w){
@@ -8130,7 +8237,7 @@ void main(){
   vec2 delta=(vWorld-uLights[i].xy)/max(1.0,uLights[i].z);
   float falloff=max(0.0,1.0-dot(delta,delta));
   float flicker=1.;
-  light+=uLightColors[i]*falloff*falloff*uLights[i].w*flicker;
+  light+=uLightColors[i]*falloff*falloff*uLights[i].w*flicker*lampMask(uLightBounds[i]);
  }
 
  if(mat<1.5|| (mat>5.5&&mat<6.5)){
@@ -8170,7 +8277,7 @@ void main(){
    float distanceToLamp=length(toLamp);
    vec3 halfway=normalize(toLamp/max(1.,distanceToLamp)+viewDir);
    float attenuation=pow(max(0.,1.-distanceToLamp/max(1.,uLights[j].z)),2.);
-   base+=uLightColors[j]*pow(max(0.,dot(normal,halfway)),rough)*attenuation*uLights[j].w*slick*(.12+fresnel)*.7;
+   base+=uLightColors[j]*pow(max(0.,dot(normal,halfway)),rough)*attenuation*uLights[j].w*lampMask(uLightBounds[j])*slick*(.12+fresnel)*.7;
   }
  }
 
@@ -8219,7 +8326,7 @@ precision mediump float;
 #endif
 varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform float uNight;uniform float uStorm;uniform vec3 uEye;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;
 uniform sampler2D uAtlas;uniform float uTextureReady;
-uniform vec4 uLights[3];uniform vec3 uLightColors[3];uniform vec4 uShadows[4];
+uniform vec4 uLights[3];uniform vec4 uLightBounds[3];uniform vec3 uLightColors[3];uniform vec4 uShadows[4];
 varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;
 varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;
 float surfaceKind(float tile){if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.5){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
@@ -8292,6 +8399,11 @@ vec3 atmosphericScene(vec3 base){
  vec3 air=max(uSky,vec3(.055,.071,.079));
  return mix(base,air,haze);
 }
+float lampMask(vec4 bounds){
+ if(bounds.z<=bounds.x)return 1.;
+ vec2 edge=min(vWorld-bounds.xy,bounds.zw-vWorld);
+ return smoothstep(-2.,6.,min(edge.x,edge.y));
+}
 void main(){
  if(uCutFade>.001&&vHeight>30.&&vWorld.x>uCutaway.x&&vWorld.y>uCutaway.y&&vWorld.x<uCutaway.z&&vWorld.y<uCutaway.w){
   vec2 cell=floor(gl_FragCoord.xy*.5);float dither=(mod(cell.x+mod(cell.y,2.)*2.,4.)+4.*mod(cell.y,4.)+.5)/16.;
@@ -8304,6 +8416,11 @@ void main(){
   float scale=mat<1.5?.006:mat<2.5?.010:mat<3.5?.012:mat<4.5?.016:mat<5.5?.019:mat<6.5?.008:.018;
   vec2 uv=fract(pos*scale);float col=mod(tileId,8.0),row=floor(tileId/8.0);
   vec3 tex=texture2D(uAtlas,vec2((col+.033+uv.x*.934)/8.,1.-(row+.033+uv.y*.934)/8.)).rgb;
+  if(mat<4.5){
+   vec2 uv2=fract(pos*scale*.371+vec2(.23,.61));
+   vec3 macroTex=texture2D(uAtlas,vec2((col+.033+uv2.x*.934)/8.,1.-(row+.033+uv2.y*.934)/8.)).rgb;
+   tex=mix(tex,tex*(.68+macroTex*.65),.35);
+  }
   base=tex*mix(vec3(.94),vColor*1.6,.27);
  }
 
@@ -8380,7 +8497,7 @@ void main(){
  for(int i=0;i<3;i++){
   vec2 delta=(vWorld-uLights[i].xy)/max(1.,uLights[i].z);
   float f=max(0.,1.-dot(delta,delta));
-  light+=uLightColors[i]*f*f*uLights[i].w;
+  light+=uLightColors[i]*f*f*uLights[i].w*lampMask(uLightBounds[i]);
  }
 
  if(mat<1.5|| (mat>5.5&&mat<6.5)){
@@ -8420,7 +8537,7 @@ void main(){
    float distanceToLamp=length(toLamp);
    vec3 halfway=normalize(toLamp/max(1.,distanceToLamp)+viewDir);
    float attenuation=pow(max(0.,1.-distanceToLamp/max(1.,uLights[j].z)),2.);
-   base+=uLightColors[j]*pow(max(0.,dot(normal,halfway)),rough)*attenuation*uLights[j].w*slick*(.12+fresnel)*.7;
+   base+=uLightColors[j]*pow(max(0.,dot(normal,halfway)),rough)*attenuation*uLights[j].w*lampMask(uLightBounds[j])*slick*(.12+fresnel)*.7;
   }
  }
 
@@ -8471,7 +8588,7 @@ try{
  catch(fallbackError){console.warn('Survival 3D shader unsupported:',fallbackError);return null}
 }
 try{staticBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer()}catch(e){console.warn('Survival 3D buffers:',e);return null}
-const A={position:gl.getAttribLocation(program,'aPosition'),color:gl.getAttribLocation(program,'aColor'),normal:gl.getAttribLocation(program,'aNormal'),material:gl.getAttribLocation(program,'aMaterial')},U={shadowMatrix:gl.getUniformLocation(program,'uShadowMatrix'),shadowMap:gl.getUniformLocation(program,'uShadowMap'),shadowReady:gl.getUniformLocation(program,'uShadowReady'),shadowTexel:gl.getUniformLocation(program,'uShadowTexel'),torchBands:gl.getUniformLocation(program,'uTorchBands[0]'),torch:gl.getUniformLocation(program,'uTorch'),mvp:gl.getUniformLocation(program,'uMVP'),cam:gl.getUniformLocation(program,'uCamera'),fog:gl.getUniformLocation(program,'uFog'),sky:gl.getUniformLocation(program,'uSky'),eye:gl.getUniformLocation(program,'uEye'),shadows:gl.getUniformLocation(program,'uShadows[0]'),tint:gl.getUniformLocation(program,'uTint'),lights:gl.getUniformLocation(program,'uLights[0]'),lightColors:gl.getUniformLocation(program,'uLightColors[0]'),night:gl.getUniformLocation(program,'uNight'),wetness:gl.getUniformLocation(program,'uWetness'),storm:gl.getUniformLocation(program,'uStorm'),cutaway:gl.getUniformLocation(program,'uCutaway'),cutFade:gl.getUniformLocation(program,'uCutFade'),time:gl.getUniformLocation(program,'uTime'),detail:gl.getUniformLocation(program,'uDetail'),atlas:gl.getUniformLocation(program,'uAtlas'),surfaceAtlas:gl.getUniformLocation(program,'uSurfaceAtlas'),surfaceReady:gl.getUniformLocation(program,'uSurfaceReady'),textureReady:gl.getUniformLocation(program,'uTextureReady')};
+const A={position:gl.getAttribLocation(program,'aPosition'),color:gl.getAttribLocation(program,'aColor'),normal:gl.getAttribLocation(program,'aNormal'),material:gl.getAttribLocation(program,'aMaterial')},U={shadowMatrix:gl.getUniformLocation(program,'uShadowMatrix'),shadowMap:gl.getUniformLocation(program,'uShadowMap'),shadowReady:gl.getUniformLocation(program,'uShadowReady'),shadowTexel:gl.getUniformLocation(program,'uShadowTexel'),torchBands:gl.getUniformLocation(program,'uTorchBands[0]'),torch:gl.getUniformLocation(program,'uTorch'),mvp:gl.getUniformLocation(program,'uMVP'),cam:gl.getUniformLocation(program,'uCamera'),fog:gl.getUniformLocation(program,'uFog'),sky:gl.getUniformLocation(program,'uSky'),eye:gl.getUniformLocation(program,'uEye'),shadows:gl.getUniformLocation(program,'uShadows[0]'),tint:gl.getUniformLocation(program,'uTint'),lights:gl.getUniformLocation(program,'uLights[0]'),lightBounds:gl.getUniformLocation(program,'uLightBounds[0]'),lightColors:gl.getUniformLocation(program,'uLightColors[0]'),night:gl.getUniformLocation(program,'uNight'),wetness:gl.getUniformLocation(program,'uWetness'),storm:gl.getUniformLocation(program,'uStorm'),cutaway:gl.getUniformLocation(program,'uCutaway'),cutFade:gl.getUniformLocation(program,'uCutFade'),time:gl.getUniformLocation(program,'uTime'),detail:gl.getUniformLocation(program,'uDetail'),atlas:gl.getUniformLocation(program,'uAtlas'),surfaceAtlas:gl.getUniformLocation(program,'uSurfaceAtlas'),surfaceReady:gl.getUniformLocation(program,'uSurfaceReady'),textureReady:gl.getUniformLocation(program,'uTextureReady')};
 const shadowSize=eco?256:(compactMode?512:1024);let shadowProgram=null,shadowFBO=null,shadowTexture=null,shadowDepth=null,shadowMatrix=orthographic(-1,1,-1,1,1,2),shadowTick=0,shadowAnchor=null,shadowValid=false,shadowPosition=-1,shadowUniform=null;
 const shadowVS=`attribute vec3 aPosition;uniform mat4 uLightMatrix;varying float vCasterHeight;void main(){vCasterHeight=aPosition.y;gl_Position=uLightMatrix*vec4(aPosition,1.);}`;
 const shadowFS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -8506,11 +8623,16 @@ function renderShadow(target,asp,dynCount){
  for(const [buffer,count] of [[staticBuffer,staticData.length/10]]){gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.vertexAttribPointer(shadowPosition,3,gl.FLOAT,false,40,0);for(const c of staticChunks)if(chunkVisible(c,shadowMatrix))gl.drawArrays(gl.TRIANGLES,c.first,c.count);}
  gl.disableVertexAttribArray(shadowPosition);gl.bindFramebuffer(gl.FRAMEBUFFER,null);shadowValid=true;
 }
+function improveTextureAngle(){
+ try{const ext=gl.getExtension?.('EXT_texture_filter_anisotropic')||gl.getExtension?.('WEBKIT_EXT_texture_filter_anisotropic');
+ if(ext){const max=gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT)||1;gl.texParameterf(gl.TEXTURE_2D,ext.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(eco?2:4,max));}}
+ catch(e){/* Standard trilinear filtering remains available. */}
+}
 let atlasTexture=gl.createTexture(),textureReady=false,disposed=false;
 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-const atlasImage=new Image();atlasImage.onload=()=>{if(disposed)return;try{gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,atlasImage);gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);textureReady=true;}catch(e){console.warn('3D texture atlas:',e);atlasImage.onerror?.()}};
-atlasImage.onerror=()=>{if(disposed)return;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);const fallback=document.createElement('canvas');fallback.width=fallback.height=2048;const fc=fallback.getContext('2d'),oldAtlas=makeSurfaceAtlas();for(let tile=0;tile<64;tile++){const kind=tile<8?tile:2;fc.drawImage(oldAtlas,(kind%4)*oldAtlas.width/4,Math.floor(kind/4)*oldAtlas.height/2,oldAtlas.width/4,oldAtlas.height/2,(tile%8)*256,Math.floor(tile/8)*256,256,256)}gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,fallback);gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);textureReady=true;};atlasImage.src=SURVIVAL_V123_ATLAS;
+const atlasImage=new Image();atlasImage.onload=()=>{if(disposed)return;try{gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,atlasImage);gl.generateMipmap(gl.TEXTURE_2D);improveTextureAngle();gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);textureReady=true;}catch(e){console.warn('3D texture atlas:',e);atlasImage.onerror?.()}};
+atlasImage.onerror=()=>{if(disposed)return;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);const fallback=document.createElement('canvas');fallback.width=fallback.height=2048;const fc=fallback.getContext('2d'),oldAtlas=makeSurfaceAtlas();for(let tile=0;tile<64;tile++){const kind=tile<8?tile:2;fc.drawImage(oldAtlas,(kind%4)*oldAtlas.width/4,Math.floor(kind/4)*oldAtlas.height/2,oldAtlas.width/4,oldAtlas.height/2,(tile%8)*256,Math.floor(tile/8)*256,256,256)}gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,fallback);gl.generateMipmap(gl.TEXTURE_2D);improveTextureAngle();gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);textureReady=true;};atlasImage.src=SURVIVAL_V123_ATLAS;
 // Packed gradient/roughness atlas, embedded for a self-contained GitHub Pages build.
 let surfaceTexture=gl.createTexture(),surfaceReady=false;
 gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);
@@ -8519,7 +8641,7 @@ for(const axis of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXT
 for(const filter of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,filter,gl.LINEAR);
 const surfaceImage=new Image();surfaceImage.onload=()=>{if(disposed)return;try{
  gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
- gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,surfaceImage);gl.generateMipmap(gl.TEXTURE_2D);
+ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,surfaceImage);gl.generateMipmap(gl.TEXTURE_2D);improveTextureAngle();
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);surfaceReady=true;
  }catch(e){surfaceReady=false;console.warn('Surface material fallback:',e)}finally{gl.activeTexture(gl.TEXTURE0)}};
 surfaceImage.onerror=()=>{surfaceReady=false};surfaceImage.src=SURVIVAL_SURFACE_ATLAS;gl.activeTexture(gl.TEXTURE0);
@@ -8531,11 +8653,12 @@ function changeZoom(d){/* Zoom disabled: fixed tactical top-down framing. */zoom
 function resetCamera(){yaw=.35;pitch=.95;zoom=430}
 function movement(dx,dy){const amount=Math.min(1,Math.hypot(dx,dy));dy/=Math.sin(pitch);const scale=amount/(Math.hypot(dx,dy)||1);return [(dx*Math.cos(yaw)+dy*Math.sin(yaw))*scale,(dy*Math.cos(yaw)-dx*Math.sin(yaw))*scale]}
 function bindBuffer(buf,vertices,usage){gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,vertices,usage);}
+const lightSelection={};
 function sceneLights(run,time){const l=[],room=run.room!=null?map.rooms[run.room]:null;
 const add=(x,z,r,c,power)=>l.push({x,z,r,c,power,d:(x-run.x)**2+(z-run.y)**2});
 const flicker=.94+.04*Math.sin(time*3.1)+.02*Math.sin(time*7.3);
 
-if(room){for(const a of room.lights||[])add(a.x,a.y,205,[1,.76,.48],1.14);for(const a of room.lights||[])if(a.r>70)add(a.x+8,a.y-4,132,[.45,.78,.84],.34)}else{
+if(room){for(const a of room.lights||[]){const p=roomLampProfile(room,a);add(a.x,a.y,205,p.color,p.power)}}else{
  for(const a of map.landmarks||[])if(a.kind==='safebase'){add(a.x-14,a.y-2,150,[1,.42,.09],3.2*flicker);for(const [dx,dz] of [[-114,-86],[118,-84],[120,86],[-118,82]])add(a.x+dx,a.y+dz,114,[1,.58,.24],1.9)}
  for(const a of map.landmarks||[])if(['camp','shack','tower','watch','well','ship','pier'].includes(a.kind))add(a.x,a.y,a.kind==='safebase'?320:268,[1,.56,.22],a.kind==='camp'?2.32*flicker:(a.kind==='safebase'?1.95*flicker:1.06));
  for(const a of map.landmarks||[])if(['generator','lab','server','reactor','portal','monolith','radar'].includes(a.kind))add(a.x,a.y,240,[.33,.73,.96],1.02);
@@ -8543,9 +8666,10 @@ if(room){for(const a of room.lights||[])add(a.x,a.y,205,[1,.76,.48],1.14);for(co
  for(const b of map.buildings||[])for(const win of b.windows||[])if(win.lit)add(win.x+win.w/2,b.y+b.h+8,100,[1,.74,.39],.58);
  for(const a of map.lights||[])add(a.x,a.y,210,/120,210,255/.test(a.c)?[.44,.73,.90]:/255,120,120/.test(a.c)?[.83,.39,.28]:[1,.72,.34],.92);
 }
-l.sort((a,b)=>a.d-b.d);const pos=new Float32Array(20),colors=new Float32Array(15);
-const count=compactMode?3:5,edge=Math.sqrt(l[count]?.d??1e12);
-for(let i=0;i<count;i++){const a=l[i];if(!a)break;const fade=clamp((edge-Math.sqrt(a.d))/100,0,1);pos.set([a.x,a.z,a.r,a.power*fade],i*4);colors.set(a.c,i*3)}return {pos,colors}}
+const pos=new Float32Array(20),colors=new Float32Array(15),bounds=new Float32Array(20),count=compactMode?3:5;
+const selected=selectLightSlots(l,count,lightSelection,time,run.room??'outside');
+for(let i=0;i<selected.length;i++){const a=selected[i];pos.set([a.x,a.z,a.r,a.power],i*4);colors.set(a.c,i*3);if(room)bounds.set(roomLightBounds(room,a.x,a.z),i*4)}return {pos,colors,bounds}}
+
 
 function sceneShadows(run,enemyData){
  const out=new Float32Array(48);out.set([run.x,run.y,17,14]);
@@ -8583,7 +8707,7 @@ else{cutBuilding=blocking;cutFade=blocking?Math.min(.92,cutFade+fadeStep):0;}
 const dyn=entityMesh(w,map,run,enemyData,time,eco,animation);bindBuffer(dynamicBuffer,dyn,gl.DYNAMIC_DRAW);
 if(!shadowValid||needsShadowRefresh(shadowAnchor,target,asp,zoom))renderShadow(target,asp,dyn.length/10);
 gl.viewport(0,0,canvas.width,canvas.height);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthFunc(gl.LEQUAL);gl.disable(gl.BLEND);const sky=rgb(map.theme.sky||'#080c0d').map(v=>Math.min(.12,v*.40+.006));gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.uniformMatrix4fv(U.mvp,false,new Float32Array(M));
-gl.uniformMatrix4fv(U.shadowMatrix,false,new Float32Array(shadowMatrix));gl.uniform1f(U.shadowReady,shadowValid?1:0);gl.uniform1f(U.shadowTexel,1/shadowSize);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadowTexture||atlasTexture);gl.uniform1i(U.shadowMap,1);gl.activeTexture(gl.TEXTURE0);gl.uniform3fv(U.cam,new Float32Array(target));if(U.eye)gl.uniform3fv(U.eye,new Float32Array(eye));gl.uniform3fv(U.sky,new Float32Array(sky));gl.uniform1f(U.fog,eco?700:900);gl.uniform3fv(U.tint,new Float32Array(run.room==null?[.82,.88,.90]:[1.06,.95,.84]));const phase=((run.worldTime||0)+((run.seed%94)*1.6))/520*Math.PI*2;const night=clamp(.34+(.5-.5*Math.cos(phase))*.66,.34,.96);const l=sceneLights(run,time);if(U.lights)gl.uniform4fv(U.lights,compactMode?l.pos.subarray(0,12):l.pos);if(U.lightColors)gl.uniform3fv(U.lightColors,compactMode?l.colors.subarray(0,9):l.colors);gl.uniform4fv(U.cutaway,new Float32Array(cutBuilding?[cutBuilding.x-10,cutBuilding.y-10,cutBuilding.x+cutBuilding.w+10,cutBuilding.y+cutBuilding.h+12]:[0,0,0,0]));gl.uniform1f(U.cutFade,cutFade);gl.uniform1f(U.night,night);gl.uniform1f(U.wetness,run.room==null?1:0);gl.uniform1f(U.storm,stormState(run.worldTime||0,run.seed,run.room!=null,window.matchMedia?.('(prefers-reduced-motion: reduce)').matches).flash);gl.uniform1f(U.time,time);
+gl.uniformMatrix4fv(U.shadowMatrix,false,new Float32Array(shadowMatrix));gl.uniform1f(U.shadowReady,shadowValid?1:0);gl.uniform1f(U.shadowTexel,1/shadowSize);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadowTexture||atlasTexture);gl.uniform1i(U.shadowMap,1);gl.activeTexture(gl.TEXTURE0);gl.uniform3fv(U.cam,new Float32Array(target));if(U.eye)gl.uniform3fv(U.eye,new Float32Array(eye));gl.uniform3fv(U.sky,new Float32Array(sky));gl.uniform1f(U.fog,eco?700:900);gl.uniform3fv(U.tint,new Float32Array(sectorTint(map.theme.id,run.room!=null)));const phase=((run.worldTime||0)+((run.seed%94)*1.6))/520*Math.PI*2;const night=clamp(.34+(.5-.5*Math.cos(phase))*.66,.34,.96);const l=sceneLights(run,time);if(U.lightBounds)gl.uniform4fv(U.lightBounds,compactMode?l.bounds.subarray(0,12):l.bounds);if(U.lights)gl.uniform4fv(U.lights,compactMode?l.pos.subarray(0,12):l.pos);if(U.lightColors)gl.uniform3fv(U.lightColors,compactMode?l.colors.subarray(0,9):l.colors);gl.uniform4fv(U.cutaway,new Float32Array(cutBuilding?[cutBuilding.x-10,cutBuilding.y-10,cutBuilding.x+cutBuilding.w+10,cutBuilding.y+cutBuilding.h+12]:[0,0,0,0]));gl.uniform1f(U.cutFade,cutFade);gl.uniform1f(U.night,night);gl.uniform1f(U.wetness,run.room==null?1:0);gl.uniform1f(U.storm,stormState(run.worldTime||0,run.seed,run.room!=null,window.matchMedia?.('(prefers-reduced-motion: reduce)').matches).flash);gl.uniform1f(U.time,time);
  const tx=Math.sin(pose.angle),tz=-Math.cos(pose.angle),reach=215;
  if(U.torchBands)gl.uniform3fv(U.torchBands,torchRanges(w,run.x,run.y,pose.angle,reach));
  if(U.torch)gl.uniform4fv(U.torch,new Float32Array([run.x,run.y,tx*reach,tz*reach]));gl.uniform1f(U.detail,eco?0:1);if(U.shadows)gl.uniform4fv(U.shadows,compactMode?sceneShadows(run,enemyData).subarray(0,16):sceneShadows(run,enemyData));gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.uniform1i(U.atlas,0);gl.uniform1f(U.textureReady,textureReady?1:0);gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);gl.uniform1i(U.surfaceAtlas,2);gl.uniform1f(U.surfaceReady,surfaceReady?1:0);gl.activeTexture(gl.TEXTURE0);drawBuffer(staticBuffer,staticData.length/10,staticChunks,M);
@@ -8639,7 +8763,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,collisionParts,dressingParts,stormState,version:'16.17'};
+window.ZonaSurvival3D={init,collisionParts,dressingParts,stormState,version:'16.21'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -8650,7 +8774,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.17</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.17 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.21</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.21 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
