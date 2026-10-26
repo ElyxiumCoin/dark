@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.21 — Survival Material Remaster</title>
+<title>ZONA Z v16.27 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -6833,6 +6833,11 @@ class Mesh{
   }
  }
  foliage(x,y,z,size,colors=['#28392a','#3b5032','#4e643c'],eco=false,seed=0){
+  const first=this.data.length;this.foliageCore(x,y,z,size,colors,eco,seed);
+  const stretch=1.25+.16*(.5+.5*Math.sin(seed));
+  for(let i=first;i<this.data.length;i+=10){this.data[i+1]=y+(this.data[i+1]-y)*stretch;const n=norm([this.data[i+6],this.data[i+7]/stretch,this.data[i+8]]);this.data[i+6]=n[0];this.data[i+7]=n[1];this.data[i+8]=n[2];}
+ }
+ foliageCore(x,y,z,size,colors=['#28392a','#3b5032','#4e643c'],eco=false,seed=0){
    const variant=Math.floor(Math.abs(seed*97+x*.13+z*.17))%7;
    const bark=31,height=Math.max(46,size*(variant<4?2.15:1.9)),lean=Math.sin(seed+.7)*size*.08;
    this.branch(x,y,z,x+lean,y+height,z,Math.max(2.5,size*.1),'#514738',eco?5:7,bark);
@@ -6862,7 +6867,10 @@ class Mesh{
      for(let fan=0;fan<(eco?2:3);fan++){
       const f=.46+fan*.2,px=x+Math.cos(angle)*len*f,pz=z+Math.sin(angle)*len*f;
       const width=size*(.11+.035*(2-fan)),sx=Math.sin(angle)*width,sz=-Math.cos(angle)*width;
-      this.tri([px-sx,elevation+3,pz-sz],[px+sx,elevation+2,pz+sz],[bx,elevation-7-fan,bz],colors[(j+h+fan)%3],.9,5);
+      for(let needle=0;needle<(eco?3:5);needle++){
+       const q=needle/(eco?2:4)*2-1,root=[px+sx*q,elevation+2,pz+sz*q],tip=[bx+sx*q*.65,elevation-7-fan-(needle%2)*2,bz+sz*q*.65];
+       this.tri([root[0]-sx*.19,root[1],root[2]-sz*.19],[root[0]+sx*.19,root[1]+.6,root[2]+sz*.19],tip,colors[(j+h+needle)%3],.9,32);
+      }
      }
     }
    }
@@ -6915,15 +6923,32 @@ const splitWood=(px,pz)=>{for(let q=0;q<7;q++){const a=q*2.4;const len=10+q%3*7;
 const antenna=(h)=>{m.cylinder(x,0,z,5,h,metal,7);for(let i=0;i<4;i++){m.rail(x-20,z+(i%2)*5,x+20,z+(i%2)*5,12+i*(h/5),rust,2);m.rail(x,z-20,x,z+20,12+i*(h/5),rust,2)}m.box(x,h-10,z,13,16,13,glow)};
 const vehicle=(lgt,col=rust)=>{
  const len=Math.max(72,lgt),front=x+len*.34,back=x-len*.32;
- m.box(x,7,z,len*.9,8,30,'#303a34',3);m.box(back,15,z,len*.48,18,32,col,3);
+ m.box(x,7,z,len*.9,8,30,'#303a34',27);
+ if(kind==='ambulance'){
+  m.box(back,15,z,len*.48,23,32,col,20);
+  for(const side of [-1,1]){m.box(back,26,z+side*16.3,len*.28,7,.7,'#263b3b',55);m.box(back,18,z+side*16.7,11,2,.7,'#8a5046',8);}
+ }else{
+  m.box(back,15,z,len*.48,2,30,'#6b5941',29);
+  for(const side of [-1,1]){
+   for(let j=0;j<3;j++){
+    if(kind==='wreck'&&side===1&&j===2)continue;
+    m.box(back,19+j*5,z+side*16,len*.48,3,1.6,j%2?'#666449':'#7d694c',29);
+   }
+   for(const offset of [-.22,0,.22])m.box(back+len*offset,15,z+side*16,1.7,20,2,'#586153',27);
+  }
+  m.box(back-len*.24,17,z,2,15,32,'#66593e',29);
+  m.box(back-len*.10,17,z-5,12,9,11,'#756044',29);
+  m.cylinder(back+len*.10,17,z+4,4,8,'#655b4c',8,27);
+ }
+
  m.box(front,15,z,len*.28,10,31,col,3);
  const cab=x+len*.07;
  m.quad([cab-15,19,z-15],[cab+14,19,z-15],[cab+9,39,z-13],[cab-12,39,z-13],col,1,3);
  m.quad([cab-15,19,z+15],[cab-12,39,z+13],[cab+9,39,z+13],[cab+14,19,z+15],col,1,3);
  m.quad([cab-12,39,z-13],[cab+9,39,z-13],[cab+9,39,z+13],[cab-12,39,z+13],col,1,3);
- m.quad([cab+14,24,z-13],[cab+14,24,z+13],[cab+9,37,z+12],[cab+9,37,z-12],'#243537',1,8);
+ m.quad([cab+14,24,z-13],[cab+14,24,z+13],[cab+9,37,z+12],[cab+9,37,z-12],'#243537',1,55);
  for(const side of [-1,1]){
-  m.quad([cab-10,27,z+side*14],[cab+10,27,z+side*14],[cab+7,36,z+side*13.5],[cab-10,36,z+side*13.5],'#253337',1,8);
+  m.quad([cab-10,27,z+side*14],[cab+10,27,z+side*14],[cab+7,36,z+side*13.5],[cab-10,36,z+side*13.5],'#253337',1,55);
   m.branch(cab-11,23,z+side*16,cab+11,23,z+side*16,.5,'#7c7b65',4,3);
   m.box(cab-7,24,z+side*16,4,1,1,'#a09a7c',3);
   m.branch(cab+8,29,z+side*15,cab+12,31,z+side*21,.7,'#4b5046',5,3);m.box(cab+12,30,z+side*21,3,4,1.5,'#434b45',3);
@@ -6932,6 +6957,16 @@ const vehicle=(lgt,col=rust)=>{
   m.ellipsoid(x+dx,9,z+side*17,9,9,4.4,'#202622',6,12,3);
   m.ellipsoid(x+dx,9,z+side*21,4.5,4.5,.6,'#5c6255',4,10,3);
  }
+ // Wheel arches, running boards and exhaust make the chassis readable at oblique angles.
+ for(const side of [-1,1]){
+  m.box(cab-1,10,z+side*18,24,2,6,'#514e40',27);
+  for(const dx of [-len*.30,len*.31]){
+   m.box(x+dx,19,z+side*18,22,2,8,col,27);
+   for(const end of [-1,1])m.box(x+dx+end*10,13,z+side*18,2,6,7,'#675344',27);
+  }
+  m.branch(cab-9,26,z+side*14.8,cab+4,33,z+side*14.2,.45,'#777b6e',4,27);
+ }
+ m.branch(back,6,z-11,back-len*.23,6,z-11,1.1,'#403f36',5,27);
  m.box(x+len*.49,12,z,3,5,35,'#4a5047',3);
  for(const side of [-1,1])m.box(x+len*.49,20,z+side*11,1,4,6,'#b6ac83',3);
  for(let j=0;j<7;j++)m.box(x+len*.49,16+j*.9,z,1,.45,13,'#202923',3);
@@ -7309,8 +7344,23 @@ function drawRoomFurniture(m,p,scene,theme,low){
    m.box(x,height,z,w,1.5,d,'#76634a',wood);
    for(let j=0;j<(low?2:3);j++){
     const bx=x+w*((j+.5)/(low?2:3)-.5);
-    m.box(bx,height+1.6,z,w*.2,5+(j%2)*5,d*.7,medical?'#a1a694':j%2?'#6d654e':'#4e625a',medical?8:28);
-    if(!low)m.box(bx,height+3,z+d*.355,w*.12,2,.3,'#aaa38a',8);
+    if(medical||lab){
+     m.box(bx,height+1.6,z,w*.23,1,d*.72,'#849082',metal);
+     for(let q=0;q<(low?2:3);q++){
+      const px=bx+w*.065*(q-(low?.5:1)),r=Math.min(w*.025,d*.10,2);
+      m.cylinder(px,height+2.6,z,r,5+(j%2)*2,medical?'#9b9e7c':'#6e8c7c',low?5:8,8);
+      m.cylinder(px,height+7.6+(j%2)*2,z,r*.72,1,'#474f43',5,metal);
+     }
+    }else if(profile==='domestic'){
+     for(let q=0;q<(low?2:4);q++){
+      const px=bx+w*.043*(q-(low?.5:1.5));
+      m.box(px,height+1.6,z,w*.035,7+(q+j)%3,d*.57,['#6a7358','#775e48','#545f5d'][(q+j)%3],57);
+      if(!low)m.box(px,height+5,z+d*.29,w*.025,1,.25,'#b5ab89',8);
+     }
+    }else{
+     m.box(bx,height+1.6,z,w*.2,5+(j%2)*5,d*.7,j%2?'#6d654e':'#4e625a',28);
+     if(!low)m.box(bx,height+3,z+d*.355,w*.12,2,.3,'#aaa38a',8);
+    }
    }
   }
  }else if(k==='locker'||k==='cabinet'){
@@ -7324,12 +7374,40 @@ function drawRoomFurniture(m,p,scene,theme,low){
    if(k==='locker')for(let v=0;v<(low?2:4);v++)m.box(dx,height-7-v*2,z+d/2+.8,w/doors*.52,.65,.3,'#222d28',8);
   }
  }else if(k==='machine'){
-  m.box(x,0,z,w,39,d,'#56685e',20);
-  m.box(x,27,z+d*.5+.3,w*.75,10,1,'#202d28',8);
-  m.box(x-w*.16,29,z+d*.5+1,w*.3,6,.5,'#476e61',8);
-  for(let j=0;j<3;j++)m.box(x+w*(.08+j*.13),29,z+d*.5+1,w*.065,2,.8,j===0?'#b99b5c':'#727f67',8);
-  for(let j=0;j<(low?3:6);j++)m.box(x,7+j*2.4,z+d*.5+.3,w*.65,.8,.7,'#27332d',8);
-  m.box(x,39,z,w*.7,1.4,d*.65,'#6b7564',metal);
+  const front=z+d*.5;
+  if(profile==='service'){
+   // Open motor frame occupies the old machine footprint.
+   m.box(x,0,z,w,4,d,'#555b4e',metal);
+   for(const side of [-1,1])m.box(x+side*w*.38,4,z,w*.10,7,d*.72,'#6a6c58',metal);
+   m.branch(x-w*.31,20,z,x+w*.28,20,z,Math.min(d*.32,11),'#5f7465',low?8:12,metal);
+   for(let j=0;j<(low?5:8);j++){
+    const px=x-w*.27+j*w*.54/((low?5:8)-1);
+    m.branch(px,20,z,px+w*.025,20,z,Math.min(d*.35,12),'#35483d',low?8:12,metal);
+   }
+   m.box(x+w*.32,9,z,w*.15,22,d*.45,'#798072',20);
+   m.box(x-w*.15,31,z,w*.24,5,d*.29,'#6a7563',metal);
+   if(!low)m.branch(x-w*.12,32,z+d*.12,x-w*.12,11,front-2,1,'#292f28',5,8);
+  }else if(medical){
+   m.box(x,0,z,w,5,d,'#525e53',metal);
+   m.box(x,5,z,w*.94,29,d*.94,'#a1aaa0',metal);
+   m.box(x,10,front+.25,w*.76,20,.7,'#3e514a',metal);
+   m.box(x,12,front+.85,w*.65,16,.7,'#697e75',55);
+   for(const side of [-1,1])m.box(x+side*w*.37,14,front+1.3,1.2,12,1,'#adb5a4',metal);
+   m.box(x,34,z,w,2,d,'#bac0ab',metal);
+   m.box(x-w*.24,30,front+.8,w*.20,2,.5,'#364f46',8);
+   m.cylinder(x+w*.25,36,z,Math.min(w*.09,3),1,'#515d51',8,metal);
+  }else{
+   m.box(x,0,z,w,23,d,'#56685e',20);
+   const screenBack=z-d*.22,screenFront=z+d*.30;
+   m.quad([x-w*.48,40,screenBack],[x+w*.48,40,screenBack],[x+w*.48,24,screenFront],[x-w*.48,24,screenFront],'#7d8977',1,metal);
+   m.quad([x-w*.32,37.7,screenBack+d*.08],[x+w*.12,37.7,screenBack+d*.08],[x+w*.12,28.6,screenFront-d*.13],[x-w*.32,28.6,screenFront-d*.13],'#253e38',1,55);
+   for(const side of [-1,1])m.tri([x+side*w*.48,23,screenBack],[x+side*w*.48,40,screenBack],[x+side*w*.48,24,screenFront],'#586a5c',1,20);
+   m.box(x,23,screenBack,w*.96,17,1,'#4e6053',20);
+   m.box(x,23,z+d*.40,w*.9,1,d*.15,'#657360',metal);
+   for(let j=0;j<(low?4:8);j++)m.box(x+w*((j+.5)/(low?4:8)-.5)*.75,24.1,z+d*.40,w*.055,.5,d*.06,'#a2a38b',8);
+   for(let j=0;j<3;j++)m.box(x+w*.29,29+j*3,z+d*(.14-j*.09),w*.07,1,1.5,j===0?'#b69758':'#839078',8);
+   for(let j=0;j<(low?3:5);j++)m.box(x,6+j*2.5,front+.3,w*.65,.8,.7,'#27332d',8);
+  }
  }else{
   m.box(x,0,z,w,20,d,'#756147',wood);
   for(const offset of [-.32,.32])m.box(x+w*offset,20,z,Math.max(1,w*.07),1.2,d,'#514838',wood);
@@ -7362,22 +7440,34 @@ function drawWorldScrap(m,s,low){
   return true;
  }
  if(k==='wreck'){
+  const worn=(Math.round(x*.13+z*.17)%3+3)%3;
+  const paint=['#666c59','#786254','#586965'][worn],hoodY=worn===1?22:12;
   m.shadow(x,z,d*.9,d*.5);
-  m.box(x,2,z,d*1.58,8,d*.76,'#514d41',20);
-  m.box(x-d*.49,10,z,d*.55,3,d*.74,'#685747',20);
-  m.box(x+d*.24,10,z,d*.59,9,d*.53,'#373e37',20);
-  // Recessed dark glazing and narrow pillars keep the cabin separate from the body.
+  m.box(x,3,z,d*1.54,5,d*.70,'#373b33',27);
+  // Tapered side panels replace the previous rectangular solid cabin.
   for(const side of [-1,1]){
-   m.box(x+d*.23,13,z+side*d*.272,d*.44,4.5,.6,'#172b2c',8);
-   m.box(x+d*.22,12.7,z+side*d*.285,1,5,.6,'#6b6654',20);
+   m.quad([x-d*.78,5,z+side*d*.34],[x+d*.77,5,z+side*d*.34],[x+d*.67,12,z+side*d*.38],[x-d*.72,12,z+side*d*.38],paint,1,20);
+   m.branch(x-d*.72,12,z+side*d*.38,x+d*.67,12,z+side*d*.38,.6,'#817664',4,27);
+   m.branch(x-d*.16,12,z+side*d*.34,x+d*.01,23,z+side*d*.25,.85,paint,4,20);
+   m.branch(x+d*.58,12,z+side*d*.34,x+d*.43,23,z+side*d*.25,.85,paint,4,20);
+   m.branch(x+d*.23,12,z+side*d*.34,x+d*.23,23,z+side*d*.25,.65,paint,4,20);
+   if(worn!==2)m.quad([x-d*.13,13,z+side*d*.335],[x+d*.55,13,z+side*d*.335],[x+d*.42,22,z+side*d*.255],[x+d*.02,22,z+side*d*.255],'#263939',1,55);
+   m.box(x+d*.29,11,z+side*d*.387,d*.08,.7,.5,'#93917c',27);
    for(const wheel of [-.52,.52]){
     m.ellipsoid(x+d*wheel,4,z+side*d*.36,d*.17,4,d*.085,'#202723',3,8,8);
     if(!low)m.ellipsoid(x+d*wheel,4,z+side*d*.424,d*.085,2,.4,'#676357',2,6,27);
    }
   }
-  m.box(x+d*.24,19,z,d*.64,1.3,d*.57,'#5c5949',20);
-  m.box(x-d*.80,3,z,1,2,d*.82,'#3d423b',27);
-  if(!low)for(const side of [-1,1])m.box(x-d*.805,7,z+side*d*.27,.6,2.4,d*.12,'#777467',8);
+  // Seats remain visible through missing side glass; no opaque block behind the windows.
+  for(const side of [-1,1]){m.box(x+d*.20,8,z+side*d*.14,d*.18,3,d*.20,'#3c3c30',57);m.box(x+d*.29,10,z+side*d*.14,d*.06,8,d*.20,'#484737',57);}
+  m.quad([x,23,z-d*.26],[x+d*.44,23,z-d*.26],[x+d*.44,23,z+d*.26],[x,23,z+d*.26],paint,1,20);
+  m.quad([x-d*.16,12,z-d*.33],[x,22,z-d*.25],[x,22,z+d*.25],[x-d*.16,12,z+d*.33],'#263a39',1,55);
+  m.quad([x+d*.44,22,z-d*.25],[x+d*.59,12,z-d*.33],[x+d*.59,12,z+d*.33],[x+d*.44,22,z+d*.25],'#233332',1,55);
+  m.box(x+d*.67,10,z,d*.21,2,d*.68,paint,20);
+  m.quad([x-d*.75,hoodY,z-d*.34],[x-d*.16,12,z-d*.34],[x-d*.16,12,z+d*.34],[x-d*.75,hoodY,z+d*.34],paint,1,20);
+  if(worn===1){m.box(x-d*.47,8,z,d*.29,3,d*.34,'#282d28',54);if(!low)for(let j=0;j<4;j++)m.box(x-d*.48+j*d*.045,11,z,d*.025,1,d*.28,'#746b57',27);}
+  for(const end of [-1,1])m.box(x+end*d*.80,3,z,1,2,d*.82,'#53574c',27);
+  if(!low)for(const side of [-1,1])m.box(x-d*.805,8,z+side*d*.27,.6,2.4,d*.12,'#929181',55);
   return true;
  }
  if(k==='stump'){
@@ -7481,6 +7571,84 @@ function terrainMesh(m,map,low){
   [0,1,2,0,2,3].forEach((v,j)=>{const color=colors[indices[v]];for(let k=0;k<3;k++)m.data[offset+j*10+3+k]=color[k]});
  }
 }
+const SECTOR_LOOKS={
+ loc_kordon_village:['village','#514332','#42652c','#84964b','#b99461'],
+ loc_kordon_post:['checkpoint','#484237','#365b36','#7e8d48','#b3a57a'],
+ loc_swamp_base:['marsh','#303c32','#39754d','#92a85c','#5d8875'],
+ loc_dump_depo:['depot','#58473b','#4e6336','#9d925c','#996d42'],
+ loc_dump_graveyard:['scrapyard','#624634','#5e6637','#aa9453','#b47942'],
+ loc_agroprom_inst:['institute','#48494a','#3c6551','#879b63','#b1b7aa'],
+ loc_agroprom_under:['underground','#363c41','#40574c','#7c8d71','#7a9394'],
+ loc_valley_bandit:['factory','#4e4136','#3c5937','#87904d','#9a6b46'],
+ loc_lab18:['biolab','#3a423e','#416252','#879d76','#7b9e85'],
+ loc_bar_100:['works','#51463b','#42663b','#929a5f','#bc9961'],
+ loc_wild_territory:['ruins','#4c4540','#487045','#96a16b','#92836e'],
+ loc_yantar_bunker:['bunker','#444634','#517047','#a1aa65','#a7b4a6'],
+ loc_lab16:['neuro','#3d4147','#405b5c','#82958b','#8f9da5'],
+ loc_military_base:['barracks','#484933','#456737','#96a153','#7f9160'],
+ loc_barrier:['fortification','#504834','#3a5730','#8c964f','#a28d57'],
+ loc_deadcity:['city','#494746','#426c4a','#93a46b','#a39582'],
+ loc_redforest:['forest','#553a2b','#99552b','#c19b50','#aa6537'],
+ loc_skadovsk:['ship','#35483f','#4a775b','#a0ab63','#b48b5b'],
+ loc_jupiter_janov:['railworks','#504b41','#4b6a41','#9b9c5d','#879790'],
+ loc_limansk:['town','#4d443c','#497544','#a0a463','#b29b7c'],
+ loc_hospital:['hospital','#444948','#4b7656','#9aa876','#a8b9b0'],
+ loc_radar:['radar','#3e4434','#35603c','#7c9955','#889b77'],
+ loc_tunnel_pripyat:['tunnel','#3e4347','#42605b','#879b8c','#8a989b'],
+ loc_pripyat_center:['civic','#4e4b43','#527541','#a6ac67','#b2ac8b'],
+ loc_lab8:['server','#343d44','#405967','#809aa5','#789da8'],
+ loc_chaes_roof:['reactor','#4b4b43','#525a36','#939264','#9a9c8b'],
+ loc_sarcophagus:['containment','#343938','#465b4f','#849885','#7c8c89'],
+ loc_generators:['power','#454333','#486638','#9ca45c','#99a57b']
+};
+function sectorLook(id){
+ const a=SECTOR_LOOKS[id]||SECTOR_LOOKS.loc_kordon_village;
+ return {identity:a[0],ground:a[1],groundAlt:a[1],treeDark:a[2],treeMid:a[2],treeLight:a[3],bushColors:[a[2],a[3],a[3]],building:a[4],accent:a[4]};
+}
+function sectorRoof(m,b,id,low){
+ const kind=sectorLook(id).identity,cx=b.x+b.w/2,cz=b.y+b.h/2;
+ const flat=!['residential','shop'].includes(b.style),top=b.style==='institute'?161:98;
+ if(!flat)return;
+ const accent=sectorLook(id).accent;
+ if(['depot','railworks','works','factory','ruins'].includes(kind)){
+  // Sawtooth industrial roof lights, entirely above the existing roof.
+  for(let i=0;i<(low?2:3);i++){
+   const px=b.x+b.w*(i+1)/(low?3:4),ww=Math.min(52,b.w*.16),dd=b.h*.50;
+   m.quad([px-ww/2,top+2,cz-dd/2],[px+ww/2,top+23,cz-dd/2],[px+ww/2,top+23,cz+dd/2],[px-ww/2,top+2,cz+dd/2],accent,1,17);
+   m.quad([px+ww/2,top+2,cz-dd/2],[px+ww/2,top+23,cz-dd/2],[px+ww/2,top+23,cz+dd/2],[px+ww/2,top+2,cz+dd/2],'#618786',1,55);
+  }
+ }else if(['biolab','neuro','bunker','power','reactor','containment'].includes(kind)){
+  const count=kind==='power'?4:2;
+  for(let j=0;j<count;j++){
+   const px=cx+(j-(count-1)/2)*Math.min(40,b.w*.18),r=Math.min(13,b.w*.06);
+   m.cylinder(px,top+2,cz,r,kind==='power'?38:26,accent,low?8:12,27);
+   for(const yy of [7,20])m.cylinder(px,top+yy,cz,r+1,2,'#465e53',low?8:12,27);
+   m.branch(px,top+10,cz+r,px,top+10,cz+b.h*.32,2,'#798f7d',5,27);
+  }
+ }else if(['institute','hospital','civic','city','town','server'].includes(kind)){
+  m.box(cx,top+1,cz,b.w*.40,23,b.h*.30,accent,34);
+  m.box(cx,top+24,cz,b.w*.43,3,b.h*.33,'#647c73',27);
+  for(let j=0;j<4;j++)m.box(cx+b.w*(j-1.5)*.08,top+6,cz+b.h*.155,b.w*.055,13,1,'#3b6060',55);
+  if(kind==='hospital'){
+   const z=b.y+b.h+4;m.box(cx,117,z,10,31,2,'#a45b49',8);m.box(cx,128,z+1,31,9,2,'#a45b49',8);
+  }
+ }else if(['ship','marsh'].includes(kind)){
+  m.box(cx,top+1,cz,b.w*.30,27,b.h*.36,'#b1b2a0',27);
+  for(const side of [-1,1])m.box(cx+side*b.w*.10,top+12,cz+b.h*.185,b.w*.10,11,1,'#406e74',55);
+  m.cylinder(cx-b.w*.26,top+1,cz,Math.min(13,b.w*.05),47,'#8d5c3c',low?7:10,27);
+  m.cylinder(cx-b.w*.26,top+44,cz,Math.min(14,b.w*.05+1),5,'#333f39',low?7:10,27);
+ }else if(['checkpoint','barracks','fortification'].includes(kind)){
+  for(let j=0;j<(low?5:9);j++)m.ellipsoid(b.x+b.w*(j+1)/(low?6:10),top+6,b.y+b.h-8,9,5,5,'#928565',3,6,25);
+ }else if(kind==='radar'){
+  m.cylinder(cx,top+1,cz,4,45,'#747f68',6,27);
+  for(let j=-2;j<=2;j++)m.branch(cx-25,top+35+j*5,cz,cx+25,top+35+j*5,cz,1,'#8e9e83',4,27);
+  for(const dx of [-20,0,20])m.branch(cx+dx,top+24,cz,cx+dx,top+47,cz,1,'#8e9e83',4,27);
+ }else if(['tunnel','underground'].includes(kind)){
+  for(const dx of [-b.w*.20,b.w*.20])m.branch(cx+dx,top+8,b.y+15,cx+dx,top+8,b.y+b.h-15,5,'#718780',low?6:10,27);
+ }else if(kind==='scrapyard'){
+  for(let j=0;j<3;j++)m.box(cx+(j-1)*b.w*.18,top+1,cz+(j%2)*15,b.w*.14,12+j*5,b.h*.22,j%2?'#9a724a':'#685745',20);
+ }
+}
 function sectorTint(id,inside=false){
  if(inside)return [1.03,.98,.91];
  if(/swamp|skadovsk/.test(id))return [.83,.94,.92];
@@ -7501,7 +7669,32 @@ function streetFixture(m,l,low){
  for(const dx of [-5,5])m.box(x+dx,38,z,1,6,9,'#465046',27);
  if(!low){m.box(x-11.8,17,z+3,4,8,1,'#707667',27);m.box(x-11.8,20,z+3.6,1,2,.4,'#242e27',8);}
 }
+function masonryWear(m,b,low){
+ // Raised brick courses and chipped plaster borders; stable local geometry, no transparent decals.
+ const seed=Number(b.id)||Math.round(b.x+b.y),faces=[-1,1];
+ for(const side of faces){
+  const wallX=side<0?b.x:b.x+b.w,zc=b.y+b.h*(.30+(seed%4)*.09),base=10+(seed%3)*7;
+  const rows=low?4:6,cols=low?4:6,step=7;
+  for(let r=0;r<rows;r++){
+   const inset=(r===0||r===rows-1)?1:0;
+   for(let k=inset;k<cols-inset;k++){
+    if((r*7+k+seed)%13===0)continue;
+    const zz=zc+(k-cols/2)*step+(r%2)*3.5,yy=base+r*4.2;
+    m.box(wallX+side*.55,yy,zz,1.5,3.5,6.2,(r+k+seed)%3?'#806049':'#665447',13);
+   }
+   // Jagged plaster lips catch light without overlapping the brick faces.
+   const left=zc+(inset-cols/2)*step+(r%2)*3.5-4;
+   const right=zc+(cols-inset-1-cols/2)*step+(r%2)*3.5+4;
+   for(const zz of [left,right])m.box(wallX+side*.45,base+r*4.2,zz,1.8,4,1.6,'#989282',34);
+  }
+  if(!low){
+   const zz=zc+cols*step*.55;
+   for(let j=0;j<4;j++)m.branch(wallX+side*1.1,base+21+j*6,zz+(j%2)*3,wallX+side*1.1,base+27+j*6,zz+((j+1)%2)*3,.35,'#383d36',3,8);
+  }
+ }
+}
 function facadeDetails(m,b,low){
+ masonryWear(m,b,low);
  const front=b.y+b.h,cx=b.x+b.w/2,door=b.door.x,high=b.style==='institute';
  // Shallow wall details and high canopies keep the established doorway footprint clear.
  m.box(cx,1,front+1.8,b.w,6,2.6,'#62695d',34);
@@ -7526,13 +7719,47 @@ function facadeDetails(m,b,low){
   if(!low)for(let j=0;j<3;j++)m.box(x+2,24+j*4,z,1,1,10,'#252e28',8);
  }
 }
+function buildingShell(m,b,color){
+ const cx=b.x+b.w/2,cz=b.y+b.h/2;
+ if(b.style!=='residential'){m.box(cx,0,cz,b.w,82,b.h,color,2);return;}
+ m.box(cx,0,cz,b.w,3,b.h,'#494b3e',29);
+ m.box(cx,0,b.y+3,b.w,82,6,color,2);
+ m.box(cx,0,b.y+b.h-3,b.w,82,6,color,2);
+ m.box(b.x+3,0,cz,6,82,b.h,color,2);m.box(b.x+b.w-3,0,cz,6,82,b.h,color,2);
+ // The attic is recessed below broken roof sections; collision remains the established building shell.
+ m.box(cx,61,cz,b.w-12,3,b.h-12,'#443c2e',29);
+}
+function houseRoof(m,b,low){
+ const cx=b.x+b.w/2,y=82,w=b.w+9,depth=b.h+11,z0=b.y-5.5,peak=y+Math.min(34,Math.max(17,w*.15));
+ const damaged=(b.id%3)!==0,rows=8,cols=4,material=b.id%3===0?11:17;
+ const point=(side,u,v)=>[cx+side*w*.5*u,peak-(peak-y)*u,z0+depth*v];
+ for(const side of [-1,1])for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+  const broken=damaged&&side===1&&j>=2&&j<=4&&i>=1&&i<=2;
+  if(broken)continue;
+  const a=point(side,i/cols,j/rows),c=point(side,(i+1)/cols,(j+1)/rows),bb=point(side,(i+1)/cols,j/rows),d=point(side,i/cols,(j+1)/rows);
+  m.quad(a,bb,c,d,'#686557',1,material);
+ }
+ for(const zz of [z0,z0+depth])m.tri([cx-w/2,y,zz],[cx,peak,zz],[cx+w/2,y,zz],'#706959',.9,13);
+ // Timber trusses stay below the covering and become visible through the missing panels.
+ for(let j=1;j<8;j++){
+  const z=z0+depth*j/8;
+  for(const side of [-1,1])m.branch(cx,peak-2,z,cx+side*(w/2-4),y-2,z,1.7,'#8a7553',low?4:5,29);
+  m.branch(cx-w*.42,y-4,z,cx+w*.42,y-4,z,1.3,'#66543d',4,29);
+ }
+ if(damaged){
+  for(let j=2;j<=4;j++){
+   const z=z0+depth*(j+.3)/8,px=cx+w*.30,py=peak-(peak-y)*.60;
+   m.quad([px,py,z],[px+w*.08,py-3,z],[px+w*.07,py+4,z+depth*.06],[px,py+2,z+depth*.05],'#746956',1,11);
+  }
+ }
+}
 function staticMesh(map,room,eco){const scene=room==null?map:map.rooms[room],t=map.theme,m=new Mesh(),low=eco;
 const alt=t.groundAlt||t.ground,ground=room==null?t.ground:t.roomGround;
 if(room==null)terrainMesh(m,map,low);else m.plane(scene.w/2,-1,scene.h/2,scene.w,scene.h,ground,2);m.plane(scene.w/2,-3,scene.h/2,scene.w+140,scene.h+140,t.groundAlt||ground,0);
 if(room==null){
 // Soil/wet patches are blended into terrainMesh, never stacked as disks.
 if(!low){for(const mud of map.pebbles||[])if(mud.r>22)m.puddle(mud.x,mud.y,mud.r*.9,mud.r*.48)}
-for(const rd of map.roads||[]){m.plane(rd.x+rd.w/2,.4,rd.y+rd.h/2,rd.w+10,rd.h+10,t.roadEdge||'#3b392f',1);m.plane(rd.x+rd.w/2,.55,rd.y+rd.h/2,rd.w,rd.h,t.road,1);if(!low){for(let k=25;k<(rd.kind==='h'?rd.w:rd.h)-20;k+=88){const x=rd.kind==='h'?rd.x+k:rd.x+rd.w/2,z=rd.kind==='h'?rd.y+rd.h/2:rd.y+k;m.plane(x,.65,z,rd.kind==='h'?28:2,rd.kind==='h'?2:28,'#827964')}for(let j=0;j<7;j++){const px=rd.kind==='h'?rd.x+25+j*(rd.w/6):rd.x+rd.w/2,pz=rd.kind==='h'?rd.y+rd.h/2:rd.y+25+j*(rd.h/6);m.plane(px,.7,pz,rd.kind==='h'?15:2,rd.kind==='h'?2:15,'#5a5346');m.rail(px-18,pz+4,px-3,pz-12,.85,'#282a25',.8);m.rail(px-3,pz-12,px+15,pz-8,.86,'#2e312c',.7)}}}
+for(const rd of map.roads||[]){m.plane(rd.x+rd.w/2,.4,rd.y+rd.h/2,rd.w+10,rd.h+10,t.roadEdge||'#3b392f',1);m.plane(rd.x+rd.w/2,.55,rd.y+rd.h/2,rd.w,rd.h,t.road,rd.trail?15:1);if(!low&&!rd.trail){for(let k=25;k<(rd.kind==='h'?rd.w:rd.h)-20;k+=88){const x=rd.kind==='h'?rd.x+k:rd.x+rd.w/2,z=rd.kind==='h'?rd.y+rd.h/2:rd.y+k;m.plane(x,.65,z,rd.kind==='h'?28:2,rd.kind==='h'?2:28,'#827964')}for(let j=0;j<7;j++){const px=rd.kind==='h'?rd.x+25+j*(rd.w/6):rd.x+rd.w/2,pz=rd.kind==='h'?rd.y+rd.h/2:rd.y+25+j*(rd.h/6);m.plane(px,.7,pz,rd.kind==='h'?15:2,rd.kind==='h'?2:15,'#5a5346');m.rail(px-18,pz+4,px-3,pz-12,.85,'#282a25',.8);m.rail(px-3,pz-12,px+15,pz-8,.86,'#2e312c',.7)}}}
 for(const rd of map.roads||[]){
  const horizontal=rd.w>rd.h,length=horizontal?rd.w:rd.h;
  for(let step=12;step<length-12;step+=low?48:30){
@@ -7548,8 +7775,8 @@ for(const a of map.landmarks||[])decorateLandmark(m,a,!low);
 // Lamp posts give a physical source to the warm pools of light.
 for(const l of map.lights||[])streetFixture(m,l,low);
 for(const b of map.buildings){const cx=b.x+b.w/2,cz=b.y+b.h/2,base=t.id==='loc_kordon_village'?['#7b7661','#677266','#82715c','#686c65'][(Number(b.id)||0)%4]:t.building;
-m.shadow(cx,cz,b.w*.66,b.h*.66);m.box(cx,0,cz,b.w,82,b.h,base,2);facadeDetails(m,b,low);
-if(b.style==='residential'||b.style==='shop')m.roof(cx,82,cz,b.w+9,b.h+11,b.style==='shop'?'#565347':['#50594b','#66584b','#535e5b'][b.id%3||0],b.style==='shop'||b.id%3===0?11:17);
+m.shadow(cx,cz,b.w*.66,b.h*.66);buildingShell(m,b,base);facadeDetails(m,b,low);
+if(b.style==='residential')houseRoof(m,b,low);else if(b.style==='shop')m.roof(cx,82,cz,b.w+9,b.h+11,'#565347',11);
 else{m.box(cx,82,cz,b.w+6,10,b.h+6,'#4a4c41',17);m.box(cx,90,cz,b.w*.72,8,b.h*.72,'#5b5b4b',17)}
 m.box(cx,0,cz+b.h/2+10,b.w*.42,7,20,'#71614c',2);
 if(b.style==='checkpoint'){m.box(cx,0,cz+b.h/2+17,70,26,20,'#555f53',2);m.box(cx-74,0,cz+b.h/2+10,38,20,18,'#816e4e',4)}
@@ -7586,11 +7813,20 @@ if(!low){for(let j=0;j<5;j++){m.box(b.x+20+j*40,84,b.y+25,7,2,13,'#654f3e');m.bo
 if(low)for(let i=0;i<(map.reeds||[]).length;i+=2){const g=map.reeds[i];m.grassClump(g.x,g.y,g.h,g.c,true)}
 for(const tr of map.trees){const x=tr.x+15,z=tr.y+15,s=tr.size||28;m.shadow(x,z,s*.70,s*.53);m.foliage(x,0,z,s,[t.treeDark,t.treeMid,t.treeLight||t.treeMid],low,(x*17+z*11)%53)}
 for(const s of map.scraps||[]){if(low&&s.s<15)continue;const x=s.x,z=s.y,k=s.kind,d=s.s;
-if(k==='bush'){m.shrub(x,z,d,[t.treeDark,t.treeMid,t.treeLight],low);continue}
+if(k==='bush'){m.shrub(x,z,d,t.bushColors||[t.treeMid,t.treeLight,t.treeLight],low);continue}
 if(drawWorldScrap(m,s,low))continue;
 m.box(x,0,z,d*.65,Math.max(2,d*.34),d*.62,'#5f6157')}
-for(const f of map.fences||[]){if(f.dir==='h'){m.box(f.x+f.w/2,20,f.y, f.w,4,5,'#625a48');for(let v=0;v<f.w;v+=27)m.box(f.x+v,0,f.y,4,28,4,'#8b7b59')}
-else{m.box(f.x,20,f.y+f.w/2,5,4,f.w,'#625a48');for(let v=0;v<f.w;v+=27)m.box(f.x,0,f.y+v,4,28,4,'#8b7b59')}}
+for(const f of map.fences||[]){
+ const horizontal=f.dir==='h',point=(v)=>horizontal?[f.x+v,f.y]:[f.x,f.y+v];
+ for(let v=0;v<=f.w;v+=27){const [px,pz]=point(v),height=29+Math.sin(v+f.x)*3;m.box(px,0,pz,4,height,4,'#796d53',29);m.box(px,height,pz,5,1,5,'#4d5145',27);}
+ for(let v=0;v<f.w;v+=27){
+  const end=Math.min(v+27,f.w),[ax,az]=point(v),[bx,bz]=point(end),broken=Math.floor(v/27+f.x+f.y)%7===0;
+  for(const h of [11,23]){
+   if(broken&&h===23){const [mx,mz]=point(v+(end-v)*.57);m.branch(ax,h,az,mx,h-7,mz,1.4,'#695b43',4,29);}
+   else m.branch(ax,h,az,bx,h-1,bz,1.4,'#716148',4,29);
+  }
+ }
+}
 if(!low){for(const d of map.decals||[])m.plane(d.x,.22,d.y,d.w,d.h,d.kind==='leaf'?'#424935':(d.kind==='soil'?'#35392f':'#292d27'));
 for(const peb of map.pebbles||[])if(peb.r<24)m.disk(peb.x,.18,peb.y,Math.max(8,peb.r*.65),'#44473f',7);
 for(const fp of map.footprints||[])m.plane(fp.x,.24,fp.y,10,3,'#29251f');for(let i=0;i<map.roads.length;i++){const rd=map.roads[i];for(let k=1;k<10;k++){const x=rd.kind==='h'?rd.x+k*rd.w/10:rd.x+(k%3)*10-10,z=rd.kind==='h'?rd.y+(k%3)*9-12:rd.y+k*rd.h/10;m.rail(x-12,z-7,x+10,z+8,.86,'#30322c',.6)}}for(const sc of map.scraps||[])if(sc.s>23&&sc.kind==='wreck')m.plank(sc.x+16,sc.y+8,30,5,sc.rot,'#6b553d');
@@ -7610,8 +7846,9 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v16.21: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v16.27: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
+ sectorRoof(m,b,t.id,low);
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop',roofTop=b.style==='institute'?161:98;
  if(sloped){
   const rise=Math.min(34,Math.max(17,(b.w+9)*.15));
@@ -7623,6 +7860,7 @@ if(room==null)for(const b of map.buildings||[]){
   if(!low)for(let j=14;j<b.h-8;j+=32){
    const zz=b.y+j;
    for(const side of [-1,1])for(let k=1;k<4;k++){
+    if(b.style==='residential'&&b.id%3!==0&&side===1&&j>b.h*.20&&j<b.h*.65)continue;
     const px=cx+side*(b.w/2+4)*k/4,py=83+rise*(1-k/4);
     m.box(px,py,zz,1.5,1,2,'#8d8878',3);
    }
@@ -7805,9 +8043,17 @@ function human(x,z,c,isPlayer=false){
   m.branch(px+side*.7,8,z+stride*side,px+side,2,z+3+stride*side,4.5,'#2b312d',7,8);
   m.ellipsoid(px+side,3,z-1+stride*side,5,3.3,8,'#292d29',4,7,8);
  }
- m.ellipsoid(x,22+bob,z,12,15,9,c,6,10,57);
+ m.ellipsoid(x,20+bob,z,9.5,11,7.5,c,6,10,57);
+ m.ellipsoid(x,29+bob,z,11.5,8,8.5,c,6,10,57);
  m.box(x,21+bob,z+8,19,18,5,isPlayer?'#4a5844':'#46504a',28); // backpack
  m.box(x,25+bob,z-8,13,14,2,isPlayer?'#76785f':'#5b6657',57);
+ for(const side of [-1,1]){
+  m.box(x+side*4.5,24+bob,z-9.5,7.6,9,2,isPlayer?'#4d594a':'#505b4b',28);
+  m.box(x+side*4.5,28+bob,z-10.7,5.8,1,.5,'#7e826b',8);
+  m.ellipsoid(x+side*7,10,z-3+stride*side,3.8,4.5,2.2,'#404c40',4,7,28);
+ }
+ m.box(x,17+bob,z-7,17,2,3,'#3b4638',28);
+
  m.ellipsoid(x,39+bob,z-1,7.7,8.2,8.4,isPlayer?'#737e66':'#6a7064',6,11,8);
  m.ellipsoid(x,44+bob,z-1,8.7,3.6,9,'#424e42',5,10,8); // helmet
  m.ellipsoid(x,39+bob,z-9,6.8,3.1,2.3,'#1b2c30',4,9,8); // visor
@@ -7879,6 +8125,13 @@ function mob(x,z,id){
   for(const side of [-1,1])for(const front of [-1,1]){const swing=stride*front*side*8;limb(side*breadth*.7,cy,front*length*.65,side*breadth,6,front*length*.7+swing,3);ell(side*breadth,3,front*length*.7+swing,3.5,3,5,dark)}
   for(let h=0;h<p.heads;h++){const hx=p.heads===2?(h?9:-9):0;ell(hx,cy+2, -length-attack*6,head,head,head+2);ell(hx,cy-2,-length-head-attack*6,head*.65,head*.55,head*.9,dark);for(const side of [-1,1]){limb(hx+side*6,cy+8,-24,hx+side*8,cy+17+p.crest,-22,2);if(p.tusks)limb(hx+side*7,cy-7,-29,hx+side*10,cy+2,-39,2,bone)}}
   if(p.tail){limb(0,cy,25,8+stride*7,cy+5,42,2);limb(8+stride*7,cy+5,42,14+stride*9,cy+10,52,1)}
+  if(p.family==='quad'&&!/flesh|rat/.test(id)){
+   const [cy,breadth,length]=p.anatomy;
+   for(let j=0;j<(eco?5:9);j++){
+    const zz=-length*.65+j*length*1.3/(eco?4:8),top=cy+Math.max(7,cy*.55)+hop*2,crest=/boar|bear/.test(id)?7:4;
+    m.tri([x-1.6,top-2,z+zz-3],[x+1.6,top-2,z+zz+3],[x+.8,top+crest,z+zz+4],dark,1,8);
+   }
+  }
   if(p.family==='crawler'){ell(0,20,-29,7,6,5,dark);limb(6,19,-30,12,10,-29,2,dark)}
  }else if(p.family==='spirit'){
   const float=25+Math.sin(time*2+p.crest)*5;ell(0,float,0,11*p.width,16,10);ell(0,float+20,0,7,8,7);
@@ -8136,7 +8389,7 @@ vec3 atmosphericScene(vec3 base){
  if(uWetness<.5)return mix(base,uSky,clamp(vFog*.38,0.,.65));
  float depth=clamp(vFog,0.,1.);
  float lowMist=(1.-smoothstep(4.,92.,vHeight))*(.5+.5*noise21(vWorld*.008+vec2(uTime*.002,0.)));
- float haze=clamp(depth*.50+lowMist*smoothstep(.05,.65,depth)*.12,0.,.68);
+ float haze=clamp(depth*.36+lowMist*smoothstep(.15,.75,depth)*.08,0.,.68);
  vec3 air=max(uSky,vec3(.055,.071,.079));
  return mix(base,air,haze);
 }
@@ -8156,6 +8409,8 @@ void main(){
  vec3 base=vColor;
  if(mat<7.5&&uTextureReady>.5){vec3 tex=atlasSample(tileId,normal);float strength=uDetail>.5?.78:.43;
   base=tex*mix(vec3(.94),vColor*1.6,.27);
+  if(mat>4.5&&mat<5.5){float leafDetail=dot(tex,vec3(.299,.587,.114));base=vColor*(.85+leafDetail*1.8);}
+  else if(mat<1.5){float soilDetail=dot(tex,vec3(.299,.587,.114));base=mix(base,vColor*(.8+soilDetail*1.9),.48);}
  }
  else if(mat<7.5){base*=.89+.13*detail+.09*macro;}
 
@@ -8230,6 +8485,7 @@ void main(){
  if(mat>5.5&&mat<6.5){base*=.55;}
  vec3 V=normalize(uEye-vWorldPos);vec3 H=normalize(sun+V);float spec=pow(max(0.0,dot(normal,H)),38.0)*wetMask*(.09+.19*uNight)*(0.45+0.55*macro);base+=vec3(.55,.68,.85)*spec;if(mat>5.5&&mat<6.5){base+=vec3(.015,.024,.030)*rainRipple(vWorld);}
  base*=visibility();
+ if(mat>4.5&&mat<5.5)base+=vColor*.10;
  float skyFacing=.35+.65*max(0.,normal.y);
  base+=vColor*vec3(.025,.034,.041)*skyFacing;
  vec3 light=vec3(0.0);
@@ -8395,7 +8651,7 @@ vec3 atmosphericScene(vec3 base){
  if(uWetness<.5)return mix(base,uSky,clamp(vFog*.38,0.,.65));
  float depth=clamp(vFog,0.,1.);
  float lowMist=(1.-smoothstep(4.,92.,vHeight))*(.5+.5*noise21(vWorld*.008+vec2(uTime*.002,0.)));
- float haze=clamp(depth*.50+lowMist*smoothstep(.05,.65,depth)*.12,0.,.68);
+ float haze=clamp(depth*.36+lowMist*smoothstep(.15,.75,depth)*.08,0.,.68);
  vec3 air=max(uSky,vec3(.055,.071,.079));
  return mix(base,air,haze);
 }
@@ -8422,6 +8678,8 @@ void main(){
    tex=mix(tex,tex*(.68+macroTex*.65),.35);
   }
   base=tex*mix(vec3(.94),vColor*1.6,.27);
+  if(mat>4.5&&mat<5.5){float leafDetail=dot(tex,vec3(.299,.587,.114));base=vColor*(.85+leafDetail*1.8);}
+  else if(mat<1.5){float soilDetail=dot(tex,vec3(.299,.587,.114));base=mix(base,vColor*(.8+soilDetail*1.9),.48);}
  }
 
  vec2 surface=abs(normal.y)>.55?vWorldPos.xz:(abs(normal.x)>.55?vWorldPos.zy:vWorldPos.xy);
@@ -8491,6 +8749,7 @@ void main(){
  base*=mix(.47+.46*sun,.36+.28*sun,uNight);
  base*=vec3(.88,.94,1.);
  base*=visibility();
+ if(mat>4.5&&mat<5.5)base+=vColor*.10;
  float skyFacing=.35+.65*max(0.,normal.y);
  base+=vColor*vec3(.025,.034,.041)*skyFacing;
  vec3 light=vec3(0.);
@@ -8763,7 +9022,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,collisionParts,dressingParts,stormState,version:'16.21'};
+window.ZonaSurvival3D={init,sectorLook,collisionParts,dressingParts,stormState,version:'16.27'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -8774,7 +9033,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.21</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.21 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.27</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.27 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
@@ -8896,7 +9155,7 @@ else if(/military|barrier/.test(id)){Object.assign(t,{ground:'#2b3328',groundAlt
 else if(/redforest/.test(id)){Object.assign(t,{ground:'#2d3328',groundAlt:'#3b402f',road:'#574d39',roadEdge:'#25261f',water:'#33453e',mud:'#49352c',treeMid:'#5a452f',treeLight:'#875d37',weather:'fog',particle:'rgba(228,214,176,.12)',puddles:7,trees:58,grassTufts:130,scraps:62,anomalies:3});}
 else if(/kordon/.test(id)){Object.assign(t,{ground:'#262a28',groundAlt:'#30332f',road:'#514a41',roadEdge:'#242521',water:'#2a3437',mud:'#46372d',treeDark:'#152019',treeMid:'#2b3f2c',treeLight:'#46573e',grass:['#32422d','#42543a','#576347'],weather:'rain',sky:'#090d11',vignette:'rgba(4,6,8,.42)',particle:'rgba(190,202,214,.18)',puddles:18,trees:30,grassTufts:76,scraps:96,anomalies:1});}
 else if(/yantar/.test(id)){Object.assign(t,{ground:'#31352b',groundAlt:'#3a3f30',road:'#5a5741',roadEdge:'#23261f',water:'#556545',mud:'#4a4530',weather:'psy',particle:'rgba(170,120,255,.18)',puddles:10,trees:22,grassTufts:82,scraps:70,anomalies:4});}
-t.weather='rain';return t}
+Object.assign(t,window.ZonaSurvival3D.sectorLook(id));t.weather='rain';return t}
 function randInt(a,b){return Math.floor(rand()*(b-a+1))+a}
 function choose(arr){return arr[Math.floor(rand()*arr.length)]}
 function arrangeLegacyFurniture(scene){
@@ -8939,8 +9198,47 @@ function clearSpawn(actor,scene){
 }
 
 const AUTHORED_SECTORS={"loc_kordon_post":{"buildings":[{"x":270,"y":180,"w":200,"h":150,"style":"checkpoint","interior":"office","name":"Караульное помещение"},{"x":1050,"y":180,"w":300,"h":180,"style":"checkpoint","interior":"barracks","name":"Казарма гарнизона"},{"x":290,"y":710,"w":250,"h":190,"style":"storage","interior":"warehouse","name":"Склад снабжения"},{"x":1100,"y":780,"w":230,"h":170,"style":"storage","interior":"workshop","name":"Автомобильный бокс"}],"roads":[{"kind":"h","x":140,"y":630,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_swamp_base":{"buildings":[{"x":330,"y":210,"w":170,"h":135,"style":"residential","interior":"office","name":"Штаб на сваях"},{"x":850,"y":330,"w":150,"h":130,"style":"residential","interior":"home","name":"Жилой барак"},{"x":1250,"y":680,"w":180,"h":160,"style":"storage","interior":"workshop","name":"Лодочная мастерская"},{"x":430,"y":820,"w":160,"h":140,"style":"residential","interior":"clinic","name":"Медпункт Чистого Неба"}],"roads":[{"kind":"h","x":140,"y":645,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_dump_depo":{"buildings":[{"x":250,"y":160,"w":420,"h":300,"style":"storage","interior":"factory","name":"Ремонтное депо"},{"x":940,"y":190,"w":440,"h":270,"style":"storage","interior":"warehouse","name":"Грузовой ангар"},{"x":340,"y":770,"w":220,"h":170,"style":"institute","interior":"office","name":"Диспетчерская"},{"x":1140,"y":800,"w":210,"h":180,"style":"storage","interior":"workshop","name":"Колёсная мастерская"}],"roads":[{"kind":"h","x":140,"y":660,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_dump_graveyard":{"buildings":[{"x":220,"y":200,"w":250,"h":190,"style":"storage","interior":"workshop","name":"Разборочный цех"},{"x":1080,"y":160,"w":260,"h":210,"style":"storage","interior":"warehouse","name":"Склад двигателей"},{"x":650,"y":670,"w":300,"h":220,"style":"storage","interior":"factory","name":"Прессовый цех"},{"x":1250,"y":910,"w":180,"h":140,"style":"checkpoint","interior":"office","name":"Пост приёмки металла"}],"roads":[{"kind":"h","x":140,"y":630,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_agroprom_inst":{"buildings":[{"x":520,"y":190,"w":660,"h":400,"style":"institute","interior":"institute","name":"НИИ: главный корпус"},{"x":230,"y":230,"w":180,"h":230,"style":"storage","interior":"workshop","name":"Технический корпус"},{"x":1290,"y":240,"w":220,"h":300,"style":"institute","interior":"lab","name":"Лабораторный корпус"},{"x":660,"y":830,"w":360,"h":180,"style":"storage","interior":"archive","name":"Архив института"}],"roads":[{"kind":"h","x":140,"y":670,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_agroprom_under":{"buildings":[{"x":310,"y":200,"w":460,"h":260,"style":"institute","interior":"tunnel","name":"Насосные галереи"},{"x":1030,"y":280,"w":320,"h":370,"style":"storage","interior":"lab","name":"Секретный блок"},{"x":340,"y":820,"w":230,"h":170,"style":"checkpoint","interior":"workshop","name":"Технический выход"}],"roads":[{"kind":"h","x":140,"y":660,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_valley_bandit":{"buildings":[{"x":310,"y":170,"w":420,"h":290,"style":"storage","interior":"factory","name":"Цех захваченного завода"},{"x":1080,"y":240,"w":280,"h":200,"style":"institute","interior":"office","name":"Штаб Борова"},{"x":300,"y":770,"w":230,"h":170,"style":"checkpoint","interior":"barracks","name":"Бандитская казарма"},{"x":1070,"y":790,"w":320,"h":210,"style":"storage","interior":"warehouse","name":"Оружейный склад"}],"roads":[{"kind":"h","x":140,"y":630,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_lab18":{"buildings":[{"x":440,"y":210,"w":600,"h":360,"style":"institute","interior":"lab","name":"X-18: биологический блок"},{"x":1200,"y":310,"w":200,"h":260,"style":"storage","interior":"lab","name":"Изолятор образцов"},{"x":310,"y":820,"w":240,"h":180,"style":"checkpoint","interior":"tunnel","name":"Грузовой шлюз"}],"roads":[{"kind":"h","x":140,"y":645,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_bar_100":{"buildings":[{"x":330,"y":220,"w":320,"h":200,"style":"shop","interior":"shop","name":"Бар «100 Рентген»"},{"x":1030,"y":160,"w":350,"h":280,"style":"storage","interior":"factory","name":"Цех Ростока"},{"x":320,"y":740,"w":260,"h":210,"style":"checkpoint","interior":"barracks","name":"Казарма Долга"},{"x":1090,"y":820,"w":220,"h":180,"style":"storage","interior":"workshop","name":"Мастерская оружейника"}],"roads":[{"kind":"h","x":140,"y":660,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_wild_territory":{"buildings":[{"x":260,"y":160,"w":320,"h":280,"style":"storage","interior":"factory","name":"Разрушенный сборочный цех"},{"x":1110,"y":280,"w":310,"h":190,"style":"storage","interior":"warehouse","name":"Перевалочный склад"},{"x":280,"y":830,"w":260,"h":200,"style":"institute","interior":"office","name":"Заброшенная контора"},{"x":960,"y":790,"w":230,"h":240,"style":"storage","interior":"workshop","name":"Крановый участок"}],"roads":[{"kind":"h","x":140,"y":630,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_yantar_bunker":{"buildings":[{"x":660,"y":250,"w":470,"h":300,"style":"institute","interior":"lab","name":"Бункер Сахарова"},{"x":280,"y":770,"w":250,"h":180,"style":"storage","interior":"warehouse","name":"Полевой склад"},{"x":1210,"y":820,"w":220,"h":170,"style":"checkpoint","interior":"clinic","name":"Пункт дезактивации"}],"roads":[{"kind":"h","x":140,"y":645,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_lab16":{"buildings":[{"x":380,"y":170,"w":700,"h":400,"style":"institute","interior":"lab","name":"X-16: нейронный комплекс"},{"x":1230,"y":210,"w":180,"h":330,"style":"storage","interior":"factory","name":"Зал охлаждения"},{"x":400,"y":850,"w":260,"h":180,"style":"checkpoint","interior":"tunnel","name":"Шлюз персонала"}],"roads":[{"kind":"h","x":140,"y":660,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_military_base":{"buildings":[{"x":270,"y":180,"w":330,"h":190,"style":"checkpoint","interior":"barracks","name":"Первая казарма"},{"x":1040,"y":170,"w":320,"h":210,"style":"checkpoint","interior":"office","name":"Штаб Свободы"},{"x":310,"y":750,"w":270,"h":210,"style":"storage","interior":"warehouse","name":"Арсенал"},{"x":1000,"y":760,"w":360,"h":230,"style":"storage","interior":"workshop","name":"Ремонтный парк"}],"roads":[{"kind":"h","x":140,"y":630,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_barrier":{"buildings":[{"x":310,"y":200,"w":240,"h":170,"style":"checkpoint","interior":"office","name":"Командный пост"},{"x":1120,"y":190,"w":220,"h":180,"style":"checkpoint","interior":"barracks","name":"Пункт подкрепления"},{"x":260,"y":800,"w":300,"h":180,"style":"storage","interior":"warehouse","name":"Передовой склад"},{"x":1100,"y":870,"w":190,"h":140,"style":"residential","interior":"clinic","name":"Полевой лазарет"}],"roads":[{"kind":"h","x":140,"y":645,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_deadcity":{"buildings":[{"x":280,"y":150,"w":230,"h":260,"style":"institute","interior":"apartment","name":"Жилой квартал А"},{"x":750,"y":180,"w":260,"h":280,"style":"institute","interior":"office","name":"Штаб Синдиката"},{"x":1240,"y":150,"w":220,"h":240,"style":"shop","interior":"shop","name":"Универмаг"},{"x":300,"y":780,"w":230,"h":250,"style":"institute","interior":"apartment","name":"Жилой квартал Б"},{"x":1050,"y":800,"w":330,"h":240,"style":"institute","interior":"archive","name":"Городской архив"}],"roads":[{"kind":"h","x":140,"y":660,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_redforest":{"buildings":[{"x":360,"y":310,"w":180,"h":150,"style":"residential","interior":"home","name":"Дом лесника"},{"x":1090,"y":700,"w":310,"h":230,"style":"storage","interior":"workshop","name":"Старая лесопилка"},{"x":320,"y":940,"w":150,"h":130,"style":"storage","interior":"warehouse","name":"Лесной склад"}],"roads":[{"kind":"h","x":140,"y":630,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_skadovsk":{"buildings":[{"x":580,"y":280,"w":720,"h":300,"style":"storage","interior":"ship","name":"Скадовск: отсеки сухогруза"},{"x":290,"y":820,"w":240,"h":180,"style":"storage","interior":"warehouse","name":"Причальный склад"},{"x":1150,"y":840,"w":220,"h":160,"style":"storage","interior":"workshop","name":"Ремонт лодочных моторов"}],"roads":[{"kind":"h","x":140,"y":645,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_jupiter_janov":{"buildings":[{"x":280,"y":180,"w":430,"h":220,"style":"institute","interior":"office","name":"Вокзал Янов"},{"x":970,"y":170,"w":450,"h":320,"style":"storage","interior":"factory","name":"Главный цех Юпитера"},{"x":300,"y":840,"w":290,"h":190,"style":"storage","interior":"warehouse","name":"Багажный склад"},{"x":1120,"y":810,"w":240,"h":200,"style":"storage","interior":"workshop","name":"Локомотивная мастерская"}],"roads":[{"kind":"h","x":140,"y":660,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_limansk":{"buildings":[{"x":250,"y":200,"w":220,"h":260,"style":"institute","interior":"apartment","name":"Дом у моста"},{"x":720,"y":160,"w":260,"h":300,"style":"institute","interior":"office","name":"Дом связи"},{"x":1230,"y":240,"w":240,"h":230,"style":"shop","interior":"shop","name":"Закрытый магазин"},{"x":270,"y":820,"w":230,"h":230,"style":"institute","interior":"apartment","name":"Дом с аркой"},{"x":1110,"y":780,"w":270,"h":250,"style":"institute","interior":"apartment","name":"Дом у площади"}],"roads":[{"kind":"h","x":140,"y":630,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_hospital":{"buildings":[{"x":510,"y":170,"w":680,"h":450,"style":"institute","interior":"hospital","name":"Главный корпус госпиталя"},{"x":220,"y":340,"w":180,"h":240,"style":"residential","interior":"clinic","name":"Приёмное отделение"},{"x":1300,"y":320,"w":210,"h":240,"style":"storage","interior":"warehouse","name":"Медицинский склад"},{"x":660,"y":870,"w":330,"h":170,"style":"storage","interior":"clinic","name":"Патологоанатомический корпус"}],"roads":[{"kind":"h","x":140,"y":645,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_radar":{"buildings":[{"x":280,"y":220,"w":320,"h":220,"style":"checkpoint","interior":"office","name":"Командный пункт радара"},{"x":1080,"y":180,"w":280,"h":330,"style":"institute","interior":"lab","name":"Блок излучателя"},{"x":350,"y":820,"w":230,"h":170,"style":"storage","interior":"factory","name":"Силовая подстанция"},{"x":1080,"y":830,"w":280,"h":170,"style":"storage","interior":"warehouse","name":"Склад антенн"}],"roads":[{"kind":"h","x":140,"y":660,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_tunnel_pripyat":{"buildings":[{"x":270,"y":170,"w":500,"h":270,"style":"storage","interior":"tunnel","name":"Северная галерея"},{"x":1020,"y":270,"w":350,"h":390,"style":"institute","interior":"tunnel","name":"Транспортный узел"},{"x":340,"y":820,"w":280,"h":200,"style":"checkpoint","interior":"workshop","name":"Вентиляционный блок"}],"roads":[{"kind":"h","x":140,"y":630,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_pripyat_center":{"buildings":[{"x":300,"y":140,"w":430,"h":300,"style":"institute","interior":"archive","name":"ДК «Энергетик»"},{"x":1040,"y":200,"w":370,"h":260,"style":"institute","interior":"office","name":"Гостиница «Полесье»"},{"x":260,"y":820,"w":250,"h":200,"style":"shop","interior":"shop","name":"Кафе у парка"},{"x":1020,"y":820,"w":360,"h":240,"style":"institute","interior":"apartment","name":"Жилой дом у площади"}],"roads":[{"kind":"h","x":140,"y":645,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_lab8":{"buildings":[{"x":410,"y":240,"w":620,"h":350,"style":"institute","interior":"lab","name":"X-8: вычислительный комплекс"},{"x":1200,"y":220,"w":230,"h":300,"style":"institute","interior":"archive","name":"Архив О-Сознания"},{"x":340,"y":820,"w":290,"h":180,"style":"storage","interior":"factory","name":"Резервное питание"}],"roads":[{"kind":"h","x":140,"y":660,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_chaes_roof":{"buildings":[{"x":270,"y":180,"w":430,"h":300,"style":"storage","interior":"factory","name":"Турбинный зал"},{"x":1030,"y":170,"w":370,"h":350,"style":"institute","interior":"lab","name":"Контроль энергоблока"},{"x":300,"y":820,"w":270,"h":180,"style":"storage","interior":"workshop","name":"Кровельная мастерская"},{"x":1080,"y":820,"w":300,"h":210,"style":"storage","interior":"warehouse","name":"Склад графитовых блоков"}],"roads":[{"kind":"h","x":140,"y":630,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_sarcophagus":{"buildings":[{"x":390,"y":180,"w":760,"h":420,"style":"institute","interior":"lab","name":"Центральная камера"},{"x":1250,"y":230,"w":190,"h":300,"style":"checkpoint","interior":"tunnel","name":"Боковой шлюз"},{"x":330,"y":840,"w":260,"h":180,"style":"storage","interior":"warehouse","name":"Зал обломков"}],"roads":[{"kind":"h","x":140,"y":645,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]},"loc_generators":{"buildings":[{"x":270,"y":200,"w":300,"h":230,"style":"checkpoint","interior":"office","name":"Узел управления"},{"x":1090,"y":190,"w":310,"h":280,"style":"institute","interior":"lab","name":"Резонансный блок"},{"x":290,"y":820,"w":260,"h":180,"style":"storage","interior":"factory","name":"Преобразовательная"},{"x":1060,"y":840,"w":350,"h":190,"style":"storage","interior":"workshop","name":"Сервис генераторов"}],"roads":[{"kind":"h","x":140,"y":660,"w":1460,"h":65},{"kind":"v","x":150,"y":70,"w":58,"h":1270},{"kind":"v","x":1530,"y":70,"w":58,"h":1270},{"kind":"h","x":140,"y":1140,"w":1450,"h":65}]}};
+function themedRoads(plan,id){
+ if((run()?.layoutVersion||1)<7||(id==='loc_kordon_village'&&!plan.fullWorld))return plan;
+ const natural=/swamp|redforest|yantar|skadovsk/.test(id),urban=/deadcity|limansk|pripyat_center|hospital|agroprom_inst/.test(id),military=/post|military|barrier/.test(id);
+ const width=natural?28:urban?66:military?58:id==='loc_kordon_village'?38:46,step=24,cols=plan.fullWorld?Math.ceil(plan.w/step):74,rows=plan.fullWorld?Math.ceil(plan.h/step):61;
+ const nodes=[{x:144,y:1296},...plan.buildings.map(b=>({x:b.x+b.w/2,y:b.y+b.h+width/2+32}))];
+ const cell=p=>({x:Math.round(p.x/step),y:Math.round(p.y/step)}),obstacles=plan.buildings.concat(plan.obstacles||[]),blocked=(x,y)=>x<2||y<2||x>=cols-2||y>=rows-2||obstacles.some(b=>x*step>b.x-width/2-5&&x*step<b.x+b.w+width/2+5&&y*step>b.y-width/2-5&&y*step<b.y+b.h+width/2+5);
+ const routeCell=p=>{
+  const c=cell(p);if(!plan.fullWorld||!blocked(c.x,c.y))return c;
+  for(let r=1;r<=8;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+   if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
+   if(!blocked(c.x+dx,c.y+dy))return {x:c.x+dx,y:c.y+dy};
+  }
+  return c;
+ };
+ const edges=[],remaining=nodes.slice(1),joined=[nodes[0]];
+ // Forest paths branch between clearings; urban sectors link their blocks; military sites have a service spine.
+ while(remaining.length){let best=Infinity,ri=0,parent=joined[0];for(let i=0;i<remaining.length;i++)for(const q of joined){const d=Math.hypot(remaining[i].x-q.x,remaining[i].y-q.y);if(d<best){best=d;ri=i;parent=q;}}const n=remaining.splice(ri,1)[0];edges.push([parent,n]);joined.push(n);}
+ if(urban&&nodes.length>3){edges.push([nodes[1],nodes[nodes.length-1]]);if(plan.fullWorld)for(let i=3;i<nodes.length;i+=4)edges.push([nodes[i],nodes[Math.max(1,i-2)]]);}
+ if(military)edges.push([nodes[0],{x:144,y:120}]);
+ const roads=[];
+ for(const [from,to] of edges){
+  const a=routeCell(from),b=routeCell(to),start=a.y*cols+a.x,target=b.y*cols+b.x,queue=[start],parents=new Map([[start,-1]]);
+  for(let qi=0;qi<queue.length&&!parents.has(target);qi++){
+   const key=queue[qi],x=key%cols,y=Math.floor(key/cols);
+   const dirs=Math.abs(b.x-a.x)>Math.abs(b.y-a.y)?[[1,0],[-1,0],[0,1],[0,-1]]:[[0,1],[0,-1],[1,0],[-1,0]];
+   for(const [dx,dy] of dirs){const xx=x+dx,yy=y+dy,k=yy*cols+xx;if(!blocked(xx,yy)&&!parents.has(k)){parents.set(k,key);queue.push(k);}}
+  }
+  if(!parents.has(target))return plan;
+  const path=[];for(let k=target;k!==-1;k=parents.get(k))path.push({x:k%cols*step,y:Math.floor(k/cols)*step});path.reverse();
+  for(let i=0;i<path.length-1;){let j=i+1;const horizontal=path[j].y===path[i].y;while(j+1<path.length&&(horizontal?path[j+1].y===path[i].y:path[j+1].x===path[i].x))j++;
+   const loX=Math.min(path[i].x,path[j].x),loY=Math.min(path[i].y,path[j].y);
+   roads.push({x:loX-width/2,y:loY-width/2,w:Math.abs(path[j].x-path[i].x)+width,h:Math.abs(path[j].y-path[i].y)+width,kind:horizontal?'h':'v'});i=j;
+  }
+ }
+ // Keep the dedicated rail corridor in the rail sectors.
+ const track={loc_dump_depo:790,loc_jupiter_janov:800,loc_wild_territory:780,loc_tunnel_pripyat:820}[id];
+ if(track)roads.push({kind:'v',x:track-10,y:80,w:134,h:1040});
+ return {...plan,routed:true,roads:roads.map(r=>({...r,trail:natural}))};
+}
 function sectorArchitecture(id){
- if(run()?.layoutVersion>=3&&AUTHORED_SECTORS[id]){const plan=JSON.parse(JSON.stringify(AUTHORED_SECTORS[id])),track={loc_dump_depo:790,loc_jupiter_janov:800,loc_wild_territory:780,loc_tunnel_pripyat:820}[id];if(track)plan.roads.push({kind:'v',x:track-10,y:80,w:134,h:1040});return plan;}
+ if(run()?.layoutVersion>=3&&AUTHORED_SECTORS[id]){const plan=JSON.parse(JSON.stringify(AUTHORED_SECTORS[id])),track={loc_dump_depo:790,loc_jupiter_janov:800,loc_wild_territory:780,loc_tunnel_pripyat:820}[id];if(track)plan.roads.push({kind:'v',x:track-10,y:80,w:134,h:1040});return themedRoads(plan,id);}
  const building=(x,y,w,h,style,name,interior)=>({x,y,w,h,style,name,interior});
  const road=(kind,x,y,w,h)=>({kind,x,y,w,h});
  let buildings=[],roads=[];
@@ -8972,7 +9270,7 @@ function sectorArchitecture(id){
   roads=[road('h',130,540,1470,100),road('v',1030,70,80,1230)];
  }
  if(run()?.layoutVersion>=3&&id==='loc_kordon_village')for(let i=0;i<buildings.length;i++){const b=buildings[i];b.y+=(i%3-1)*12;b.h+=i%2?12:-8;b.style=i===5?'storage':b.style;}
- return {buildings,roads};
+ return themedRoads({buildings,roads},id);
 }
 function furnishedInterior(b,index,theme,count){
  const type=b.interior||'home',large=['institute','hospital','lab','factory','tunnel','ship','apartment'].includes(type),rows=type==='institute'?7:type==='hospital'?6:large?4:2;
@@ -9136,6 +9434,21 @@ function expandFrontierDistrict(w){
  w.expansionEntrances.push({x:3474,y:2635},{x:3086,y:2930});
 }
 
+function connectOuterDistricts(w){
+ if((run()?.layoutVersion||1)<8)return;
+ const obstacles=(w.landmarks||[]).flatMap(l=>window.ZonaSurvival3D.collisionParts(l));
+ const routed=themedRoads({buildings:w.buildings,roads:w.roads,w:w.w,h:w.h,fullWorld:true,obstacles},w.theme.id);
+ if(!routed.routed)return;
+ const oldVillage=w.theme.id==='loc_kordon_village'?w.roads.filter(r=>r.x<1700&&r.y<1350&&r.x+r.w<1800&&r.y+r.h<1450):[];
+ // Replace the shared perimeter grids rather than layering new roads over them.
+ w.roads=routed.roads.concat(oldVillage);w.roadNetworkVersion=8;
+ const onRoad=(p,r)=>w.roads.some(q=>rectHit(p.x,p.y,q,r));
+ const removed=new Set(w.trees.filter(t=>onRoad({x:t.x+15,y:t.y+15},25)));
+ w.trees=w.trees.filter(t=>!removed.has(t));w.walls=w.walls.filter(t=>!removed.has(t));
+ w.scraps=w.scraps.filter(p=>!onRoad(p,Math.max(10,p.s*.88)));
+ w.reeds=w.reeds.filter(p=>!onRoad(p,3));
+ // Entrances remain fixed and saves from previous layout generations retain their roads.
+}
 function build(seed){rand=random(seed);const theme=themeFor(loc()?.id),w={w:1760,h:1440,walls:[],trees:[],buildings:[],crates:[],people:[],enemies:[],rooms:[],exit:{x:140,y:1290},theme,patches:[],scraps:[],reeds:[],roads:[],anomalies:[],lights:[],fences:[],particles:[]};
 const architectural=run()?.layoutVersion>=2,plan=architectural?sectorArchitecture(theme.id):null;const presets=[[310,270],[1010,230],[650,720],[1250,900]];
 for(let i=0;i<18;i++)w.patches.push({x:80+rand()*(w.w-160),y:80+rand()*(w.h-160),r:40+rand()*120,color:i%4===0?theme.mud:(i%3===0?theme.groundAlt:theme.water),alpha:i%4===0?.22:(i%3===0?.15:.12)});
@@ -9208,7 +9521,7 @@ for(let i=0;i<42;i++)w.scraps.push({...freePoint(),kind:choose(['rock','barrel',
 for(let i=0;i<86;i++)w.decals.push({x:rand()*w.w,y:rand()*w.h,w:4+rand()*20,h:2+rand()*8,rot:rand()*6.28,kind:choose(['soil','scorch','scratch','stone','leaf']),a:.09+rand()*.19});
 for(let i=0;i<6;i++)w.lights.push({...freePoint(),r:34+rand()*48,c:choose(['rgba(255,214,144,.11)','rgba(113,181,163,.10)','rgba(201,141,110,.09)'])});
 for(const room of w.rooms){if(!architectural)for(let i=0;i<14;i++)room.props.push({x:35+rand()*(room.w-70),y:35+rand()*(room.h-70),w:16+rand()*46,h:10+rand()*29,kind:choose(['table','locker','shelf','bed','box','machine','cabinet']),rot:rand()<.35});for(let i=0;i<68;i++)room.debris.push({x:25+rand()*(room.w-50),y:25+rand()*(room.h-50),size:1+rand()*7.8,rot:rand()*6.28,c:choose(['#5b584e','#8a795d','#30342e','#766447','#43483d'])});}
-expandSector(w);expandOuterDistrict(w);expandFrontierDistrict(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}installWorldCollisions(w);dressSector(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
+expandSector(w);expandOuterDistrict(w);expandFrontierDistrict(w);connectOuterDistricts(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}installWorldCollisions(w);dressSector(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
 function enter(id){
  // Never create a second renderer over an already running Survival session.
  if(visible){return true}
@@ -9228,7 +9541,7 @@ function enter(id){
  if(!oldRun){
   st.visits=st.visits||{};st.visits[id]=(st.visits[id]||0)+1;
   st.selectedLoc=id;
-  st.run={layoutVersion:6,locId:id,seed:seedOf(id+':'+st.visits[id]),room:null,
+  st.run={layoutVersion:8,locId:id,seed:seedOf(id+':'+st.visits[id]),room:null,
    x:id==='loc_kordon_village'?535:140,y:id==='loc_kordon_village'?1110:1260,
    opened:[],talked:[],defeated:[],enemyState:{},bag:{},rubles:0,gram:0,kills:0,
    worldTime:id==='loc_kordon_village'?300:170};
