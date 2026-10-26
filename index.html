@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.31 — Survival Material Remaster</title>
+<title>ZONA Z v16.35 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -6824,12 +6824,17 @@ class Mesh{
   }
  }
  leafSpray(x,y,z,rx,ry,rz,color,eco=false,seed=0){
-  const count=eco?14:28;
+  // Stable, folded leaf clusters: four facets catch different amounts of light.
+  const count=eco?14:24;
   for(let j=0;j<count;j++){
-   const a=j*2.399+seed,rad=.35+.65*((j*7)%19)/19,py=y+Math.sin(j*3.1+seed)*ry;
-   const px=x+Math.cos(a)*rx*rad,pz=z+Math.sin(a)*rz*rad,width=Math.max(1.2,rx*.24),length=Math.max(2,ry*.6);
-   const ux=Math.cos(a)*width,uz=Math.sin(a)*width,vx=-Math.sin(a)*length*.6,vz=Math.cos(a)*length*.6,vy=length*(.4+.4*Math.sin(j));
-   this.quad([px-vx,py-vy,pz-vz],[px+ux,py+.2,pz+uz],[px+vx,py+vy,pz+vz],[px-ux,py-.2,pz-uz],color,.8+.15*Math.sin(j*2),5);
+   const a=j*2.399+seed,rad=Math.sqrt((j+.5)/count),py=y+Math.sin(j*2.17+seed)*ry*.75;
+   const px=x+Math.cos(a)*rx*rad,pz=z+Math.sin(a)*rz*rad;
+   const width=Math.max(1.4,rx*(.20+.04*Math.sin(j*1.7))),length=Math.max(2,ry*.55);
+   const ux=Math.cos(a)*width,uz=Math.sin(a)*width,vx=-Math.sin(a)*length*.7,vz=Math.cos(a)*length*.7;
+   const tilt=Math.sin(j*1.31+seed)*length*.45;
+   const points=[[px-vx,py-tilt,pz-vz],[px+ux,py,pz+uz],[px+vx,py+tilt,pz+vz],[px-ux,py,pz-uz]];
+   const mid=[px,py+Math.min(width,length)*.36,pz];
+   for(let k=0;k<4;k++)this.tri(points[k],points[(k+1)%4],mid,color,.86+(k%2)*.14,5);
   }
  }
  foliage(x,y,z,size,colors=['#28392a','#3b5032','#4e643c'],eco=false,seed=0,forcedVariant=null){
@@ -6856,32 +6861,37 @@ class Mesh{
     }
     return;
    }
-   const levels=eco?4:6,n=eco?6:9;
+   const levels=eco?5:7,n=eco?5:7;
    for(let h=0;h<levels;h++){
-    const elevation=y+12+h*size*.29,radius=size*(1.12-h/(levels+.7));
+    const fraction=h/(levels-1),elevation=y+height*(.28+fraction*.64);
+    const radius=size*(1.08-fraction*.91),cx=x+lean*(elevation-y)/height;
     for(let j=0;j<n;j++){
-     const angle=j*6.283/n+h*.57+seed*.017,len=radius*(.76+.22*Math.sin(j*17+h));
-     const bx=x+Math.cos(angle)*len,bz=z+Math.sin(angle)*len;
-     this.branch(x,elevation+6,z,bx,elevation-4,bz,.95,'#4c4031',4,bark);
-     // Separate needle fans leave gaps between the branches instead of a solid cone.
+     const angle=j*6.283/n+h*1.17+seed*.13,len=radius*(.82+.17*Math.sin(j*17+h));
+     const bx=cx+Math.cos(angle)*len,bz=z+Math.sin(angle)*len;
+     const drop=size*(.10+.08*(1-fraction));
+     this.branch(cx,elevation,z,bx,elevation-drop,bz,Math.max(.35,.9*(1-fraction)), '#4c4031',4,bark);
      for(let fan=0;fan<(eco?2:3);fan++){
-      const f=.46+fan*.2,px=x+Math.cos(angle)*len*f,pz=z+Math.sin(angle)*len*f;
-      const width=size*(.11+.035*(2-fan)),sx=Math.sin(angle)*width,sz=-Math.cos(angle)*width;
-      for(let needle=0;needle<(eco?3:5);needle++){
-       const q=needle/(eco?2:4)*2-1,root=[px+sx*q,elevation+2,pz+sz*q],tip=[bx+sx*q*.65,elevation-7-fan-(needle%2)*2,bz+sz*q*.65];
-       this.tri([root[0]-sx*.19,root[1],root[2]-sz*.19],[root[0]+sx*.19,root[1]+.6,root[2]+sz*.19],tip,colors[(j+h+needle)%3],.9,32);
+      const f=.20+fan*.23,px=cx+Math.cos(angle)*len*f,pz=z+Math.sin(angle)*len*f;
+      const width=len*(.30-.035*fan),sx=Math.sin(angle)*width,sz=-Math.cos(angle)*width;
+      const baseY=elevation-drop*f;
+      for(const side of [-1,1])for(let tooth=0;tooth<3;tooth++){
+       const q=tooth*.12,root=[px+Math.cos(angle)*len*q,baseY-drop*q,pz+Math.sin(angle)*len*q];
+       const edge=[root[0]+Math.cos(angle)*len*.10,root[1]+size*.025,root[2]+Math.sin(angle)*len*.10];
+       const tip=[root[0]+Math.cos(angle)*len*.22+sx*side,root[1]-drop*.25,root[2]+Math.sin(angle)*len*.22+sz*side];
+       this.tri(root,edge,tip,colors[(h+j+tooth)%3],side>0?1.05:.86,32);
       }
      }
     }
    }
-   this.ellipsoid(x+lean,y+height-5,z,size*.14,size*.28,size*.14,colors[1],3,6,5);
+   for(let j=0;j<5;j++){const a=j*1.256;this.tri([x+lean,y+height,z],[x+lean+Math.cos(a)*size*.11,y+height*.90,z+Math.sin(a)*size*.11],[x+lean+Math.cos(a+.7)*size*.08,y+height*.86,z+Math.sin(a+.7)*size*.08],colors[j%3],1,32);}
+
  }
  shrub(x,z,size,colors,eco=false){
   const count=eco?4:7;
   for(let j=0;j<count;j++){
-   const a=j*2.399+x*.03,r=size*(.15+.18*(j%3)),px=x+Math.cos(a)*r,pz=z+Math.sin(a)*r,h=size*(.22+.11*(j%3));
+   const a=j*2.399+x*.03,r=size*(.15+.18*(j%3)),px=x+Math.cos(a)*r,pz=z+Math.sin(a)*r,h=size*(.30+.14*(j%3));
    this.branch(x,0,z,px,h,pz,.6,'#564a35',3,31);
-   this.leafSpray(px,h,pz,size*.3,size*.23,size*.27,colors[j%3],eco,x+j);
+   this.leafSpray(px,h,pz,size*.38,size*.29,size*.34,colors[j%3],eco,x+j);
   }
  }
  shadow(x,z,rx,rz){/* Soft projected shadows are evaluated in the terrain shader, not polygon disks. */}
@@ -6896,7 +6906,15 @@ class Mesh{
   this.rail(rx,z-d*.48,rx,z+d*.48,y,'#6b5b4a',2,3);
  }
  plank(x,z,w,d,angle=0,color='#67523c'){const c=Math.cos(angle),q=Math.sin(angle),a=[-w/2,-d/2],b=[w/2,-d/2],g=[w/2,d/2],h=[-w/2,d/2],pt=p=>[x+p[0]*c-p[1]*q,.8,z+p[0]*q+p[1]*c];this.quad(pt(a),pt(b),pt(g),pt(h),color,.9,4)}
- puddle(x,z,rx,rz){const surface=3.9+(Math.abs(x*17+z*31)%97)/97*.12;for(let i=0;i<20;i++){const a=i*Math.PI/10,b=(i+1)*Math.PI/10,r=t=>.83+.11*Math.sin(t*3+x)+.06*Math.cos(t*7+z);this.tri([x,surface,z],[x+Math.cos(a)*rx*r(a),surface,z+Math.sin(a)*rz*r(a)],[x+Math.cos(b)*rx*r(b),surface,z+Math.sin(b)*rz*r(b)],'#29343b',1,6)}}
+ puddle(x,z,rx,rz){
+ const surface=3.9+(Math.abs(x*17+z*31)%97)/97*.12;
+ const point=(a,k)=>{const r=.83+.11*Math.sin(a*3+x)+.06*Math.cos(a*7+z);return [x+Math.cos(a)*rx*r*k,surface,z+Math.sin(a)*rz*r*k]};
+ for(let i=0;i<20;i++){
+  const a=i*Math.PI/10,b=(i+1)*Math.PI/10,ia=point(a,.88),ib=point(b,.88);
+  this.tri([x,surface,z],ia,ib,'#29343b',1,6);
+  this.quad(ia,point(a,1),point(b,1),ib,'#393b2f',1,15);
+ }
+ }
 }
 function decorateLandmark(m,l,hi){const x=l.x,z=l.y,s=l.size||55,kind=l.kind,metal='#62655c',rust='#79563d',concrete='#6b6e64',dark='#303933',glow='#95cbb4',canvas='#5e6553',wood='#66543d',amber='#d8a45c';
 const building=(w,d,h)=>m.box(x,0,z,w,h,d,concrete);
@@ -7052,7 +7070,23 @@ case 'fountain':m.cylinder(x,0,z,59,14,concrete,10);m.cylinder(x,14,z,27,30,rust
 case 'barricade':for(let k=-2;k<=2;k++)m.box(x+k*30,0,z,31,15,17,'#786b4d');m.box(x,14,z,120,8,22,metal);m.box(x-40,0,z+34,20,14,20,'#5b4b39');break;
 case 'deadtrees':for(let k=-2;k<=2;k++){const a=k*19;m.cylinder(x+a,0,z+a/2,6,65,metal);m.cone(x+a,39,z+a/2,13,22,rust)}m.box(x+58,0,z-24,16,12,16,'#554a3e');break;
 case 'totem':m.box(x,0,z,13,105,13,rust);m.box(x,70,z,49,13,12,concrete);m.box(x-20,0,z+16,18,12,16,wood);break;
-case 'crystal':case 'monolith':case 'portal':m.cone(x,0,z,kind==='monolith'?35:55,kind==='portal'?190:137,kind==='monolith'?'#95abd0':glow,7);m.cylinder(x,0,z,65,5,rust,12);for(let i=0;i<4;i++){const a=i*Math.PI/2;m.box(x+Math.cos(a)*72,0,z+Math.sin(a)*72,14,16,14,'#4f4a3f')}break;
+case 'crystal':case 'monolith':case 'portal':{
+ const radius=kind==='monolith'?25:40,height=kind==='portal'?125:kind==='monolith'?108:86;
+ const stone=['#60665c','#4d574f','#72766a','#5b6259'];
+ const count=8,ring=(i,upper)=>{const a=i*Math.PI/4,r=radius*(upper?.72:.96)*(1+.04*Math.sin(i*3.7));return [x+Math.cos(a)*r+(upper?5:0),upper?height*(.87+.09*Math.sin(i*2.3)):0,z+Math.sin(a)*r]};
+ for(let j=0;j<count;j++){
+  const a=ring(j,false),b=ring((j+1)%count,false),c=ring((j+1)%count,true),d=ring(j,true);
+  m.quad(a,b,c,d,stone[j%4],1,34);
+  m.tri([x+3,height*.81,z],d,c,stone[(j+1)%4],1,34);
+ }
+ m.cylinder(x,0,z,65,5,'#514c3e',12,34);
+ for(let i=0;i<4;i++){const a=i*Math.PI/2;m.box(x+Math.cos(a)*72,0,z+Math.sin(a)*72,14,16,14,'#63675c',34);}
+ if(hi)for(let j=0;j<4;j++){
+  const yy=18+j*15,px=x+radius*.65-j*3,pz=z+radius*.68;
+  m.branch(px,yy,pz,px-7,yy+12,pz,.55,'#303d37',4,8);
+ }
+ break;
+}
 case 'wheel':{m.cylinder(x,0,z,6,95,metal);const n=12;for(let j=0;j<n;j++){const a=2*Math.PI*j/n;m.rail(x,z,x+Math.sin(a)*75,z+Math.cos(a)*75,100,metal,2);m.box(x+Math.sin(a)*75,30,z+Math.cos(a)*75,13,13,13,rust)}m.box(x-46,0,z+68,18,16,18,wood);break}
 }
 }
@@ -7117,9 +7151,10 @@ function drawDressing(m,p,low){
 }
 function detailSurvivalEnvironment(m,map,scene,room,low){
  const outdoor=room==null, t=map.theme;
- if(outdoor)for(const road of map.roads||[]){
+ if(outdoor&&/city|limansk|pripyat_center|jupiter|dump|wild|agroprom_inst/.test(t.id))for(const road of map.roads||[]){
+  if(road.trail)continue;
   const horizontal=road.w>road.h,length=horizontal?road.w:road.h;
-  for(let pos=45;pos<length;pos+=low?180:110){
+  for(let pos=90;pos<length-25;pos+=low?300:220){
    const x=road.x+(horizontal?pos:road.w*.8),z=road.y+(horizontal?road.h*.8:pos);
    m.box(x,2.7,z,14,.6,19,'#363d39',27);
    for(let k=-4;k<=4;k+=2)m.box(x+k,3.35,z,.7,.25,15,'#151e1c',8);
@@ -7584,6 +7619,67 @@ function applySurfacePack(m,map,room){
   const tile=number+9;for(let k=0;k<3;k++)m.data[i+k*10+9]=tile;
  }
 }
+function subtractRoadRect(a,b){
+ const x=Math.max(a.x,b.x),z=Math.max(a.y,b.y),right=Math.min(a.x+a.w,b.x+b.w),bottom=Math.min(a.y+a.h,b.y+b.h);
+ if(right<=x||bottom<=z)return [a];
+ return [
+  {...a,w:x-a.x}, {...a,x:right,w:a.x+a.w-right},
+  {...a,x,w:right-x,h:z-a.y}, {...a,x,y:bottom,w:right-x,h:a.y+a.h-bottom}
+ ].filter(p=>p.w>.001&&p.h>.001);
+}
+function roadSurfaceParts(roads){
+ const originals=(roads||[]).filter(r=>r.w>0&&r.h>0),cores=[],shoulders=[],seen=[];
+ for(const r of originals){
+  let parts=[{x:r.x,y:r.y,w:r.w,h:r.h,source:r}];
+  for(const cut of seen)parts=parts.flatMap(p=>subtractRoadRect(p,cut));
+  cores.push(...parts);seen.push(r);
+ }
+ const outer=[];
+ for(const r of originals){
+  const pad=r.trail?4:7,wide={x:r.x-pad,y:r.y-pad,w:r.w+pad*2,h:r.h+pad*2,source:r};
+  let parts=[wide];
+  for(const cut of originals.concat(outer))parts=parts.flatMap(p=>subtractRoadRect(p,cut));
+  shoulders.push(...parts);outer.push(wide);
+ }
+ return {cores,shoulders};
+}
+function roadSurface(m,map,low){
+ const t=map.theme,parts=roadSurfaceParts(map.roads),urban=/city|limansk|pripyat_center|jupiter|dump|wild|agroprom_inst/.test(t.id);
+ const plane=(r,color,material)=>m.plane(r.x+r.w/2,.55,r.y+r.h/2,r.w,r.h,color,material);
+ for(const r of parts.cores){
+  const road=r.source,seed=Math.abs(Math.floor(r.x*7+r.y*11)),trail=road.trail;
+  const repair=!trail&&r.w>21&&r.h>21&&seed%3!==0;
+  if(repair){
+   const patch={x:r.x+r.w*.18,y:r.y+r.h*.23,w:Math.min(43,r.w*.54),h:Math.min(57,r.h*.51)};
+   for(const q of subtractRoadRect(r,patch))plane(q,t.road,1);
+   // The repair replaces the asphalt below it instead of covering another polygon.
+   plane(patch,seed%2?'#41483e':'#535344',36);
+  }else plane(r,trail?t.ground:t.road,trail?15:1);
+  if(!low&&r.w>16&&r.h>16){
+   const ax=r.x+r.w*.18,az=r.y+r.h*.36,bx=r.x+r.w*.48,bz=r.y+r.h*.54,cx=r.x+r.w*.78,cz=r.y+r.h*.43;
+   m.branch(ax,1.15,az,bx,1.15,bz,.30,trail?'#514a35':'#242c27',3,8);
+   m.branch(bx,1.15,bz,cx,1.15,cz,.23,trail?'#514a35':'#242c27',3,8);
+   if(!trail)m.branch(bx,1.15,bz,r.x+r.w*.57,1.15,r.y+r.h*.78,.18,'#293029',3,8);
+  }
+  if(urban&&!trail&&Math.min(road.w,road.h)>=50){
+   const horizontal=road.w>road.h,length=horizontal?r.w:r.h;
+   for(let k=18;k<length-24;k+=87){
+    const x=horizontal?r.x+k:r.x+r.w/2,z=horizontal?r.y+r.h/2:r.y+k;
+    if(Math.abs((horizontal?z:x)-(horizontal?road.y+road.h/2:road.x+road.w/2))>2)continue;
+    m.plane(x,1.15,z,horizontal?19:1.4,horizontal?1.4:19,'#85816b',8);
+   }
+  }
+ }
+ for(const r of parts.shoulders){
+  m.plane(r.x+r.w/2,.22,r.y+r.h/2,r.w,r.h,r.source.trail?t.ground:(t.roadEdge||'#514b3b'),15);
+  if(low||r.w*r.h<70)continue;
+  const n=Math.min(5,Math.ceil(Math.max(r.w,r.h)/80));
+  for(let j=0;j<n;j++){
+   const u=(j+.5)/n,x=r.x+r.w*u,z=r.y+r.h*(.3+.4*((j*7)%3)/2),rad=1.3+(j%3)*.55;
+   m.ellipsoid(x,1,z,Math.min(rad,r.w*.35),1.2,Math.min(rad*.8,r.h*.35),j%2?'#6a6652':'#555644',2,5,34);
+  }
+ }
+}
 function terrainMesh(m,map,low){
  // One ground surface: overlapping coplanar triangle fans caused camera-dependent flicker.
  const step=low?64:40,cols=Math.ceil(map.w/step),rows=Math.ceil(map.h/step),base=rgb(map.theme.ground),patches=(map.patches||[]).map(p=>({...p,c:rgb(p.color)}));
@@ -7757,7 +7853,37 @@ function sideFacade(m,b,low){
   }
  }
 }
+function rearFacade(m,b,low){
+ const house=b.style==='residential',high=b.style==='institute',warehouse=b.style==='storage';
+ const bays=Math.max(1,Math.floor((b.w-28)/(warehouse?85:62))),levels=high?[38,110]:[warehouse?46:38];
+ const seed=Number(b.id)||Math.round(b.x+b.y),wall=b.y;
+ for(let j=0;j<bays;j++)for(const y of levels){
+  const x=b.x+(j+.5)*b.w/bays,w=Math.min(warehouse?44:27,b.w/bays-18),h=warehouse?19:25,broken=(seed+j)%3===1;
+  m.box(x,y-2,wall-.7,w+5,h+4,1.8,'#202923',8);
+  // Broken bays expose a dark recess; surviving glass occupies separate panes.
+  for(const side of [-1,1])if(!broken||side<0)m.box(x+side*w*.25,y,wall-1.9,w*.46,h,.5,'#384e4a',55);
+  if(broken)m.tri([x+.6,y+h,wall-2.2],[x+w*.46,y+h,wall-2.2],[x+w*.46,y+h*.58,wall-2.2],'#47615b',1,55);
+  for(const dx of [-w/2,0,w/2])m.box(x+dx,y-2,wall-2.5,1.7,h+4,1.2,house?'#958973':'#7e887d',house?29:27);
+  for(const yy of [y-2,y+h])m.box(x,yy,wall-2.5,w+4,1.6,1.2,'#858675',27);
+  m.box(x,y-4,wall-3,w+8,2.2,4,'#757a69',34);
+  if(house&&(seed+j)%4===0)for(const k of [-1,1])m.branch(x-w*.48,y+6+k*4,wall-3.8,x+w*.48,y+15+k*4,wall-3.8,1.8,'#6a5c43',4,29);
+ }
+ const top=high?150:79;
+ // Eaves and downpipes sit against existing walls, outside the door facade.
+ for(const side of [-1,1]){
+  const x=side<0?b.x-1.8:b.x+b.w+1.8;
+  m.branch(x,top,b.y+8,x,8,b.y+8,1.25,'#657265',low?4:6,27);
+  m.branch(x,8,b.y+8,x+side*3,3,b.y+8,1.25,'#657265',low?4:6,27);
+  if(!low)for(const yy of [18,48,72])m.box(x,yy,b.y+8,3,1.3,3,'#909380',27);
+ }
+ if(warehouse){
+  const x=b.x+b.w*.5,z=b.y-2;
+  m.box(x,9,z,30,20,2,'#515d53',27);
+  for(let j=0;j<(low?4:7);j++)m.box(x,12+j*(low?4:2.4),z-1.5,25,.8,1,'#242e27',8);
+ }
+}
 function facadeDetails(m,b,low){
+ rearFacade(m,b,low);
  sideFacade(m,b,low);
  masonryWear(m,b,low);
  const front=b.y+b.h,cx=b.x+b.w/2,door=b.door.x,high=b.style==='institute';
@@ -7796,10 +7922,11 @@ function buildingShell(m,b,color){
 }
 function houseRoof(m,b,low){
  const cx=b.x+b.w/2,y=82,w=b.w+9,depth=b.h+11,z0=b.y-5.5,peak=y+Math.min(34,Math.max(17,w*.15));
- const damaged=(b.id%3)!==0,rows=8,cols=4,material=b.id%3===0?11:17;
+ const seed=Number(b.id)||Math.round(b.x+b.y),damaged=(seed%3)!==0,rows=8,cols=4,material=seed%3===0?11:17;
+ const damageSide=seed%2?1:-1,damageRow=1+seed%4,damageCol=1+seed%2;
  const point=(side,u,v)=>[cx+side*w*.5*u,peak-(peak-y)*u,z0+depth*v];
  for(const side of [-1,1])for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
-  const broken=damaged&&side===1&&j>=2&&j<=4&&i>=1&&i<=2;
+  const broken=damaged&&side===damageSide&&j>=damageRow&&j<damageRow+2&&i>=damageCol&&i<Math.min(cols,damageCol+2);
   if(broken)continue;
   const a=point(side,i/cols,j/rows),c=point(side,(i+1)/cols,(j+1)/rows),bb=point(side,(i+1)/cols,j/rows),d=point(side,i/cols,(j+1)/rows);
   m.quad(a,bb,c,d,'#686557',1,material);
@@ -7811,12 +7938,26 @@ function houseRoof(m,b,low){
   for(const side of [-1,1])m.branch(cx,peak-2,z,cx+side*(w/2-4),y-2,z,1.7,'#8a7553',low?4:5,29);
   m.branch(cx-w*.42,y-4,z,cx+w*.42,y-4,z,1.3,'#66543d',4,29);
  }
+ // Raised ridge cap and separated eaves have a real silhouette and no coplanar overlay.
+ m.branch(cx,peak+.8,z0-1,cx,peak+.8,z0+depth+1,1.3,'#79725d',low?4:6,27);
+ for(const side of [-1,1])m.branch(cx+side*w*.5,y-.8,z0,cx+side*w*.5,y-.8,z0+depth,1.2,'#626b5a',low?4:6,27);
  if(damaged){
-  for(let j=2;j<=4;j++){
-   const z=z0+depth*(j+.3)/8,px=cx+w*.30,py=peak-(peak-y)*.60;
-   m.quad([px,py,z],[px+w*.08,py-3,z],[px+w*.07,py+4,z+depth*.06],[px,py+2,z+depth*.05],'#746956',1,11);
-  }
+  const u=(damageCol+.45)/cols,v=(damageRow+.6)/rows;
+  const a=point(damageSide,u,v),bb=point(damageSide,Math.min(.98,u+.14),v);
+  m.quad(a,bb,[bb[0],bb[1]+4,bb[2]+depth*.07],[a[0],a[1]+2,a[2]+depth*.08],'#746956',1,11);
  }
+ // Hollow brick chimney: four walls, an open soot-black throat, and a chipped cap.
+ const chimneyX=cx-damageSide*w*.27,chimneyZ=z0+depth*.72,base=peak-(peak-y)*.54-1;
+ const tall=seed%2?22:29;
+ for(const side of [-1,1]){
+  m.box(chimneyX+side*5,base,chimneyZ,3,tall,13,'#82644e',13);
+  m.box(chimneyX,base,chimneyZ+side*5,7,tall,3,'#76563f',13);
+  m.box(chimneyX+side*6,base+tall,chimneyZ,3,2,16,'#646557',34);
+  m.box(chimneyX,base+tall,chimneyZ+side*6,9,2,3,'#646557',34);
+ }
+ m.box(chimneyX,base+tall-7,chimneyZ,7,.5,7,'#20251f',8);
+ if(!low)for(let j=0;j<4;j++)m.box(chimneyX+6.6,base+4+j*5,chimneyZ, .5,.7,12,'#504b3c',8);
+
 }
 function sectorEcology(id){
  if(/agroprom_under|lab18|lab16|lab8|tunnel_pripyat|sarcophagus|chaes_roof/.test(id))return 'sealed';
@@ -7875,18 +8016,7 @@ if(room==null)terrainMesh(m,map,low);else m.plane(scene.w/2,-1,scene.h/2,scene.w
 if(room==null){
 // Soil/wet patches are blended into terrainMesh, never stacked as disks.
 if(!low){for(const mud of map.pebbles||[])if(mud.r>22)m.puddle(mud.x,mud.y,mud.r*.9,mud.r*.48)}
-for(const rd of map.roads||[]){m.plane(rd.x+rd.w/2,.4,rd.y+rd.h/2,rd.w+10,rd.h+10,t.roadEdge||'#3b392f',1);m.plane(rd.x+rd.w/2,.55,rd.y+rd.h/2,rd.w,rd.h,t.road,rd.trail?15:1);if(!low&&!rd.trail){for(let k=25;k<(rd.kind==='h'?rd.w:rd.h)-20;k+=88){const x=rd.kind==='h'?rd.x+k:rd.x+rd.w/2,z=rd.kind==='h'?rd.y+rd.h/2:rd.y+k;m.plane(x,.65,z,rd.kind==='h'?28:2,rd.kind==='h'?2:28,'#827964')}for(let j=0;j<7;j++){const px=rd.kind==='h'?rd.x+25+j*(rd.w/6):rd.x+rd.w/2,pz=rd.kind==='h'?rd.y+rd.h/2:rd.y+25+j*(rd.h/6);m.plane(px,.7,pz,rd.kind==='h'?15:2,rd.kind==='h'?2:15,'#5a5346');m.rail(px-18,pz+4,px-3,pz-12,.85,'#282a25',.8);m.rail(px-3,pz-12,px+15,pz-8,.86,'#2e312c',.7)}}}
-for(const rd of map.roads||[]){
- const horizontal=rd.w>rd.h,length=horizontal?rd.w:rd.h;
- for(let step=12;step<length-12;step+=low?48:30){
-  const n=.5+.5*Math.sin(step*.19+rd.x*.07+rd.y*.11),extent=3+n*7;
-  for(const side of [-1,1]){
-   const along=Math.min(26,length-step),x=horizontal?rd.x+step:rd.x+rd.w*(side+1)/2,z=horizontal?rd.y+rd.h*(side+1)/2:rd.y+step;
-   const pts=horizontal?[[x,1.75,z],[x+along,1.75,z],[x+along*.78,1.75,z+side*extent],[x+along*.14,1.75,z+side*extent*.6]]:[[x,1.75,z],[x,1.75,z+along],[x+side*extent,1.75,z+along*.78],[x+side*extent*.6,1.75,z+along*.14]];
-   m.quad(...pts,'#514c3c',1,15);
-  }
- }
-}
+roadSurface(m,map,low);
 for(const a of map.landmarks||[])decorateLandmark(m,a,!low);
 // Lamp posts give a physical source to the warm pools of light.
 for(const l of map.lights||[])streetFixture(m,l,low);
@@ -7948,9 +8078,12 @@ for(const f of map.fences||[]){
   }
  }
 }
-if(!low){for(const d of map.decals||[])m.plane(d.x,.22,d.y,d.w,d.h,d.kind==='leaf'?'#424935':(d.kind==='soil'?'#35392f':'#292d27'));
-for(const peb of map.pebbles||[])if(peb.r<24)m.disk(peb.x,.18,peb.y,Math.max(8,peb.r*.65),'#44473f',7);
-for(const fp of map.footprints||[])m.plane(fp.x,.24,fp.y,10,3,'#29251f');for(let i=0;i<map.roads.length;i++){const rd=map.roads[i];for(let k=1;k<10;k++){const x=rd.kind==='h'?rd.x+k*rd.w/10:rd.x+(k%3)*10-10,z=rd.kind==='h'?rd.y+(k%3)*9-12:rd.y+k*rd.h/10;m.rail(x-12,z-7,x+10,z+8,.86,'#30322c',.6)}}for(const sc of map.scraps||[])if(sc.s>23&&sc.kind==='wreck')m.plank(sc.x+16,sc.y+8,30,5,sc.rot,'#6b553d');
+if(!low){for(const d of map.decals||[])if(d.kind==='leaf')for(let j=0;j<3;j++){
+ const a=d.x*.13+j*2.399,x=d.x+Math.cos(a)*d.w*.22,z=d.y+Math.sin(a)*d.h*.22;
+ m.tri([x-1.6,1.7,z],[x+1.9,1.8,z-1],[x+.5,2.1,z+3.4],j%2?'#736547':'#605d3e',1,32);
+} 
+for(const peb of map.pebbles||[])if(peb.r<24)for(let j=0;j<3;j++){const a=j*2.399+peb.x; m.ellipsoid(peb.x+Math.cos(a)*peb.r*.28,1,peb.y+Math.sin(a)*peb.r*.28,2+j*.6,1.1+j*.3,1.8+j*.4,j%2?'#706955':'#555b4b',2,5,34);}
+for(const fp of map.footprints||[])m.plane(fp.x,.24,fp.y,10,3,'#29251f');for(const sc of map.scraps||[])if(sc.s>23&&sc.kind==='wreck')m.plank(sc.x+16,sc.y+8,30,5,sc.rot,'#6b553d');
 for(const grass of map.reeds||[])sectorGroundPlant(m,grass,t,low)}
 }else{
 for(const zone of scene.zones||[])m.plane(zone.x+zone.w/2,-.5,zone.y+zone.h/2,zone.w,zone.h,zone.color,roomPalette(zone.name).floor);
@@ -7967,11 +8100,11 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v16.31: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v16.35: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
  sectorRoof(m,b,t.id,low);
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop',roofTop=b.style==='institute'?161:98;
- if(sloped){
+ if(b.style==='shop'){
   const rise=Math.min(34,Math.max(17,(b.w+9)*.15));
   for(let j=14;j<b.h-8;j+=16){const zz=b.y+j;
    m.branch(b.x-3,83,zz,cx,82+rise,zz,.5,'#6a6b5d',4,3);
@@ -7987,7 +8120,7 @@ if(room==null)for(const b of map.buildings||[]){
    }
   }
   m.box(b.x+b.w*.23,89,b.y+b.h*.3,13,25,13,'#656456',2);m.box(b.x+b.w*.23,114,b.y+b.h*.3,16,2,16,'#3f4941',3);
- }else{
+ }else if(!sloped){
   for(const dx of [-b.w*.38,b.w*.38]){
    m.box(cx+dx,roofTop+1,cz,18,9,27,'#4b5750',27);
    for(let k=-3;k<=3;k++)m.box(cx+dx+k*2,roofTop+10,cz,1,1,22,'#26332e',54);
@@ -8443,7 +8576,7 @@ vec3 atlasSample(float tile,vec3 normal){
  float col=mod(tile,8.0),row=floor(tile/8.0);
  vec2 st=vec2((col+.033+uv.x*.934)/8.0,1.0-(row+.033+uv.y*.934)/8.0);
  vec3 tex=texture2D(uAtlas,st).rgb;
- vec2 uv2=fract(texPos*texScale*.371+vec2(.23,.61));
+ vec2 uv2=fract(mat2(.8,-.6,.6,.8)*texPos*texScale*.371+vec2(.23,.61));
  vec3 macroTex=texture2D(uAtlas,vec2((col+.033+uv2.x*.934)/8.,1.-(row+.033+uv2.y*.934)/8.)).rgb;
  return mix(tex,tex*(.68+macroTex*.65),.35);
 }
@@ -8465,11 +8598,18 @@ vec2 reliefUV(float tile,vec3 normal){
 vec3 reliefNormal(float tile,vec3 n,vec2 encoded){
  float mat=surfaceKind(tile);
  if(uSurfaceReady<.5||mat>7.5||mat==5.||mat==6.)return n;
- vec2 slope=(encoded-.5)*1.35;
+ float strength=mat<1.5?1.85:mat<2.5?1.55:mat<3.5?.85:1.10;
+ vec2 slope=(encoded-.5)*strength;
  return normalize(n+(abs(n.y)>.55?vec3(-slope.x,0.,slope.y):(abs(n.x)>.55?vec3(0.,-slope.y,-slope.x):vec3(-slope.x,-slope.y,0.))));
 }
 
-vec3 gradeScene(vec3 c){c=max(c,vec3(0.));return pow(c*1.14/(vec3(1.)+c*.28),vec3(.95));}
+vec3 gradeScene(vec3 c){
+ c=max(c,vec3(0.))*1.12;
+ float peak=max(c.r,max(c.g,c.b));
+ float shoulder=.64+.33*(1.-exp(-max(0.,peak-.64)/.33));
+ c*=mix(1.,shoulder/max(.001,peak),step(.64,peak));
+ return pow(c,vec3(.94));
+}
 float beamLimit(float theta){
  float t=clamp((theta+.65)/1.3*8.,0.,8.);
  if(t<1.)return mix(uTorchBands[0].x,uTorchBands[0].y,t);
@@ -8537,6 +8677,10 @@ void main(){
 
  vec2 surface=abs(normal.y)>.55?vWorldPos.xz:(abs(normal.x)>.55?vWorldPos.zy:vWorldPos.xy);
  base=weatherSurface(base,mat,normal,surface);
+ if(mat<1.5){
+  float strata=noise21(surface*.009+vec2(7.,19.));
+  base*=mix(vec3(.91,.94,.88),vec3(1.09,1.03,.94),strata);
+ }
  float coarse=noise21(surface*.047),fine=noise21(surface*.61);
  if(mat<7.5&&mat!=5.0){
   float relief=mat<2.5?.025:mat<3.5?.015:mat<4.5?.02:.01;
@@ -8599,13 +8743,13 @@ void main(){
 
  // Directional lighting works on 3D surfaces even with vertex-colour models.
  vec3 sun=normalize(vec3(-.44,.82,.38));float lambert=max(0.0,dot(normal,sun));
- float ao=clamp(.82+.18*normal.y-.0015*max(vHeight-18.0,0.0),.58,1.0);
- float shade=mix(.48+.52*lambert,.36+.30*lambert,uNight);base*=shade*ao;base=pow(max(base,vec3(.005)),vec3(.90));
+ float ao=clamp(.90+.10*normal.y-.00035*max(vHeight-18.0,0.0),.78,1.0);
+ float shade=mix(.34+.66*lambert*visibility(),.30+.34*lambert*visibility(),uNight);base*=shade*ao;base=pow(max(base,vec3(.005)),vec3(.90));
  float tileGrain=mat<7.5?(.98+.035*detail):1.0;base*=tileGrain;
  float wetMask=uWetness*((mat<2.5?1.0:0.0)+(mat>5.5&&mat<6.5?1.0:0.0));
  if(mat>5.5&&mat<6.5){base*=.55;}
  vec3 V=normalize(uEye-vWorldPos);vec3 H=normalize(sun+V);float spec=pow(max(0.0,dot(normal,H)),38.0)*wetMask*(.09+.19*uNight)*(0.45+0.55*macro);base+=vec3(.55,.68,.85)*spec;if(mat>5.5&&mat<6.5){base+=vec3(.015,.024,.030)*rainRipple(vWorld);}
- base*=visibility();
+
  if(mat>4.5&&mat<5.5)base+=vColor*.10;
  float skyFacing=.35+.65*max(0.,normal.y);
  base+=vColor*vec3(.025,.034,.041)*skyFacing;
@@ -8634,16 +8778,18 @@ void main(){
   moisture*=uWetness;
   if(vHeight<2.0&&moisture>.03){
     float flecks=noise21(vWorld*.65+vec2(.1,.3));
-    float oilFilm=pow(max(0.,sin(vWorld.x*.22+vWorld.y*.085)*.5+.5),11.);
+    float oilFilm=pow(noise21(vWorld*.035+vec2(9.,3.)),7.);
     float glisten=pow(max(0.,flecks),5.)*.55+oilFilm*.32;
-    base+=moisture*(light*vec3(1.30,.97,.69))*(.035+.19*glisten);
+    base+=moisture*(light*vec3(1.30,.97,.69))*(.018+.12*glisten);
     base+=moisture*vec3(.10,.15,.19)*pow(max(0.,noise21(vWorld*.14)),7.)*.17;
   }
 
 
  float water=mat>5.5&&mat<6.5?1.:0.;
  float metal=mat>2.5&&mat<3.5?1.:0.;
- float slick=metal*.14+uWetness*(water+(1.-water)*(mat<3.5?.42:mat<4.5?.10:0.));
+ float soil=(tileId==15.||tileId==19.||tileId==30.||tileId==33.)?1.:0.;
+ float pavement=mat<1.5?mix(.32,.08,soil):mat<2.5?.20:mat<3.5?.42:mat<4.5?.10:0.;
+ float slick=metal*.14+uWetness*(water+(1.-water)*pavement);
  if(slick>.01){
   vec3 viewDir=normalize(uEye-vWorldPos);
   float fresnel=.035+.32*pow(1.-max(0.,dot(normal,viewDir)),5.);
@@ -8727,11 +8873,18 @@ vec2 reliefUV(float tile,vec3 normal){
 vec3 reliefNormal(float tile,vec3 n,vec2 encoded){
  float mat=surfaceKind(tile);
  if(uSurfaceReady<.5||mat>7.5||mat==5.||mat==6.)return n;
- vec2 slope=(encoded-.5)*1.35;
+ float strength=mat<1.5?1.85:mat<2.5?1.55:mat<3.5?.85:1.10;
+ vec2 slope=(encoded-.5)*strength;
  return normalize(n+(abs(n.y)>.55?vec3(-slope.x,0.,slope.y):(abs(n.x)>.55?vec3(0.,-slope.y,-slope.x):vec3(-slope.x,-slope.y,0.))));
 }
 
-vec3 gradeScene(vec3 c){c=max(c,vec3(0.));return pow(c*1.14/(vec3(1.)+c*.28),vec3(.95));}
+vec3 gradeScene(vec3 c){
+ c=max(c,vec3(0.))*1.12;
+ float peak=max(c.r,max(c.g,c.b));
+ float shoulder=.64+.33*(1.-exp(-max(0.,peak-.64)/.33));
+ c*=mix(1.,shoulder/max(.001,peak),step(.64,peak));
+ return pow(c,vec3(.94));
+}
 float beamLimit(float theta){
  float t=clamp((theta+.65)/1.3*8.,0.,8.);
  if(t<1.)return mix(uTorchBands[0].x,uTorchBands[0].y,t);
@@ -8794,7 +8947,7 @@ void main(){
   vec2 uv=fract(pos*scale);float col=mod(tileId,8.0),row=floor(tileId/8.0);
   vec3 tex=texture2D(uAtlas,vec2((col+.033+uv.x*.934)/8.,1.-(row+.033+uv.y*.934)/8.)).rgb;
   if(mat<4.5){
-   vec2 uv2=fract(pos*scale*.371+vec2(.23,.61));
+   vec2 uv2=fract(mat2(.8,-.6,.6,.8)*pos*scale*.371+vec2(.23,.61));
    vec3 macroTex=texture2D(uAtlas,vec2((col+.033+uv2.x*.934)/8.,1.-(row+.033+uv2.y*.934)/8.)).rgb;
    tex=mix(tex,tex*(.68+macroTex*.65),.35);
   }
@@ -8805,6 +8958,10 @@ void main(){
 
  vec2 surface=abs(normal.y)>.55?vWorldPos.xz:(abs(normal.x)>.55?vWorldPos.zy:vWorldPos.xy);
  base=weatherSurface(base,mat,normal,surface);
+ if(mat<1.5){
+  float strata=noise21(surface*.009+vec2(7.,19.));
+  base*=mix(vec3(.91,.94,.88),vec3(1.09,1.03,.94),strata);
+ }
  float coarse=noise21(surface*.047),fine=noise21(surface*.61);
  if(mat<7.5&&mat!=5.0){
   float relief=mat<2.5?.025:mat<3.5?.015:mat<4.5?.02:.01;
@@ -8867,9 +9024,9 @@ void main(){
  }
 
  float sun=max(0.,dot(normal,normalize(vec3(-.42,.86,.35))));
- base*=mix(.47+.46*sun,.36+.28*sun,uNight);
- base*=vec3(.88,.94,1.);
- base*=visibility();
+ base*=mix(.34+.66*sun*visibility(),.30+.34*sun*visibility(),uNight);
+ base=pow(max(base,vec3(.005)),vec3(.90));
+
  if(mat>4.5&&mat<5.5)base+=vColor*.10;
  float skyFacing=.35+.65*max(0.,normal.y);
  base+=vColor*vec3(.025,.034,.041)*skyFacing;
@@ -8897,16 +9054,18 @@ void main(){
   moisture*=uWetness;
   if(vHeight<2.0&&moisture>.03){
     float flecks=noise21(vWorld*.16);
-    float oilFilm=pow(max(0.,sin(vWorld.x*.22+vWorld.y*.085)*.5+.5),11.);
+    float oilFilm=pow(noise21(vWorld*.035+vec2(9.,3.)),7.);
     float glisten=pow(max(0.,flecks),5.)*.55+oilFilm*.32;
-    base+=moisture*(light*vec3(1.30,.97,.69))*(.035+.19*glisten);
+    base+=moisture*(light*vec3(1.30,.97,.69))*(.018+.12*glisten);
     base+=moisture*vec3(.012,.021,.030)*glisten;
   }
 
 
  float water=mat>5.5&&mat<6.5?1.:0.;
  float metal=mat>2.5&&mat<3.5?1.:0.;
- float slick=metal*.14+uWetness*(water+(1.-water)*(mat<3.5?.42:mat<4.5?.10:0.));
+ float soil=(tileId==15.||tileId==19.||tileId==30.||tileId==33.)?1.:0.;
+ float pavement=mat<1.5?mix(.32,.08,soil):mat<2.5?.20:mat<3.5?.42:mat<4.5?.10:0.;
+ float slick=metal*.14+uWetness*(water+(1.-water)*pavement);
  if(slick>.01){
   vec3 viewDir=normalize(uEye-vWorldPos);
   float fresnel=.035+.32*pow(1.-max(0.,dot(normal,viewDir)),5.);
@@ -9102,6 +9261,12 @@ return {draw,rotate,changeZoom,resetCamera,movement,project,dispose,get yaw(){re
 // Emergency Telegram/iOS compatibility path. Used only when no WebGL pipeline can run.
 // Draws the same world coordinates/actors, keeping saves and the Survival mechanics intact.
 function collisionParts(landmark){
+ if(['crystal','monolith','portal'].includes(landmark.kind)){
+  const {x,y,kind}=landmark,size=kind==='monolith'?52.5:82.5;
+  const out=[{x:x-size/2,y:y-size/2,w:size,h:size}];
+  for(let i=0;i<4;i++){const a=i*Math.PI/2;out.push({x:x+Math.cos(a)*72-7,y:y+Math.sin(a)*72-7,w:14,h:14});}
+  return out;
+ }
  const parts=[],m=new Mesh();
  const box=(x,y,z,w,h,d)=>{if(y<28&&y+h>6&&h>=5&&w>1&&d>1)parts.push({x:x-w/2,y:z-d/2,w,h:d})};
  m.box=box;m.cylinder=(x,y,z,r,h)=>box(x,y,z,r*2,h,r*2);
@@ -9144,7 +9309,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.31'};
+window.ZonaSurvival3D={init,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.35'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -9155,7 +9320,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.31</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.31 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.35</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.35 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
