@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.35 — Survival Material Remaster</title>
+<title>ZONA Z v16.40 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -8100,7 +8100,7 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v16.35: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v16.40: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
  sectorRoof(m,b,t.id,low);
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop',roofTop=b.style==='institute'?161:98;
@@ -8282,48 +8282,78 @@ for(const o of (room==null?map.buildings:scene.props)||[]){
 }
 detailSurvivalEnvironment(m,map,scene,room,low);if(room==null)for(const p of map.dressing||[])drawDressing(m,p,low);
 applySurfacePack(m,map,room);return new Float32Array(m.data)}
-const MOB_PROFILES={"rat":{"family":"quad","size":0.47,"width":0.87,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[11,8,16,6,1.7],"heightScale":1},"dog":{"family":"quad","size":1.035,"width":0.925,"crest":1,"gear":1,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[21,10,23,7,1.3],"heightScale":1},"flesh":{"family":"quad","size":1.09,"width":0.98,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,23,23,7,0.7],"heightScale":1},"boar":{"family":"quad","size":1.145,"width":1.035,"crest":3,"gear":3,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[18,19,24,10,0.85],"heightScale":1},"maroder":{"family":"soldier","size":1.2,"width":1.09,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudodog":{"family":"quad","size":0.98,"width":1.145,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[21,10,23,7,1.3],"heightScale":1},"zombie":{"family":"mutant","size":1.035,"width":1.2,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"snork":{"family":"crawler","size":1.09,"width":0.87,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[13,11,19,7,1.35],"heightScale":1},"fracture":{"family":"mutant","size":1.145,"width":0.925,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":true,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1.1},"mercenary":{"family":"soldier","size":1.2,"width":0.98,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"bloodsucker":{"family":"mutant","size":0.98,"width":1.035,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"poltergeist":{"family":"spirit","size":1.035,"width":1.09,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"psydog":{"family":"quad","size":1.09,"width":1.145,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[21,10,23,7,1.3],"heightScale":1},"burer":{"family":"caster","size":1.145,"width":1.2,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"monolith":{"family":"soldier","size":1.2,"width":0.87,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudogiant":{"family":"quad","size":0.98,"width":0.925,"crest":3,"gear":3,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[21,10,23,7,1.3],"heightScale":1},"controller":{"family":"caster","size":1.035,"width":0.98,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"exo_monolith":{"family":"soldier","size":1.09,"width":1.035,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera":{"family":"quad","size":1.145,"width":1.09,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[24,16,30,8,1.25],"heightScale":1},"phantom":{"family":"spirit","size":1.2,"width":1.145,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"tushkano":{"family":"quad","size":0.47,"width":1.2,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[11,8,16,6,1.7],"heightScale":1},"swamp_flesh":{"family":"quad","size":1.035,"width":0.87,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,23,23,7,0.7],"heightScale":1},"blind_dog_pack":{"family":"quad","size":1.09,"width":0.925,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[21,10,23,7,1.3],"heightScale":1},"bandit_sniper":{"family":"soldier","size":1.145,"width":0.98,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"bandit_chief":{"family":"soldier","size":1.2,"width":1.035,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"snork_stalker":{"family":"crawler","size":0.98,"width":1.09,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[13,11,19,7,1.35],"heightScale":1},"swamp_beast":{"family":"quad","size":1.035,"width":1.145,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[15,20,30,10,0.85],"heightScale":1},"military_spetsnaz":{"family":"soldier","size":1.09,"width":1.2,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_sniper":{"family":"soldier","size":1.145,"width":0.87,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"pyro_poltergeist":{"family":"spirit","size":0.98,"width":0.98,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"electric_poltergeist":{"family":"spirit","size":1.035,"width":1.035,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"bloodsucker_black":{"family":"mutant","size":1.09,"width":1.09,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"burer_elder":{"family":"caster","size":1.145,"width":1.145,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"controller_master":{"family":"caster","size":1.2,"width":1.2,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"mutant_bear":{"family":"quad","size":1.617,"width":0.87,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[29,21,28,10,0.65],"heightScale":1},"monolith_gauss_sniper":{"family":"soldier","size":1.035,"width":0.925,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"giant_titan":{"family":"giant","size":1.798,"width":0.98,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera_shadow":{"family":"quad","size":1.145,"width":1.035,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[24,16,30,8,1.25],"heightScale":1},"dark_stalker_boss":{"family":"soldier","size":1.2,"width":1.09,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"master_zone":{"family":"caster","size":0.98,"width":1.145,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"cat_bayun":{"family":"quad","size":1.035,"width":1.2,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[16,9,21,6,1.4],"heightScale":1},"zombie_civilian":{"family":"mutant","size":1.09,"width":0.87,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"zombie_soldier":{"family":"mutant","size":1.145,"width":0.925,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"renegade_scout":{"family":"soldier","size":1.2,"width":0.98,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"renegade_veteran":{"family":"soldier","size":0.98,"width":1.035,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudodog_stalker":{"family":"quad","size":1.035,"width":1.09,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[21,10,23,7,1.3],"heightScale":1},"swamp_snork":{"family":"crawler","size":1.09,"width":1.145,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[13,11,19,7,1.35],"heightScale":1},"dark_stalker_novice":{"family":"soldier","size":1.145,"width":1.2,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"military_heavy":{"family":"soldier","size":1.2,"width":0.87,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_infiltrator":{"family":"quad","size":0.47,"width":0.925,"crest":2,"gear":2,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[11,8,16,6,1.7],"heightScale":1},"bloodsucker_swamp":{"family":"mutant","size":1.035,"width":0.98,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"poltergeist_frost":{"family":"spirit","size":1.09,"width":1.035,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"burer_telekinesis":{"family":"caster","size":1.145,"width":1.09,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"controller_psystorm":{"family":"caster","size":1.2,"width":1.145,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"mutant_boar_iron":{"family":"quad","size":0.98,"width":1.2,"crest":3,"gear":1,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[18,19,24,10,0.85],"heightScale":1},"pseudogiant_fury":{"family":"quad","size":1.035,"width":0.87,"crest":0,"gear":2,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[21,10,23,7,1.3],"heightScale":1},"monolith_berserk":{"family":"soldier","size":1.09,"width":0.925,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"monolith_commander":{"family":"soldier","size":1.145,"width":0.98,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera_frost":{"family":"quad","size":1.2,"width":1.035,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[24,16,30,8,1.25],"heightScale":1},"chimera_blood":{"family":"quad","size":0.98,"width":1.09,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[24,16,30,8,1.25],"heightScale":1},"phantom_monolith":{"family":"spirit","size":1.035,"width":1.145,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"gargoyle_mutant":{"family":"wing","size":1.09,"width":1.2,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"spectral_stalker":{"family":"soldier","size":1.145,"width":0.87,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"titan_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"avatar_noosphere_prime":{"family":"spirit","size":0.98,"width":0.98,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1}};
+const MOB_PROFILES={"rat":{"family":"quad","size":0.47,"width":0.87,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[11,8,16,6,1.7],"heightScale":1},"dog":{"family":"quad","size":1.035,"width":0.925,"crest":1,"gear":1,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[21,10,23,7,1.3],"heightScale":1},"flesh":{"family":"quad","size":1.09,"width":0.98,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,23,23,7,0.7],"heightScale":1},"boar":{"family":"quad","size":1.145,"width":1.035,"crest":3,"gear":3,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[18,19,24,10,0.85],"heightScale":1},"maroder":{"family":"soldier","size":1.2,"width":1.09,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudodog":{"family":"quad","size":0.98,"width":1.145,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[21,10,23,7,1.3],"heightScale":1},"zombie":{"family":"mutant","size":1.035,"width":1.2,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"snork":{"family":"crawler","size":1.09,"width":0.87,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[13,11,19,7,1.35],"heightScale":1},"fracture":{"family":"mutant","size":1.145,"width":0.925,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":true,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1.1},"mercenary":{"family":"soldier","size":1.2,"width":0.98,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"bloodsucker":{"family":"mutant","size":0.98,"width":1.035,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"poltergeist":{"family":"spirit","size":1.035,"width":1.09,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"psydog":{"family":"quad","size":1.09,"width":1.145,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[21,10,23,7,1.3],"heightScale":1},"burer":{"family":"caster","size":1.145,"width":1.2,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"monolith":{"family":"soldier","size":1.2,"width":0.87,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudogiant":{"family":"giant","size":0.98,"width":1.2,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#555a55","anatomy":[26,21,24,9,0.75],"heightScale":1},"controller":{"family":"caster","size":1.035,"width":0.98,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"exo_monolith":{"family":"soldier","size":1.09,"width":1.035,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera":{"family":"quad","size":1.145,"width":1.09,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[24,16,30,8,1.25],"heightScale":1},"phantom":{"family":"spirit","size":1.2,"width":1.145,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"tushkano":{"family":"quad","size":0.47,"width":1.2,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[11,8,16,6,1.7],"heightScale":1},"swamp_flesh":{"family":"quad","size":1.035,"width":0.87,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,23,23,7,0.7],"heightScale":1},"blind_dog_pack":{"family":"quad","size":1.09,"width":0.925,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[21,10,23,7,1.3],"heightScale":1},"bandit_sniper":{"family":"soldier","size":1.145,"width":0.98,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"bandit_chief":{"family":"soldier","size":1.2,"width":1.035,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"snork_stalker":{"family":"crawler","size":0.98,"width":1.09,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[13,11,19,7,1.35],"heightScale":1},"swamp_beast":{"family":"quad","size":1.035,"width":1.145,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[15,20,30,10,0.85],"heightScale":1},"military_spetsnaz":{"family":"soldier","size":1.09,"width":1.2,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_sniper":{"family":"soldier","size":1.145,"width":0.87,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"pyro_poltergeist":{"family":"spirit","size":0.98,"width":0.98,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"electric_poltergeist":{"family":"spirit","size":1.035,"width":1.035,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"bloodsucker_black":{"family":"mutant","size":1.09,"width":1.09,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"burer_elder":{"family":"caster","size":1.145,"width":1.145,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"controller_master":{"family":"caster","size":1.2,"width":1.2,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"mutant_bear":{"family":"quad","size":1.617,"width":0.87,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[29,21,28,10,0.65],"heightScale":1},"monolith_gauss_sniper":{"family":"soldier","size":1.035,"width":0.925,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"giant_titan":{"family":"giant","size":1.798,"width":0.98,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera_shadow":{"family":"quad","size":1.145,"width":1.035,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[24,16,30,8,1.25],"heightScale":1},"dark_stalker_boss":{"family":"soldier","size":1.2,"width":1.09,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"master_zone":{"family":"caster","size":0.98,"width":1.145,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"cat_bayun":{"family":"quad","size":1.035,"width":1.2,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[16,9,21,6,1.4],"heightScale":1},"zombie_civilian":{"family":"mutant","size":1.09,"width":0.87,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"zombie_soldier":{"family":"mutant","size":1.145,"width":0.925,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"renegade_scout":{"family":"soldier","size":1.2,"width":0.98,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"renegade_veteran":{"family":"soldier","size":0.98,"width":1.035,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudodog_stalker":{"family":"quad","size":1.035,"width":1.09,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[21,10,23,7,1.3],"heightScale":1},"swamp_snork":{"family":"crawler","size":1.09,"width":1.145,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[13,11,19,7,1.35],"heightScale":1},"dark_stalker_novice":{"family":"soldier","size":1.145,"width":1.2,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"military_heavy":{"family":"soldier","size":1.2,"width":0.87,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_infiltrator":{"family":"soldier","size":0.47,"width":0.925,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1],"heightScale":1},"bloodsucker_swamp":{"family":"mutant","size":1.035,"width":0.98,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"poltergeist_frost":{"family":"spirit","size":1.09,"width":1.035,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"burer_telekinesis":{"family":"caster","size":1.145,"width":1.09,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"controller_psystorm":{"family":"caster","size":1.2,"width":1.145,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"mutant_boar_iron":{"family":"quad","size":0.98,"width":1.2,"crest":3,"gear":1,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[18,19,24,10,0.85],"heightScale":1},"pseudogiant_fury":{"family":"giant","size":1.035,"width":1.32,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#726b58","anatomy":[26,21,24,9,0.75],"heightScale":1},"monolith_berserk":{"family":"soldier","size":1.09,"width":0.925,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"monolith_commander":{"family":"soldier","size":1.145,"width":0.98,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera_frost":{"family":"quad","size":1.2,"width":1.035,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[24,16,30,8,1.25],"heightScale":1},"chimera_blood":{"family":"quad","size":0.98,"width":1.09,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[24,16,30,8,1.25],"heightScale":1},"phantom_monolith":{"family":"spirit","size":1.035,"width":1.145,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"gargoyle_mutant":{"family":"wing","size":1.09,"width":1.2,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"spectral_stalker":{"family":"soldier","size":1.145,"width":0.87,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"titan_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"avatar_noosphere_prime":{"family":"spirit","size":0.98,"width":0.98,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1}};
+function combatProfile(id){
+ const p=MOB_PROFILES[id];if(p?.family!=='soldier')return null;
+ const sniper=/sniper/.test(id),heavy=!!p.heavy;
+ return {range:sniper?330:heavy?260:240,preferred:sniper?235:155,aim:sniper?.95:.65,burst:sniper?1:3,cool:sniper?2.7:heavy?2.3:2.4,speed:sniper?520:420,weapon:sniper?'sniper_svd':'rifle_ak74'};
+}
+function npcRecord(run,p){return run.npcState?.[String(run.room??'outside')+':'+p.id]||p;}
+function npcRole(p){if(/guard/.test(p.id))return 'guard';if(/guide/.test(p.id))return 'scout';let n=0;for(const c of String(p.id))n+=c.charCodeAt(0);return ['scout','medic','technician'][n%3];}
+function poseActorMesh(m,first,x,z,pose={},shape={}){
+ const scale=shape.scale||1,width=shape.width||1,height=shape.height||1,angle=pose.angle||0;
+ const death=clamp(pose.death||0,0,1),fall=death*death*(3-2*death)*Math.PI*.49;
+ const ca=Math.cos(angle),sa=Math.sin(angle),cf=Math.cos(fall),sf=Math.sin(fall);
+ const hurt=Math.sin(clamp(pose.hurt||0,0,1)*Math.PI)*(1-death),kick=hurt*1.7;
+ let lowest=Infinity;
+ for(let i=first;i<m.data.length;i+=10){
+  const dx=(m.data[i]-x)*scale*width,y=m.data[i+1]*scale*height,dz=(m.data[i+2]-z)*scale;
+  const px=dx*cf-y*sf,py=dx*sf+y*cf;lowest=Math.min(lowest,py);
+  m.data[i]=x+px*ca-dz*sa;m.data[i+1]=py;m.data[i+2]=z+px*sa+dz*ca;
+  const n=norm([m.data[i+6]/width,m.data[i+7]/height,m.data[i+8]]),nx=n[0]*cf-n[1]*sf,ny=n[0]*sf+n[1]*cf;
+  m.data[i+6]=nx*ca-n[2]*sa;m.data[i+7]=ny;m.data[i+8]=nx*sa+n[2]*ca;
+ }
+ const lift=death>0?Math.max(0,.6-lowest):0;
+ for(let i=first;i<m.data.length;i+=10){m.data[i+1]+=lift+kick;m.data[i]-=Math.sin(angle)*kick;m.data[i+2]+=Math.cos(angle)*kick;}
+}
 function entityMesh(world,map,run,enemyData,time,eco,animation={}){const m=new Mesh(),room=run.room==null?null:map.rooms[run.room];
 const w=room||map;const player=run;m.materialMode=8;
-function human(x,z,c,isPlayer=false){
- const first=m.data.length,pose=isPlayer?animation.player:(animation.actors?.get(x+','+z)),moving=pose?.speed||0;
- const phase=pose?.phase||0,bob=Math.sin(phase*2)*.7*moving+Math.sin(time*2)*.22,stride=Math.sin(phase)*4*moving;
- const recoil=isPlayer?(animation.recoil||0):0;
+function human(x,z,c,isPlayer=false,appearance={}){
+ const first=m.data.length,pose=appearance.pose||(isPlayer?animation.player:(animation.actors?.get(x+','+z))),moving=pose?.speed||0;
+ const phase=pose?.phase||0,bob=Math.sin(phase*2)*.7*moving+Math.sin(time*2)*.22,stride=Math.sin(phase)*8*moving;
+ const legPose=side=>({foot:stride*side,lift:Math.max(0,-Math.cos(phase)*side)*moving*4.5,knee:stride*side*.45-2});
+ const recoil=isPlayer?(animation.recoil||0):(pose?.recoil??pose?.attack??0);
  m.shadow(x,z,14,11);
- // Lower body, boots and articulated legs
+ // Feet lift only in the swing half of the step; knees follow the planted ankle.
  for(const side of [-1,1]){
-  const px=x+side*6.4;
-  m.branch(px,19,z+2,px+side*.7,8,z+stride*side,4.0,'#41483c',7,8);
-  m.branch(px+side*.7,8,z+stride*side,px+side,2,z+3+stride*side,4.5,'#2b312d',7,8);
-  m.ellipsoid(px+side,3,z-1+stride*side,5,3.3,8,'#292d29',4,7,8);
+  const px=x+side*6.4,leg=legPose(side),kneeY=9+leg.lift*.55;
+  m.branch(px,19,z+2,px+side*.7,kneeY,z+leg.knee,4.0,'#41483c',eco?5:7,8);
+  m.branch(px+side*.7,kneeY,z+leg.knee,px+side,3+leg.lift,z+leg.foot,4.1,'#2b312d',eco?5:7,8);
+  m.ellipsoid(px+side,3+leg.lift,z-2+leg.foot,4.7,3.0,7.7,'#292d29',eco?3:4,eco?6:7,8);
  }
- m.ellipsoid(x,20+bob,z,9.5,11,7.5,c,6,10,57);
- m.ellipsoid(x,29+bob,z,11.5,8,8.5,c,6,10,57);
- m.box(x,21+bob,z+8,19,18,5,isPlayer?'#4a5844':'#46504a',28); // backpack
- m.box(x,25+bob,z-8,13,14,2,isPlayer?'#76785f':'#5b6657',57);
+ m.ellipsoid(x,20+bob,z,9.5,11,7.5,c,6,10,60);
+ m.ellipsoid(x,29+bob,z,11.5,8,8.5,c,6,10,60);
+ m.box(x,21+bob,z+8,19,18,5,isPlayer?'#4a5844':'#46504a',61); // backpack
+ m.box(x,25+bob,z-8,13,14,2,isPlayer?'#76785f':'#5b6657',60);
  for(const side of [-1,1]){
-  m.box(x+side*4.5,24+bob,z-9.5,7.6,9,2,isPlayer?'#4d594a':'#505b4b',28);
+  m.box(x+side*4.5,24+bob,z-9.5,7.6,9,2,isPlayer?'#4d594a':'#505b4b',61);
   m.box(x+side*4.5,28+bob,z-10.7,5.8,1,.5,'#7e826b',8);
-  m.ellipsoid(x+side*7,10,z-3+stride*side,3.8,4.5,2.2,'#404c40',4,7,28);
+  const leg=legPose(side);m.ellipsoid(x+side*7,10+leg.lift*.55,z+leg.knee-2,3.8,4.0,2.2,'#404c40',4,7,61);
  }
- m.box(x,17+bob,z-7,17,2,3,'#3b4638',28);
+ m.box(x,17+bob,z-7,17,2,3,'#3b4638',61);
 
+ const headStart=m.data.length;
  m.ellipsoid(x,39+bob,z-1,7.7,8.2,8.4,isPlayer?'#737e66':'#6a7064',6,11,8);
- m.ellipsoid(x,44+bob,z-1,8.7,3.6,9,'#424e42',5,10,8); // helmet
+ if(appearance.hood){m.ellipsoid(x,42+bob,z+1,9,8.5,9.5,c,5,10,60);m.box(x,36+bob,z-8,11,4,2,'#363d32',60);}
+ else m.ellipsoid(x,44+bob,z-1,8.7,3.6,9,'#424e42',5,10,8); // helmet
  m.ellipsoid(x,39+bob,z-9,6.8,3.1,2.3,'#1b2c30',4,9,8); // visor
  m.ellipsoid(x,34+bob,z-11,4,4.3,3.3,'#515c50',5,8,8); // respirator
  m.box(x-6.2,35+bob,z-11.5,2.3,2,1.8,'#9eb4ad',8);
  m.box(x+6.2,35+bob,z-11.5,2.3,2,1.8,'#9eb4ad',8);
+ const headYaw=(pose?.aim||isPlayer&&recoil>0||pose?.death)?0:Math.sin(time*.8+x*.013+z*.007)*.14*(1-moving*.8);
+ const headCos=Math.cos(headYaw),headSin=Math.sin(headYaw);
+ for(let i=headStart;i<m.data.length;i+=10){const dx=m.data[i]-x,dz=m.data[i+2]-z,nx=m.data[i+6],nz=m.data[i+8];m.data[i]=x+dx*headCos-dz*headSin;m.data[i+2]=z+dx*headSin+dz*headCos;m.data[i+6]=nx*headCos-nz*headSin;m.data[i+8]=nx*headSin+nz*headCos;}
  // A single articulated pair of arms follows the actual weapon family.
- const weaponId=isPlayer?(window.game?.state?.equipment?.weapon||''):'rifle_ak74';
+ const weaponId=isPlayer?(window.game?.state?.equipment?.weapon||''):(appearance.weapon||'');
  const family=!weaponId?'none':weaponId.startsWith('knife_')?'knife':weaponId.startsWith('pistol_')?'pistol':weaponId.startsWith('shotgun_')?'shotgun':weaponId.startsWith('sniper_')||/mosin|vintorez/.test(weaponId)?'sniper':'rifle';
- const kick=recoil*3,gx=x+10,gy=25+bob,gz=z-14+kick;
+ const ready=isPlayer?.65+recoil*.35:(pose?.aimBlend??(pose?.aim||recoil>0?1:0));
+ const kick=recoil*3,gx=x+10,gy=22+bob+ready*7,gz=z-9-ready*6+kick;
  const twoHanded=['rifle','shotgun','sniper'].includes(family);
  const hands=twoHanded?[[x-12,23+bob,z-6],[gx-2,gy-1,gz-9],[x+15,22+bob,z-3],[gx,gy-2,gz+3]]:family==='pistol'?[[x-12,24+bob,z-5],[gx-2,gy-1,gz],[x+15,24+bob,z-5],[gx,gy-1,gz]]:[[x-14,22+bob,z],[x-15,16+bob,z-3+stride*.3],[x+14,23+bob,z-4],[x+13,family==='knife'?24+bob:16+bob,family==='knife'?z-14:z-3-stride*.3]];
  for(let side=0;side<2;side++){
   const sign=side?1:-1,elbow=hands[side*2],hand=hands[side*2+1];
-  m.branch(x+sign*12,31+bob,z,elbow[0],elbow[1],elbow[2],3.9,c,6,57);
-  m.branch(...elbow,...hand,3.1,c,6,57);
+  m.branch(x+sign*12,31+bob,z,elbow[0],elbow[1],elbow[2],3.9,c,6,60);
+  m.branch(...elbow,...hand,3.1,c,6,60);
   m.ellipsoid(x+sign*12,31+bob,z,4.6,4.3,4.8,isPlayer?'#64705a':'#586055',3,7,8);
   m.ellipsoid(...hand,3.4,2.8,3.5,'#343e34',3,7,8);
  }
@@ -8343,40 +8373,95 @@ function human(x,z,c,isPlayer=false){
   m.branch(gx,gy,gz-8,gx,gy,gz-8-barrel,1.1,'#29332f',6,8);
   m.box(gx,gy-2,gz-9,4,3.4,10,family==='shotgun'?'#695842':'#4e5744',8);
   if(family==='shotgun')m.branch(gx,gy-2.2,gz-10,gx,gy-2.2,gz-25,.8,'#39443a',5,8);
-  else m.box(gx,gy-9,gz-1,3,8,4,'#3b4439',8);
+  else{m.box(gx,gy-7,gz-1,3,6,4,'#3b4439',8);m.box(gx,gy-11,gz+1,3,4,4,'#42493d',8);}
   if(family==='sniper'){
    m.box(gx,gy+3,gz,2,3,5,'#343e37',8);
    m.branch(gx,gy+6,gz+3,gx,gy+6,gz-8,1.9,'#283930',7,8);
    m.ellipsoid(gx,gy+6,gz+3,1.5,1.5,.4,'#526d6a',3,6,8);
   }else m.box(gx,gy+2.8,gz-5,1.4,1.8,3,'#626b5d',8);
   m.box(gx,gy+1,gz-7-barrel,1.5,2,1.2,'#636c5e',8);
+  if(pose?.flash||isPlayer&&recoil>.45){m.ellipsoid(gx,gy,gz-10-barrel,2.5,2.5,4.5,'#ffd49a',3,6,9);}
  }
  // Fabric webbing and buckles, with no second weapon mesh over the held gun.
  for(const dx of [-7,7]){
   m.branch(x+dx,34+bob,z-8,x+dx,18+bob,z-8,.9,'#303b2e',4,8);
-  m.box(x+dx,21+bob,z-10,5,6,3,'#5d6149',28);
+  m.box(x+dx,21+bob,z-10,5,6,3,'#5d6149',61);
   m.box(x+dx,24+bob,z-11.7,2.2,1.5,.6,'#8c8d72',8);
  }
  for(const dy of [22,30])m.box(x,dy+bob,z+11,17,.8,1,'#73735a',8);
- for(const dx of [-10,10])m.box(x+dx,24+bob,z+8,3,9,4,'#58614a',28);
- m.box(x,37+bob,z+9,12,2,5,'#536047',28);
+ for(const dx of [-10,10])m.box(x+dx,24+bob,z+8,3,9,4,'#58614a',61);
+ m.box(x,37+bob,z+9,12,2,5,'#536047',61);
  for(const dx of [-5,5])m.ellipsoid(x+dx,34+bob,z-12,3,3,3,'#303a34',3,6,8);
- const angle=pose?.angle||0,cs=Math.cos(angle),sn=Math.sin(angle);
- for(let i=first;i<m.data.length;i+=10){const dx=m.data[i]-x,dz=m.data[i+2]-z,nx=m.data[i+6],nz=m.data[i+8];m.data[i]=x+dx*cs-dz*sn;m.data[i+2]=z+dx*sn+dz*cs;m.data[i+6]=nx*cs-nz*sn;m.data[i+8]=nx*sn+nz*cs;}
+ // Silhouette details depend on role; small seams are skipped in economy mode.
+ if(appearance.gear!=null)for(let j=0;j<1+appearance.gear%3;j++)m.box(x-7+j*6,19+bob,z-10,4,5+appearance.gear*.4,3,'#696b52',61);
+ if(appearance.heavy)for(const side of [-1,1]){
+  m.box(x+side*14,29+bob,z,6,10,12,'#59665c',61);
+  m.branch(x+side*14,32+bob,z+7,x+side*9,7,z+5+stride*side,1.4,'#8c9380',5,27);
+ }
+ if(appearance.role==='medic'){
+  m.box(x-13,27+bob,z-3,5,6,2,'#b7b49b',8);m.box(x-13,28+bob,z-4.2,3,1,1,'#945b48',8);m.box(x-13,27+bob,z-4.2,1,3,1,'#945b48',8);
+  m.box(x,23+bob,z+12,13,11,4,'#a3a387',61);
+ }else if(appearance.role==='technician'){
+  m.box(x+12,15+bob,z,6,7,7,'#6d5a40',29);
+  for(let j=0;j<3;j++)m.branch(x+10+j*2,17+bob,z-3,x+10+j*2,26+bob,z-3,.6,'#8b9081',4,27);
+ }else if(isPlayer||appearance.role==='scout')m.branch(x-10,38+bob,z+11,x+10,38+bob,z+11,3.2,'#78775b',7,61);
+ if(!eco){
+  for(const side of [-1,1]){
+   m.branch(x+side*10,30+bob,z-3,x+side*11,23+bob,z-3,.35,'#9a9675',3,8);
+   m.box(x+side*8,15+bob,z+1,4,5,4,'#60694f',61);
+   const leg=legPose(side);m.box(x+side*6,4+leg.lift,z-5+leg.foot,5,.6,2,'#696a53',8);
+  }
+ }
+ poseActorMesh(m,first,x,z,pose||{},{scale:appearance.scale||1,width:appearance.width||1});
+
 
 }
 function mob(x,z,id){
  const p=MOB_PROFILES[id]||MOB_PROFILES.zombie,pose=animation.actors?.get(x+','+z)||{},first=m.data.length;
- const phase=(pose.phase||0)*(p.anatomy?.[4]||1),speed=pose.speed||0,attack=pose.attack||0,breathe=Math.sin(time*1.8+p.gear)*.55;
+ if(p.family==='soldier'){human(x,z,p.color,false,{pose,weapon:combatProfile(id).weapon,heavy:p.heavy,hood:/maroder|bandit|renegade/.test(id),scale:p.size,width:p.width,gear:p.gear});return;}
+ const phase=(pose.phase||0)*(p.anatomy?.[4]||1),speed=pose.speed||0,attack=(pose.attack||0)-(pose.windup||0)*.65,breathe=Math.sin(time*1.8+p.gear)*.55;
  const stride=Math.sin(phase)*speed,hop=Math.abs(Math.sin(phase))*speed,c=p.color,dark='#30352e',bone='#b2a48b';
- const ell=(px,y,pz,rx,ry,rz,col=c)=>m.ellipsoid(x+px,y,z+pz,rx,ry,rz,col,eco?4:6,eco?6:9,8);
- const limb=(ax,ay,az,bx,by,bz,r,col=c)=>m.branch(x+ax,ay,z+az,x+bx,by,z+bz,r,col,eco?4:6,8);
+ // Pigment is baked in each body part's own coordinates before animation.
+ const fur=p.family==='quad'&&/rat|dog|boar|bear|chimera|cat/.test(id),patternSeed=Array.from(id).reduce((n,ch)=>n+ch.charCodeAt(0),0)*.037;
+ const pigment=(i,u,v,w)=>{
+  const patch=.5+.5*Math.sin(u*4.7+Math.sin(v*3.2+patternSeed)+w*3.1+patternSeed);
+  const fleck=.5+.5*Math.sin(u*8.1-v*5.3+w*6.7+patternSeed);
+  const back=fur?Math.max(0,v)*.22:0,shade=(fur?.77+.29*patch:.84+.22*patch)-back+(fleck-.5)*(fur?.06:.035);
+  const belly=fur?Math.max(0,-v)*.13:0;
+  m.data[i+3]=clamp(m.data[i+3]*(shade+belly),0,1);
+  m.data[i+4]=clamp(m.data[i+4]*(shade+belly*.62),0,1);
+  m.data[i+5]=clamp(m.data[i+5]*(shade-belly*.12),0,1);
+ };
+ const ell=(px,y,pz,rx,ry,rz,col=c)=>{
+  const firstPart=m.data.length,skin=col===c;
+  m.ellipsoid(x+px,y,z+pz,rx,ry,rz,col,eco?4:6,eco?6:10,skin?62:8);
+  if(skin)for(let i=firstPart;i<m.data.length;i+=10) pigment(i,(m.data[i]-x-px)/rx,(m.data[i+1]-y)/ry,(m.data[i+2]-z-pz)/rz);
+ };
+ const limb=(ax,ay,az,bx,by,bz,r,col=c)=>{
+  const firstPart=m.data.length,skin=col===c;
+  m.branch(x+ax,ay,z+az,x+bx,by,z+bz,r,col,eco?4:6,skin?62:8);
+  if(!skin)return;
+  const axis=norm([bx-ax,by-ay,bz-az]),length=Math.hypot(bx-ax,by-ay,bz-az)||1;
+  let side=norm(cross(axis,[0,0,1]));if(Math.hypot(...side)<.01)side=[1,0,0];const up=norm(cross(axis,side));
+  for(let i=firstPart;i<m.data.length;i+=10){
+   const q=[m.data[i]-x-ax,m.data[i+1]-ay,m.data[i+2]-z-az],along=q[0]*axis[0]+q[1]*axis[1]+q[2]*axis[2];
+   const radial=q.map((v,k)=>v-axis[k]*along),n=norm(radial);
+   m.data[i+6]=n[0];m.data[i+7]=n[1];m.data[i+8]=n[2];
+   pigment(i,radial.reduce((sum,v,k)=>sum+v*side[k],0)/r,along/length*2-1,radial.reduce((sum,v,k)=>sum+v*up[k],0)/r);
+  }
+ };
  const quad=p.family==='quad'||p.family==='crawler';
  if(quad){
   const [cy,breadth,length,head]=p.anatomy;
   ell(0,cy+hop*2,4,breadth*p.width,Math.max(7,cy*.55),length);
   if(/boar|bear/.test(id))ell(0,cy+7, -8,breadth*.8,10,12);
-  for(const side of [-1,1])for(const front of [-1,1]){const swing=stride*front*side*8;limb(side*breadth*.7,cy,front*length*.65,side*breadth,6,front*length*.7+swing,3);ell(side*breadth,3,front*length*.7+swing,3.5,3,5,dark)}
+  for(const side of [-1,1])for(const front of [-1,1]){
+   const legPhase=phase+(front*side>0?0:Math.PI),swing=Math.sin(legPhase)*speed*8,lift=Math.max(0,-Math.cos(legPhase))*speed*3.8;
+   const kneeZ=front*length*.68+swing*.5+(front>0?3:-3),pawZ=front*length*.7+swing,kneeY=Math.max(7,cy*.48)+lift*.4;
+   limb(side*breadth*.7,cy,front*length*.65,side*breadth*.9,kneeY,kneeZ,3);
+   limb(side*breadth*.9,kneeY,kneeZ,side*breadth,3+lift,pawZ,2.4);ell(side*breadth,3+lift,pawZ,3.5,3,5,dark);
+   if(!eco)for(let k=-1;k<=1;k++)limb(side*breadth+k,2+lift,pawZ-2,side*breadth+k,1+lift,pawZ-6,.55,bone);
+  }
   for(let h=0;h<p.heads;h++){const hx=p.heads===2?(h?9:-9):0;ell(hx,cy+2, -length-attack*6,head,head,head+2);ell(hx,cy-2,-length-head-attack*6,head*.65,head*.55,head*.9,dark);for(const side of [-1,1]){limb(hx+side*6,cy+8,-24,hx+side*8,cy+17+p.crest,-22,2);if(p.tusks)limb(hx+side*7,cy-7,-29,hx+side*10,cy+2,-39,2,bone)}}
   if(p.tail){limb(0,cy,25,8+stride*7,cy+5,42,2);limb(8+stride*7,cy+5,42,14+stride*9,cy+10,52,1)}
   if(p.family==='quad'&&!/flesh|rat/.test(id)){
@@ -8413,7 +8498,7 @@ function mob(x,z,id){
   for(const side of [-1,1]){const reach=/zombie/.test(id)?12:7;limb(side*14,24,-4,side*15,24+attack*3,-reach-attack*10,2);for(let k=0;k<3;k++)limb(side*15+k-1,24,-reach-attack*10,side*15+k-1,21,-reach-5-attack*10,.65,bone)}
   if(p.longarm)ell(15,29,0,7,10,6,dark);
  }
- if(quad&&!eco)for(const side of [-1,1])for(let k=0;k<3;k++)limb(side*p.anatomy[1]+k-1,2,-p.anatomy[2]*.7-2,side*p.anatomy[1]+k-1,1,-p.anatomy[2]*.7-6,.7,bone);
+
  if(!eco){
   if(p.family==='soldier'){
    m.box(x,23,z-9,15,14,2,'#42483c',8);
@@ -8427,8 +8512,25 @@ function mob(x,z,id){
    if(p.coat)for(let k=0;k<4;k++)m.box(x,15+k*5,z-12,1.2,1.2,1,'#9a9278',8);
   }
  }
- const angle=pose.angle||0,cs=Math.cos(angle),sn=Math.sin(angle);
- for(let i=first;i<m.data.length;i+=10){const dx=(m.data[i]-x)*p.size,dz=(m.data[i+2]-z)*p.size,nx=m.data[i+6],nz=m.data[i+8];m.data[i]=x+dx*cs-dz*sn;m.data[i+1]*=p.size*p.heightScale*(1-(pose.death||0)*.88);m.data[i+1]+=Math.sin((pose.hurt||0)*Math.PI)*2;m.data[i+2]=z+dx*sn+dz*cs;m.data[i+6]=nx*cs-nz*sn;m.data[i+8]=nx*sn+nz*cs;}
+ if(quad){
+  const [cy,breadth,length,head]=p.anatomy;
+  for(let h=0;h<p.heads;h++){
+   const hx=p.heads===2?(h?9:-9):0,front=-length-head-attack*6;
+   ell(hx,cy-5-attack*2,front,head*.56,1.5,head*.7,'#4b4438');
+   for(const side of [-1,1]){
+    ell(hx+side*head*.65,cy+4,-length-head*.55-attack*6,1.2,1.2,1.1,'#b6a26d');
+    if(!eco)for(let tooth=0;tooth<3;tooth++)limb(hx+side*head*.43,cy-2,front-2+tooth*2,hx+side*head*.40,cy-4-attack,front-2+tooth*2,.4,bone);
+
+   }
+  }
+ }else if(p.family!=='spirit'){
+  for(const side of [-1,1]){
+   ell(side*7,9,stride*side*6-2,3.3,4,2.2,dark);
+   if(!eco)for(let k=0;k<3;k++)limb(side*16+k*.8,15,-4-attack*17,side*16+k*.8,11,-7-attack*17,.6,bone);
+  }
+  if(!eco)for(let j=0;j<3;j++)limb(-5,30+j*3,-7,5,29+j*3,-8,.4,'#6f6957');
+ }
+ poseActorMesh(m,first,x,z,pose,{scale:p.size,height:p.heightScale});
 }
 for(const c of w.crates){m.shadow(c.x,c.y,17,14);const opened=run.opened.includes(c.id);if(!opened)m.disk(c.x,.55,c.y,26,'#8b764a',10);m.box(c.x,0,c.y,29,20,25,opened?'#434239':'#6f6047',4);if(!opened){m.box(c.x,21,c.y,32,4,27,'#897353',4);m.box(c.x,0,c.y+14,36,6,3,'#978366',4)}}
 for(const c of w.crates){
@@ -8438,8 +8540,9 @@ for(const c of w.crates){
  m.box(c.x,10,c.y+14,4,5,2,opened?'#4b5045':'#ac9c70',3);
  for(const dx of [-10,10])m.box(c.x+dx,17,c.y-13,4,4,1.5,col,3);
 }
-for(const p of w.people){m.disk(p.x,.7,p.y,16,'#344d4b',12,8);human(p.x,p.y,'#69715e')}
-for(const e of w.enemies){if(run.defeated.includes(e.id)&&((run.worldTime||0)-(run.defeatedAt?.[e.id]??-100)>1.6))continue;const v=enemyData(e);if(Math.hypot(run.x-v.x,run.y-v.y)>440)continue;m.disk(v.x,.7,v.y,16,'#4e3932',12,8);mob(v.x,v.y,e.enemyId)}
+for(const p of w.people){const d=npcRecord(run,p),role=npcRole(p);if(Math.hypot(run.x-d.x,run.y-d.y)>500)continue;human(d.x,d.y,role==='medic'?'#8b9581':role==='technician'?'#806c4f':'#69715e',false,{role,hood:role==='scout',weapon:role==='guard'?'rifle_ak74':role==='scout'?'pistol_pm':'',pose:animation.actors?.get(d.x+','+d.y)});}
+for(const e of w.enemies){if(run.defeated.includes(e.id)&&((run.worldTime||0)-(run.defeatedAt?.[e.id]??-100)>1.6))continue;const v=enemyData(e);if(Math.hypot(run.x-v.x,run.y-v.y)>440)continue;if(!run.defeated.includes(e.id))m.disk(v.x,.7,v.y,16,'#4e3932',12,8);mob(v.x,v.y,e.enemyId)}
+for(const p of run.enemyProjectiles||[]){if(p.room!==run.room)continue;const length=Math.hypot(p.dx,p.dy)||1;m.branch(p.x,25,p.y,p.x-p.dx/length*10,25,p.y-p.dy/length*10,.48,'#e8b97c',3,9);}
 // Weathered evacuation sign; the exit coordinates and interaction stay unchanged.
 const t=world.exit;m.box(t.x,0,t.y,3,47,3,'#514b3b',3);m.box(t.x,34,t.y,28,14,2,'#414e3c',3);
 m.box(t.x-2,40,t.y+1.3,17,2,1,'#b9b697',3);
@@ -8565,7 +8668,7 @@ precision mediump float;
 #endif
 varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform vec3 uEye;uniform vec4 uShadows[12];uniform vec4 uLights[5];uniform vec4 uLightBounds[5];uniform vec3 uLightColors[5];uniform float uNight;uniform float uStorm;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;uniform sampler2D uAtlas;uniform float uTextureReady;
 varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;
-float surfaceKind(float tile){if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.5){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
+float surfaceKind(float tile){if(tile>59.5&&tile<62.5)return 8.;if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.5){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
 float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise21(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash21(i),hash21(i+vec2(1.0,0.0)),f.x),mix(hash21(i+vec2(0.0,1.0)),hash21(i+vec2(1.0,1.0)),f.x),f.y);}
 vec3 atlasSample(float tile,vec3 normal){
@@ -8722,10 +8825,15 @@ void main(){
   float scratch=pow(.5+.5*sin(surface.x*.7+noise21(surface*.02)*4.),18.);
   base+=vec3(.035,.032,.025)*scratch*(1.-coarse);
  }
- if(mat>7.5&&mat<8.5&&tileId!=55.){
+ if(mat>7.5&&mat<8.5&&tileId!=55.&&tileId!=62.){
   float cloth=noise21(surface*.16);base*=.92+.12*cloth;
   float dirt=(1.-smoothstep(0.,22.,vHeight))*.25;
   base=mix(base,base*vec3(.68,.62,.51),dirt);
+ }
+ if(tileId>59.5&&tileId<61.5){
+  float weave=noise21(vWorldPos.xz*1.3+vec2(vHeight*.7));
+  float worn=1.-smoothstep(2.,24.,vHeight);
+  base=vColor*(.90+.12*weave)*mix(vec3(1.),vec3(.80,.76,.65),worn*.35);
  }
  if(tileId==55.){
   vec2 pane=abs(normal.y)>.55?vWorldPos.xz:(abs(normal.x)>.55?vWorldPos.zy:vWorldPos.xy);
@@ -8852,7 +8960,7 @@ uniform sampler2D uAtlas;uniform float uTextureReady;
 uniform vec4 uLights[3];uniform vec4 uLightBounds[3];uniform vec3 uLightColors[3];uniform vec4 uShadows[4];
 varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;
 varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;
-float surfaceKind(float tile){if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.5){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
+float surfaceKind(float tile){if(tile>59.5&&tile<62.5)return 8.;if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.5){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
 float hash21(vec2 p){p=fract(p*vec2(.1031,.11369));p+=dot(p,p.yx+19.19);return fract(p.x*p.y);}
 float noise21(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),mix(hash21(i+vec2(0.,1.)),hash21(i+vec2(1.)),f.x),f.y);}
 
@@ -9004,10 +9112,15 @@ void main(){
   float scratch=pow(.5+.5*sin(surface.x*.7+noise21(surface*.02)*4.),18.);
   base+=vec3(.035,.032,.025)*scratch*(1.-coarse);
  }
- if(mat>7.5&&mat<8.5&&tileId!=55.){
+ if(mat>7.5&&mat<8.5&&tileId!=55.&&tileId!=62.){
   float cloth=noise21(surface*.16);base*=.92+.12*cloth;
   float dirt=(1.-smoothstep(0.,22.,vHeight))*.25;
   base=mix(base,base*vec3(.68,.62,.51),dirt);
+ }
+ if(tileId>59.5&&tileId<61.5){
+  float weave=noise21(vWorldPos.xz*1.3+vec2(vHeight*.7));
+  float worn=1.-smoothstep(2.,24.,vHeight);
+  base=vColor*(.90+.12*weave)*mix(vec3(1.),vec3(.80,.76,.65),worn*.35);
  }
  if(tileId==55.){
   vec2 pane=abs(normal.y)>.55?vWorldPos.xz:(abs(normal.x)>.55?vWorldPos.zy:vWorldPos.xy);
@@ -9214,7 +9327,7 @@ function sceneShadows(run,enemyData){
  const out=new Float32Array(48);out.set([run.x,run.y,17,14]);
  const world=run.room==null?map:map.rooms[run.room],actors=[];
  for(const e of world.enemies||[]){if(run.defeated.includes(e.id))continue;const v=enemyData(e),p=MOB_PROFILES[e.enemyId]||{};actors.push({x:v.x,y:v.y,rx:(p.family==='quad'?19:14)*(p.width||1),rz:p.family==='quad'?15:12})}
- for(const p of world.people||[])actors.push({x:p.x,y:p.y,rx:16,rz:13});
+ for(const p of world.people||[]){const d=npcRecord(run,p);actors.push({x:d.x,y:d.y,rx:16,rz:13});}
  actors.sort((a,b)=>(a.x-run.x)**2+(a.y-run.y)**2-(b.x-run.x)**2-(b.y-run.y)**2);
  const count=compactMode?3:11;for(let i=0;i<Math.min(count,actors.length);i++){const p=actors[i];out.set([p.x,p.y,p.rx,p.rz],(i+1)*4)}return out;
 }
@@ -9222,13 +9335,18 @@ function rebuild(room){shadowValid=false;shadowAnchor=null;roomKey=room;focus=nu
 function drawBuffer(buffer,count,chunks=null,matrix=null){if(!count)return;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(A.position);gl.enableVertexAttribArray(A.color);gl.enableVertexAttribArray(A.normal);gl.enableVertexAttribArray(A.material);gl.vertexAttribPointer(A.position,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(A.color,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(A.normal,3,gl.FLOAT,false,40,24);gl.vertexAttribPointer(A.material,1,gl.FLOAT,false,40,36);if(chunks){for(const c of chunks)if(chunkVisible(c,matrix))gl.drawArrays(gl.TRIANGLES,c.first,c.count)}else gl.drawArrays(gl.TRIANGLES,0,count)}
 function draw(run,enemyData,time,visual={}){if(!run||!textureReady)return;
  const same=previousVisual&&previousVisual.room===run.room,dx=same?run.x-previousVisual.x:0,dz=same?run.y-previousVisual.y:0,dist=Math.hypot(dx,dz),dt=same?Math.max(.001,time-previousVisual.time):.016;
- const pose=animation.player;pose.speed=dist>.02?Math.min(1,dist/dt/120):0;pose.phase+=Math.min(dist,15)*.11;
+ const pose=animation.player;pose.hurt=run.hurtAt==null?0:clamp(1-(time-run.hurtAt)/.35,0,1);pose.speed=dist>.02?Math.min(1,dist/dt/120):0;pose.phase+=Math.min(dist,15)*.11;
  if(dist>.02)pose.angle=Math.atan2(dx,-dz);
  if(visual.hit){pose.angle=Math.atan2(visual.hit.x-run.x,-(visual.hit.y-run.y));}
  animation.recoil=visual.hit?Math.max(0,visual.hit.t/.14):0;
  previousVisual={x:run.x,y:run.y,room:run.room,time};animation.actors.clear();
  const actors=(run.room==null?map:map.rooms[run.room]).enemies||[];
- for(const actor of actors){const v=enemyData(actor),old=actorHistory.get(actor.id),valid=old&&old.room===run.room,ddx=valid?v.x-old.x:0,ddz=valid?v.y-old.y:0,d=Math.hypot(ddx,ddz),p={speed:Math.min(1,d/dt/60),phase:(valid?old.phase:0)+Math.min(d,12)*.14,angle:d>.02?Math.atan2(ddx,-ddz):(valid?old.angle:0)};p.hurt=valid&&v.hp<old.hp?1:Math.max(0,(old?.hurt||0)-dt*4);p.death=run.defeated.includes(actor.id)?Math.min(1,((run.worldTime||0)-(run.defeatedAt?.[actor.id]??-100))/.7):0;p.attack=Math.max(0,Math.min(1,((v.cool||0)-.95)/.35));if(p.attack>0)p.angle=Math.atan2(run.x-v.x,-(run.y-v.y));animation.actors.set(v.x+','+v.y,p);actorHistory.set(actor.id,{...p,x:v.x,y:v.y,hp:v.hp,room:run.room});}
+ for(const actor of actors){const v=enemyData(actor),old=actorHistory.get(actor.id),valid=old&&old.room===run.room,ddx=valid?v.x-old.x:0,ddz=valid?v.y-old.y:0,d=Math.hypot(ddx,ddz),p={speed:Math.min(1,d/dt/60),phase:(valid?old.phase:0)+Math.min(d,12)*.14,angle:d>.02?Math.atan2(ddx,-ddz):(valid?old.angle:0)};p.hurt=valid&&v.hp<old.hp?1:Math.max(0,(old?.hurt||0)-dt*4);p.death=run.defeated.includes(actor.id)?Math.min(1,((run.worldTime||0)-(run.defeatedAt?.[actor.id]??-100))/.7):0;p.attack=Math.max(0,Math.min(1,((v.attackUntil||0)-time)/.22));p.windup=v.meleeUntil>time?Math.min(1,Math.max(0,(time-v.meleeStart)/Math.max(.01,v.meleeUntil-v.meleeStart))):0;if(p.windup>0)p.angle=v.meleeAngle;p.recoil=p.attack;p.flash=(v.flashUntil||0)>time;p.aim=(v.aimUntil||0)>time;p.aimBlend=clamp((valid?old.aimBlend||0:0)+(p.aim||p.attack>0?dt*5:-dt*3),0,1);if(v.searching&&p.speed<.05&&Number.isFinite(v.angle))p.angle=v.angle;if(p.attack>0||p.aim)p.angle=Math.atan2((v.aimX??run.x)-v.x,-((v.aimY??run.y)-v.y));animation.actors.set(v.x+','+v.y,p);actorHistory.set(actor.id,{...p,x:v.x,y:v.y,hp:v.hp,room:run.room});}
+for(const actor of (run.room==null?map:map.rooms[run.room]).people||[]){
+ const v=npcRecord(run,actor),key='npc:'+String(run.room)+':'+actor.id,old=actorHistory.get(key),ddx=old?v.x-old.x:0,ddz=old?v.y-old.y:0,d=Math.hypot(ddx,ddz);
+ const p={speed:Math.min(1,d/dt/30),phase:(old?.phase||0)+Math.min(d,12)*.16,angle:Number.isFinite(v.angle)?v.angle:(d>.02?Math.atan2(ddx,-ddz):old?.angle||0)};
+ animation.actors.set(v.x+','+v.y,p);actorHistory.set(key,{...p,x:v.x,y:v.y});
+}
 if(roomKey!==run.room||!staticData)rebuild(run.room);
 const w=run.room==null?map:map.rooms[run.room],asp=Math.max(.2,canvas.width/Math.max(1,canvas.height));
 // Oblique tactical camera: visible facades, fixed angle, no touch rotation.
@@ -9309,7 +9427,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.35'};
+window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.40'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -9320,7 +9438,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.35</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.35 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.40</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.40 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
@@ -9889,7 +10007,7 @@ function resetInput(){stick.x=stick.y=0;stick.id=null;$('sv-stick').classList.re
 function pause(){if(!visible)return;survivalAudio.stop();visible=false;cancelAnimationFrame(frame);if(renderer3d){renderer3d.dispose();renderer3d=null}g.isRaidActive=false;overlay.hidden=true;document.body.classList.remove('sv-playing');resetInput();save();g.renderHeader();g.renderInventory();refresh()}
 function exitRun(){const r=run();if(!visible||!map||!r)return false;if(r.room!==null||distance(r,map.exit)>85){note('Вернитесь к зелёной отметке выхода.');return false}let arts=0;for(const[id,count]of Object.entries(r.bag))if(DB.items[id]&&count>0){g.addItem(id,count);if(DB.items[id].type==='artifact')arts+=count;}if(g.state.tracker)g.state.tracker.artsFound=(g.state.tracker.artsFound||0)+arts;for(const c of g.state.activeContracts||[])if(c.type==='arts'&&!c.completed)c.current=(c.current||0)+arts;g.state.rubles+=r.rubles;if((r.gram||0)>0)g.awardGram?.(Number(r.gram.toFixed(2)));const count=Object.values(r.bag).reduce((a,b)=>a+b,0);const gram=(r.gram||0)>0?' · '+Number(r.gram.toFixed(2))+' GRAM':'';state().run=null;pause();g.renderTrophyCabinet?.();g.updateBadges?.();g.toast('Вы вернулись: '+count+' предметов, '+r.rubles+' ₽'+gram,'gold');return true}
 function fail(){const r=run();if(!r)return;state().run=null;g.state.hp=1;pause();g.toast('Сталкер доставил вас в убежище. Полевая добыча потеряна.','red')}
-function target(){const r=run(),w=world(),objects=[...w.crates.filter(o=>!r.opened.includes(o.id)).map(o=>({...o,kind:'crate'})),...w.people.filter(o=>!r.talked.includes(o.id)).map(o=>({...o,kind:'person'}))];if(r.room===null){objects.push(...map.buildings.map(b=>({...b.door,kind:'door',id:b.id})),{...map.exit,kind:'exit'})}else objects.push({...w.exit,kind:'outside'});return objects.filter(o=>distance(r,o)<78&&sight(r,o,w,o.kind==='crate'?'crate:'+o.id:null)).sort((a,b)=>distance(r,a)-distance(r,b))[0]}
+function target(){const r=run(),w=world(),objects=[...w.crates.filter(o=>!r.opened.includes(o.id)).map(o=>({...o,kind:'crate'})),...w.people.filter(o=>!r.talked.includes(o.id)).map(o=>({...o,...npcData(o),kind:'person'}))];if(r.room===null){objects.push(...map.buildings.map(b=>({...b.door,kind:'door',id:b.id})),{...map.exit,kind:'exit'})}else objects.push({...w.exit,kind:'outside'});return objects.filter(o=>distance(r,o)<78&&sight(r,o,w,o.kind==='crate'?'crate:'+o.id:null)).sort((a,b)=>distance(r,a)-distance(r,b))[0]}
 function rollSurvivalLoot(token){
  const zone=loc(),r=run(),rng=random(seedOf((zone?.id||'')+':'+(r?.seed||0)+':'+token+':loot127'));
  const all=(zone?.loot||[]).filter(id=>{const it=DB.items[id];return it&&!it.buildingOnly&&!it.plotExclusive&&it.type!=='loot'&&id!=='scrap_doc'&&it.rarity!=='metro'});
@@ -9914,6 +10032,126 @@ function applyLootRoll(token){
 }
 function action(){if(!visible||!run())return;const r=run(),t=target();if(!t){note('Подойдите к ящику, выжившему или двери.');return}if(t.kind==='exit')return exitRun();if(t.kind==='door'){r.room=t.id;const entry=map.rooms[r.room].spawn||{x:380,y:510};r.x=entry.x;r.y=entry.y;clearSpawn(r,world());note('Внутри здания. Выход — через дверь внизу.')}else if(t.kind==='outside'){const door=map.buildings[r.room].door;r.room=null;r.x=door.x;r.y=door.y+14;clearSpawn(r,world());note('Вы вышли на улицу.')}else if(t.kind==='person'){r.talked.push(t.id);const lines=['Держись стен. Они укроют от мутантов. Ящики ищи внутри зданий.','Я отметил дорогу обратно. Сначала забери припасы, потом возвращайся к выходу.','За помощь держи немного припасов. Не задерживайся в Зоне.'];note('Выживший: «'+lines[seedOf(t.id)%lines.length]+'» +30 ₽ в полевой рюкзак.');r.rubles+=30}else{r.opened.push(t.id);const reward=applyLootRoll('cache:'+String(r.room)+':'+t.id);note('Ящик: '+reward.name+(reward.dust?' · Радиационная пыль':'')+(reward.gram?' · +'+reward.gram.toFixed(2)+' GRAM':'')+'.')}save();hud()}
 function enemyData(e){const r=run(),proto=DB.enemies[e.enemyId]||{};return r.enemyState[e.id]||(r.enemyState[e.id]={x:e.x,y:e.y,hp:Math.max(18,Number(proto.maxHp||proto.hp)||30+Math.min(140,(loc().minLevel||1)*1.5)),cool:0,enemyId:e.enemyId})}
+function npcData(p){
+ const r=run(),key=String(r.room??'outside')+':'+p.id,states=r.npcState||(r.npcState={});
+ if(!states[key]){const d=states[key]={x:p.x,y:p.y,angle:0,wait:0,turn:0,role:window.ZonaSurvival3D.npcRole(p)};clearSpawn(d,world());d.homeX=d.x;d.homeY=d.y;}
+ return states[key];
+}
+function actorWalkClear(a,b,w){
+ const length=distance(a,b),steps=Math.max(1,Math.ceil(length/6));
+ for(let i=1;i<=steps;i++){const x=a.x+(b.x-a.x)*i/steps,y=a.y+(b.y-a.y)*i/steps;if(solid(x,y,12,w)||(w.anomalies||[]).some(q=>Math.hypot(x-q.x,y-q.y)<q.r+18))return false;}
+ return true;
+}
+function actorRoute(a,b,w){
+ // Bounded local search. Every edge checks actor width, including corners.
+ const unit=20,pad=140,minX=Math.max(20,Math.floor((Math.min(a.x,b.x)-pad)/unit)*unit),minY=Math.max(20,Math.floor((Math.min(a.y,b.y)-pad)/unit)*unit);
+ const maxX=Math.min(w.w-20,Math.ceil((Math.max(a.x,b.x)+pad)/unit)*unit),maxY=Math.min(w.h-20,Math.ceil((Math.max(a.y,b.y)+pad)/unit)*unit);
+ const cols=Math.floor((maxX-minX)/unit)+1,rows=Math.floor((maxY-minY)/unit)+1;
+ if(cols*rows>5000||cols<1||rows<1)return null;
+ const point=k=>({x:minX+(k%cols)*unit,y:minY+Math.floor(k/cols)*unit}),cell=p=>({x:Math.round((p.x-minX)/unit),y:Math.round((p.y-minY)/unit)});
+ const start=cell(a),queue=[],parents=new Map();
+ for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+  const x=start.x+dx,y=start.y+dy,k=y*cols+x;if(x<0||y<0||x>=cols||y>=rows||!actorWalkClear(a,point(k),w))continue;queue.push(k);parents.set(k,-1);
+ }
+ let found=-1;for(let i=0;i<queue.length&&i<1800;i++){
+  const k=queue[i],p=point(k);if(distance(p,b)<30&&actorWalkClear(p,b,w)){found=k;break;}
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const x=k%cols+dx,y=Math.floor(k/cols)+dy,next=y*cols+x;if(x<0||y<0||x>=cols||y>=rows||parents.has(next))continue;if(!actorWalkClear(p,point(next),w))continue;parents.set(next,k);queue.push(next);}
+ }
+ if(found<0)return null;const route=[{x:b.x,y:b.y}];for(let k=found;k!==-1;k=parents.get(k))route.push(point(k));route.reverse();return route;
+}
+function navigateActor(d,target,w,dt,speed){
+ const time=run().worldTime||0;let next=target;
+ if(!actorWalkClear(d,target,w)){
+  const changed=!d.nav||distance(d.nav.target,target)>28;
+  if(changed||!d.nav.path?.length||time>d.nav.expires){
+   if(time<(d.navRetry||0))return false;
+   d.navRetry=time+.7;const path=actorRoute(d,target,w);d.nav={target:{x:target.x,y:target.y},path:path||[],expires:time+4};if(!path)return false;
+  }
+  while(d.nav.path.length&&distance(d,d.nav.path[0])<5)d.nav.path.shift();
+  if(!d.nav.path.length)return false;
+  // Skip only waypoints connected by a body-width-clear segment.
+  while(d.nav.path.length>1&&actorWalkClear(d,d.nav.path[1],w))d.nav.path.shift();next=d.nav.path[0];
+  if(!actorWalkClear(d,next,w)){d.nav.path=[];return false;}
+ }else d.nav=null;
+ const dist=distance(d,next);if(dist<.01)return true;const x=d.x,y=d.y,amount=Math.min(speed*dt,dist);
+ move(d,(next.x-d.x)/dist*amount,(next.y-d.y)/dist*amount,w);
+ const moved=Math.hypot(d.x-x,d.y-y);if(moved>.01)d.angle=Math.atan2(d.x-x,-(d.y-y));return moved>.01;
+}
+function wanderActor(d,home,w,key,dt,speed,radius){
+ d.wait=Math.max(0,(d.wait||0)-dt);if(d.wait>0)return;
+ if(!d.goal||distance(d,d.goal)<8){
+  if(d.goal){d.goal=null;d.wait=1.1+(seedOf(key+':'+d.turn)%24)/10;return;}
+  const turn=d.turn=(d.turn||0)+1,rng=random(seedOf(key+':walk:'+turn));
+  for(let n=0;n<12;n++){const a=rng()*Math.PI*2,reach=28+rng()*radius,p={x:home.x+Math.cos(a)*reach,y:home.y+Math.sin(a)*reach};
+   if(!solid(p.x,p.y,14,w)&&(!w.anomalies||!w.anomalies.some(q=>distance(p,q)<q.r+24))){d.goal=p;break;}}
+  if(!d.goal){d.wait=1.2;return;}
+ }
+ if(!navigateActor(d,d.goal,w,dt,speed)){d.goal=null;d.wait=.8;}
+
+}
+function retreatActor(d,threat,w,dt,speed){
+ const away=Math.atan2(d.y-threat.y,d.x-threat.x),current=distance(d,threat);let best=null,score=current;
+ for(const offset of [0,.65,-.65,1.3,-1.3,1.57,-1.57]){
+  const angle=away+offset,q={x:d.x+Math.cos(angle)*35,y:d.y+Math.sin(angle)*35},far=distance(q,threat);
+  if(far>score&&actorWalkClear(d,q,w)){best=q;score=far;}
+ }
+ if(best)return navigateActor(d,best,w,dt,speed);return false;
+}
+function stepPeople(dt,w){
+ const r=run();for(const p of w.people||[]){const d=npcData(p);if(distance(d,r)>650)continue;
+  const danger=w.enemies.find(e=>!r.defeated.includes(e.id)&&distance(d,enemyData(e))<125&&sight(d,enemyData(e),w));
+  if(danger){retreatActor(d,enemyData(danger),w,dt,55);d.goal=null;d.wait=0;continue;}
+  if(distance(d,r)<76&&sight(d,r,w)){d.angle=Math.atan2(r.x-d.x,-(r.y-d.y));d.wait=.5;continue;}
+
+  if(distance(d,{x:d.homeX,y:d.homeY})>(r.room==null?170:115))d.goal={x:d.homeX,y:d.homeY};
+  wanderActor(d,{x:d.homeX,y:d.homeY},w,'npc:'+p.id,dt,d.role==='guard'?35:28,r.room==null?105:60);
+ }
+}
+function enemyDamage(proto){const a=Array.isArray(proto.dmg)?proto.dmg:[7+(loc().minLevel||1)*.18,10+(loc().minLevel||1)*.26];return a[0]+Math.random()*Math.max(0,(a[1]||a[0])-a[0]);}
+function hurtPlayer(amount){const current=run();if(current)current.hurtAt=current.worldTime||0;g.state.hp=Math.max(0,g.state.hp-Math.max(1,Math.round(amount*100/(100+Math.max(0,g.getDefensePower())))));if(g.state.hp<=0){fail();return false;}return true;}
+function fireEnemy(d,e,profile,w){
+ const r=run(),dx=d.aimX-d.x,dy=d.aimY-d.y,len=Math.hypot(dx,dy)||1;
+ const bullets=r.enemyProjectiles||(r.enemyProjectiles=[]);if(bullets.length>=48)return;
+ const spread=profile.burst===1?0:((d.burstLeft||0)-1)*.025,angle=Math.atan2(dy,dx)+spread;
+ bullets.push({x:d.x,y:d.y,dx:Math.cos(angle)*profile.speed,dy:Math.sin(angle)*profile.speed,life:profile.range/profile.speed+.12,damage:enemyDamage(DB.enemies[e.enemyId]||{})/profile.burst,room:r.room,owner:e.id});
+ d.flashUntil=(r.worldTime||0)+.10;d.attackUntil=(r.worldTime||0)+.22;
+}
+function stepEnemyProjectiles(dt,w){
+ const r=run(),alive=[];for(const p of r.enemyProjectiles||[]){if(p.room!==r.room)continue;p.life-=dt;if(p.life<=0)continue;
+  const steps=Math.max(1,Math.ceil(Math.hypot(p.dx,p.dy)*dt/4));let hit=false;
+  for(let i=0;i<steps;i++){p.x+=p.dx*dt/steps;p.y+=p.dy*dt/steps;if(solid(p.x,p.y,1.5,w)){hit=true;break;}if(distance(p,r)<12){hit=true;if(!hurtPlayer(p.damage))return false;break;}}
+  if(!hit)alive.push(p);
+ }r.enemyProjectiles=alive;return true;
+}
+function stepEnemies(dt,w){
+ const r=run(),time=r.worldTime||0;
+ for(const e of w.enemies){if(r.defeated.includes(e.id))continue;const d=enemyData(e),proto=DB.enemies[e.enemyId]||{},profile=window.ZonaSurvival3D.combatProfile(e.enemyId);
+  d.cool=Math.max(0,(d.cool||0)-dt);const dist=distance(r,d),visibleTarget=dist<(profile?profile.range+65:260)&&sight(d,r,w);
+  if(!visibleTarget){if(d.meleeUntil){d.meleeUntil=0;d.cool=Math.max(d.cool,.45);}d.aimUntil=0;d.burstLeft=0;if(d.lastSeen&&time-d.seenAt<5.5){d.searching=true;if(distance(d,d.lastSeen)>14)navigateActor(d,d.lastSeen,w,dt,profile?44:52);else d.angle=(d.angle||0)+dt*.65;}else{d.searching=false;if(dist<650)wanderActor(d,e,w,'enemy:'+e.id,dt,22,65);}continue;}
+  d.goal=null;d.searching=false;d.lastSeen={x:r.x,y:r.y};d.seenAt=time;d.angle=Math.atan2(r.x-d.x,-(r.y-d.y));
+  if(profile){
+   if(dist>profile.range*.90){navigateActor(d,r,w,dt,52);d.aimUntil=0;continue;}
+   if(dist<profile.preferred*.55&&!d.aimUntil&&!d.burstLeft)retreatActor(d,r,w,dt,35);
+   if(d.burstLeft>0){d.burstTimer-=dt;if(d.burstTimer<=0){fireEnemy(d,e,profile,w);d.burstLeft--;d.burstTimer=.13;if(!d.burstLeft)d.cool=profile.cool;}continue;}
+   if(d.aimUntil){if(time<d.aimUntil-.20){d.aimX=r.x;d.aimY=r.y;}if(time>=d.aimUntil){d.aimUntil=0;d.burstLeft=profile.burst;d.burstTimer=0;}continue;}
+   if(d.cool<=0){d.aimUntil=time+profile.aim;d.aimX=r.x;d.aimY=r.y;}
+  }else{
+   if(d.meleeUntil){
+    d.angle=d.meleeAngle;
+    if(time>=d.meleeUntil){
+     d.meleeUntil=0;d.cool=1.3;d.attackUntil=time+.28;
+     const targetAngle=Math.atan2(r.x-d.x,-(r.y-d.y)),delta=Math.atan2(Math.sin(targetAngle-d.meleeAngle),Math.cos(targetAngle-d.meleeAngle));
+     if(distance(r,d)<=33&&Math.abs(delta)<.95&&sight(d,r,w)&&!hurtPlayer(enemyDamage(proto)))return false;
+    }
+   }else if(dist>27){const speed=/rat|tushkano|dog|cat_bayun|psydog/.test(e.enemyId)?75:/pseudogiant|giant_titan|titan_juggernaut/.test(e.enemyId)?44:61;navigateActor(d,r,w,dt,speed);}
+   else if(d.cool<=0){
+    const windup=/giant|titan|bear/.test(e.enemyId)?.60:/rat|dog|tushkano/.test(e.enemyId)?.28:.40;
+    d.meleeStart=time;d.meleeUntil=time+windup;d.meleeAngle=d.angle;d.aimX=r.x;d.aimY=r.y;
+   }
+  }
+ }
+ return stepEnemyProjectiles(dt,w);
+}
 function attack(){
  if(!visible||!run()||shot>0)return;
  const r=run(),w=world(),weapon=g.state.equipment?.weapon,range=weapon&&!weapon.startsWith('knife_')&&DB.items[weapon]?.dmg?230:60;
@@ -9960,7 +10198,8 @@ function stepAnomalies(dt){
  }
  return true;
 }
-function step(dt){if(!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x,dy=stick.y;const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];move(r,v[0]*155*dt,v[1]*155*dt);for(const e of w.enemies){if(r.defeated.includes(e.id))continue;const d=enemyData(e),proto=DB.enemies[e.enemyId]||{};d.cool=Math.max(0,d.cool-dt);const dist=distance(r,d);if(dist<260&&sight(d,r)){if(dist>27){const pursuit=/rat|tushkano|dog|cat_bayun|psydog/.test(e.enemyId)?75:/pseudogiant|giant_titan|titan_juggernaut/.test(e.enemyId)?44:61;move(d,(r.x-d.x)/dist*pursuit*dt,(r.y-d.y)/dist*pursuit*dt)}else if(d.cool<=0){d.cool=1.3;const dmgRange=Array.isArray(proto.dmg)?proto.dmg:[7+(loc().minLevel||1)*.18,10+(loc().minLevel||1)*.26],base=dmgRange[0]+Math.random()*Math.max(0,(dmgRange[1]||dmgRange[0])-dmgRange[0]);g.state.hp=Math.max(0,g.state.hp-Math.max(1,Math.round(base*100/(100+Math.max(0,g.getDefensePower())))));if(g.state.hp<=0){fail();return}}}}
+function step(dt){if(!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x,dy=stick.y;const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];move(r,v[0]*155*dt,v[1]*155*dt);stepPeople(dt,w);if(!stepEnemies(dt,w))return;
+
 if(!stepAnomalies(dt))return;saveTimer+=dt;hudTimer+=dt;if(saveTimer>=5){saveTimer=0;save()}if(hudTimer>.2){hudTimer=0;hud()}}
 function hud(){const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=.5-.5*Math.cos(phase),tod=night>.7?'НОЧЬ':night>.4?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / '+(world().zones?.find(z=>r.x>=z.x&&r.x<=z.x+z.w&&r.y>=z.y&&r.y<=z.y+z.h)?.name||world().name||('Здание '+(r.room+1))):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(state().quality==='eco'?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action-label').textContent=verb;$('sv-action').setAttribute('aria-label',verb);const prompt=$('sv-3d-prompt');prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb+' · кнопка справа';$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,g.state.maxEnergy||100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit));const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}}
 function resize(){const b=canvas.parentElement.getBoundingClientRect(),dpr=window.devicePixelRatio||1,ratio=state().quality==='eco'?Math.min(dpr,1):(renderer3d&&!renderer3d.webgl?Math.min(dpr,1.4):Math.min(dpr,(/Telegram|iPhone|iPad|iPod/i.test(navigator.userAgent)||!!window.Telegram?.WebApp)?1.45:1.75));canvas.width=Math.max(1,Math.floor(b.width*ratio));canvas.height=Math.max(1,Math.floor(b.height*ratio));canvas.style.width=b.width+'px';canvas.style.height=b.height+'px';const fx=$('sv-3d-fx');if(fx){fx.width=Math.max(1,Math.floor(b.width));fx.height=Math.max(1,Math.floor(b.height))}}
@@ -10076,7 +10315,7 @@ function draw3DMinimap(){
  const pin=(x,y,color,size=3)=>{c.fillStyle=color;c.beginPath();c.arc(X(x),Y(y),size,0,Math.PI*2);c.fill()};
  for(const e of w.enemies||[])if(!r.defeated.includes(e.id)){const d=enemyData(e);if(distance(r,d)<360)pin(d.x,d.y,'#e17c69')}
  for(const o of w.crates||[])if(!r.opened.includes(o.id))pin(o.x,o.y,'#dcc080',2.5);
- for(const o of w.people||[])pin(o.x,o.y,'#8dc1c6');
+ for(const o of w.people||[]){const p=npcData(o);pin(p.x,p.y,'#8dc1c6');}
  const ex=w.exit.x-r.x,ey=w.exit.y-r.y,ed=Math.hypot(ex,ey),factor=Math.min(1,(range-32)/(ed||1));
  pin(r.x+ex*factor,r.y+ey*factor,'#b1d397',4);
  c.fillStyle='#f1e3ba';c.strokeStyle='#18251d';c.lineWidth=2;c.beginPath();c.moveTo(C,C-7);c.lineTo(C+5,C+6);c.lineTo(C,C+3);c.lineTo(C-5,C+6);c.closePath();c.fill();c.stroke();
