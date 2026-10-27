@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.45 — Survival Material Remaster</title>
+<title>ZONA Z v16.48 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -7101,7 +7101,37 @@ function dressingParts(p){
 }
 function drawDressing(m,p,low){
  const {x,y,w,h,kind}=p,cx=x+w/2,cz=y+h/2,metal='#535c54',rust='#75604a';
- if(kind==='ruin'){
+ if(kind==='shed'){
+  m.box(cx,0,cz,w,5,h,'#56584a',34);
+  for(const side of [-1,1])m.box(cx+side*(w/2-2),5,cz,4,46,h-4,'#6a6048',29);
+  m.box(cx,5,y+2,w-4,46,4,'#62553f',29);
+  m.box(cx,5,y+h-2,w-4,46,4,'#514b39',29);
+  for(let j=0;j<(low?5:9);j++)m.box(x+5+j*(w-10)/(low?4:8),6,y+h+.1,.7,44,.4,'#30392e',8);
+  m.box(cx,5,y+h+.5,w*.38,36,.8,'#363d30',29);
+  m.branch(cx-w*.17,8,y+h+1,cx+w*.17,38,y+h+1,1.2,'#7a684d',4,29);
+  m.roof(cx,51,cz,w,h,'#646a56');
+ }else if(kind==='stockpile'){
+  for(const side of [-1,1])m.box(cx+side*w*.32,0,cz,6,3,h-4,'#514a37',29);
+  for(let row=0;row<3;row++)for(let col=0;col<3;col++){
+   const xx=x+8+col*(w-16)/2,zz=y+7+row*(h-14)/2;
+   m.box(xx,3,zz,w*.25,9+(row+col)%3*3,h*.24,'#756348',29);
+   if(!low)m.box(xx,12,zz,w*.26,1,h*.25,'#8b7756',29);
+  }
+  m.quad([x+8,20,y+8],[x+w-8,18,y+8],[x+w-12,14,y+h-6],[x+12,16,y+h-6],'#4d5840',1,57);
+ }else if(kind==='pipepile'){
+  for(const dx of [-w*.32,w*.32])m.box(cx+dx,0,cz,5,3,h-4,'#5f5741',29);
+  const segments=low?6:10;
+  for(let row=0;row<2;row++)for(let k=0;k<3-row;k++){
+   const py=9+row*10,pz=y+9+k*12+row*6,r=5.7;
+   for(let j=0;j<segments;j++){
+    const a=j*Math.PI*2/segments,b=(j+1)*Math.PI*2/segments;
+    const pt=(xx,rr,ang)=>[xx,py+Math.sin(ang)*rr,pz+Math.cos(ang)*rr];
+    m.quad(pt(x+5,r,a),pt(x+w-5,r,a),pt(x+w-5,r,b),pt(x+5,r,b),'#79654d',1,27);
+    for(const end of [x+5,x+w-5])m.quad(pt(end,r,a),pt(end,r,b),pt(end,r-1.2,b),pt(end,r-1.2,a),'#8a7b60',1,27);
+    if(!low)m.quad(pt(x+5,r-1.2,b),pt(x+w-5,r-1.2,b),pt(x+w-5,r-1.2,a),pt(x+5,r-1.2,a),'#333d32',1,8);
+   }
+  }
+ }else if(kind==='ruin'){
   // Uneven masonry, exposed reinforcement and fallen roof material.
   const seed=Math.abs(Math.floor(x*17+y*31)),segments=low?4:7;
   const story=p.story||'urban',home=story==='home'||story==='forest',industry=story==='industrial',science=story==='research',army=story==='military';
@@ -7558,17 +7588,22 @@ function drawWorldScrap(m,s,low){
  if(k==='wreck'){
   const first=m.data.length;
   const worn=(Math.round(x*.13+z*.17)%3+3)%3;
-  const paint=['#666c59','#786254','#586965'][worn],hoodY=worn===1?22:12;
+  const paint=['#666c59','#786254','#45483e'][worn],hoodY=worn===1?22:12,roofEnd=worn===0?.60:worn===2?.38:.44,roofY=worn===0?26:worn===2?18:23;
   m.shadow(x,z,d*.9,d*.5);
   m.box(x,3,z,d*1.54,5,d*.70,'#373b33',27);
   // Tapered side panels replace the previous rectangular solid cabin.
   for(const side of [-1,1]){
    m.quad([x-d*.78,5,z+side*d*.34],[x+d*.77,5,z+side*d*.34],[x+d*.67,12,z+side*d*.38],[x-d*.72,12,z+side*d*.38],paint,1,20);
    m.branch(x-d*.72,12,z+side*d*.38,x+d*.67,12,z+side*d*.38,.6,'#817664',4,27);
-   m.branch(x-d*.16,12,z+side*d*.34,x+d*.01,23,z+side*d*.25,.85,paint,4,20);
-   m.branch(x+d*.58,12,z+side*d*.34,x+d*.43,23,z+side*d*.25,.85,paint,4,20);
-   m.branch(x+d*.23,12,z+side*d*.34,x+d*.23,23,z+side*d*.25,.65,paint,4,20);
-   if(worn!==2)m.quad([x-d*.13,13,z+side*d*.335],[x+d*.55,13,z+side*d*.335],[x+d*.42,22,z+side*d*.255],[x+d*.02,22,z+side*d*.255],'#263939',1,55);
+   m.branch(x-d*.16,12,z+side*d*.34,x+d*.01,roofY,z+side*d*.25,.85,paint,4,20);
+   m.branch(x+d*.58,12,z+side*d*.34,x+d*roofEnd,roofY,z+side*d*.25,.85,paint,4,20);
+   m.branch(x+d*.23,12,z+side*d*.34,x+d*.23,roofY,z+side*d*.25,.65,paint,4,20);
+   // Partial panes expose the interior; jagged fragments remain attached to their frames.
+   if(worn!==2){
+    m.tri([x-d*.13,13,z+side*d*.335],[x+d*.10,15,z+side*d*.32],[x+d*.02,roofY-1,z+side*d*.255],'#344846',1,55);
+    m.tri([x+d*.28,13,z+side*d*.335],[x+d*.55,13,z+side*d*.335],[x+d*(roofEnd-.02),roofY-1,z+side*d*.255],'#2b3b38',1,55);
+   }
+   if(worn===0)m.branch(x+d*.42,12,z+side*d*.34,x+d*.42,roofY,z+side*d*.25,.7,paint,4,20);
    m.box(x+d*.29,11,z+side*d*.387,d*.08,.7,.5,'#93917c',27);
    for(const wheel of [-.52,.52]){
     vehicleWheel(m,x+d*wheel,d*.13/1.45,z+side*d*.36,d*.13,d*.12,side,low,1/1.45);
@@ -7576,9 +7611,15 @@ function drawWorldScrap(m,s,low){
   }
   // Seats remain visible through missing side glass; no opaque block behind the windows.
   for(const side of [-1,1]){m.box(x+d*.20,8,z+side*d*.14,d*.18,3,d*.20,'#3c3c30',57);m.box(x+d*.29,10,z+side*d*.14,d*.06,8,d*.20,'#484737',57);}
-  m.quad([x,23,z-d*.26],[x+d*.44,23,z-d*.26],[x+d*.44,23,z+d*.26],[x,23,z+d*.26],paint,1,20);
-  m.quad([x-d*.16,12,z-d*.33],[x,22,z-d*.25],[x,22,z+d*.25],[x-d*.16,12,z+d*.33],'#263a39',1,55);
-  m.quad([x+d*.44,22,z-d*.25],[x+d*.59,12,z-d*.33],[x+d*.59,12,z+d*.33],[x+d*.44,22,z+d*.25],'#233332',1,55);
+  if(worn!==2)m.quad([x,roofY,z-d*.26],[x+d*roofEnd,roofY,z-d*.26],[x+d*roofEnd,roofY,z+d*.26],[x,roofY,z+d*.26],paint,1,20);
+  else{
+   m.quad([x,roofY,z-d*.26],[x+d*roofEnd,roofY-2,z-d*.26],[x+d*.31,roofY-4,z-d*.04],[x+d*.05,roofY-2,z+d*.04],paint,1,27);
+   for(const dx of [.04,.30])m.branch(x+d*dx,roofY,z-d*.25,x+d*dx,roofY-3,z+d*.25,.8,'#4d4b3e',4,27);
+  }
+  if(worn!==2){
+   m.tri([x-d*.16,12,z-d*.33],[x,roofY-1,z-d*.25],[x-d*.03,roofY-4,z+d*.04],'#344744',1,55);
+   m.tri([x+d*roofEnd,roofY-1,z-d*.25],[x+d*.64,12,z-d*.33],[x+d*.64,12,z+d*.33],'#293b37',1,55);
+  }
   m.box(x+d*.67,10,z,d*.21,2,d*.68,paint,20);
   m.quad([x-d*.75,hoodY,z-d*.34],[x-d*.16,12,z-d*.34],[x-d*.16,12,z+d*.34],[x-d*.75,hoodY,z+d*.34],paint,1,20);
   if(worn===1){m.box(x-d*.47,8,z,d*.29,3,d*.34,'#282d28',54);if(!low)for(let j=0;j<4;j++)m.box(x-d*.48+j*d*.045,11,z,d*.025,1,d*.28,'#746b57',27);}
@@ -7589,6 +7630,18 @@ function drawWorldScrap(m,s,low){
   for(const side of [-1,1]){
    m.box(x+d*.783,7,z+side*d*.26,.8,2,d*.10,'#754a36',8);
    m.branch(x+d*.05,6,z+side*d*.386,x+d*.05,12,z+side*d*.386,.24,'#3c4337',3,8);
+  }
+  // Rust follows the side-panel slope, with no coplanar surfaces or random frame noise.
+  for(const side of [-1,1])for(let j=0;j<(low?3:7);j++){
+   const px=x+d*(-.61+j*(low?.40:.19)),yy=6+(j%3)*1.25,zz=z+side*d*(.34+(yy-5)/7*.04)+side*.06;
+   m.quad([px-3,yy,zz],[px+4,yy,zz],[px+2,yy+1.8,zz+side*d*.0103],[px-2,yy+2.2,zz+side*d*.0126],j%2?'#775037':'#4b4533',1,27);
+  }
+  // Surviving lamp housings and black empty sockets distinguish the front damage.
+  if(worn===2)for(const side of [-1,1])m.box(x-d*.812,8,z+side*d*.27,.7,3,d*.12,'#1c2823',8);
+  if(!low){
+   m.branch(x-d*.05,15,z-d*.23,x-d*.14,13,z-d*.03,.35,'#51564a',3,27);
+   m.branch(x-d*.05,15,z+d*.03,x-d*.14,13,z+d*.22,.35,'#51564a',3,27);
+   for(const side of [-1,1])m.box(x+d*.2,4,z+side*d*.39,d*.32,.7,.7,'#3a3e32',27);
   }
   scaleMeshRange(m,first,x,z,1,1.45,.8);
   return true;
@@ -7892,7 +7945,22 @@ function sideFacade(m,b,low){
    for(const y of levels){
     const h=industrial?18:25;
     m.box(wall+side*.5,y-2,z,1.7,h+4,span+5,'#242f2b',8);
-    m.box(wall+side*1.5,y,z,.7,h,span,'#34534f',55);
+    const damage=(Math.abs(Number(b.id)||Math.floor(b.x+b.y))+j+Math.floor(y/60)+(side>0?2:0))%4;
+    if(damage===0)m.box(wall+side*1.5,y,z,.7,h,span,'#344d47',55);
+    else{
+     // Keep glass remnants at the frame; the dark recess remains behind the missing pane.
+     m.tri([wall+side*1.9,y+h,z-span*.48],[wall+side*1.9,y+h,z-span*.08],[wall+side*1.9,y+h*.57,z-span*.48],'#405952',1,55);
+     if(damage===1)m.box(wall+side*1.5,y,z+span*.25,.7,h,span*.46,'#344d47',55);
+    }
+    if(damage===3&&house)for(const k of [-1,1]){
+     const xx=wall+side*3.1,yy=y+9+k*4;
+     m.quad([xx,yy-1.7,z-span*.54],[xx,yy+1.7,z-span*.54],[xx,yy+8.7,z+span*.54],[xx,yy+5.3,z+span*.54],k<0?'#796346':'#5d5540',1,29);
+    }
+    // Rain trails descend from sills and frame joints, with uneven lengths.
+    for(let k=0;k<(low?2:4);k++){
+     const zz=z-span*.43+k*span*.23,len=5+(j*7+k*3+Math.floor(y))%13;
+     m.box(wall+side*.9,y-4-len,zz,.35,len,1.2+k%2,industrial?'#6a543c':'#4c5445',8);
+    }
     for(const dz of [-span/2,span/2])m.box(wall+side*2,y-2,z+dz,1,h+4,1.7,house?'#9b977d':'#849385',house?29:27);
     for(const yy of [y-2,y+h])m.box(wall+side*2,yy,z,1,1.6,span+3,house?'#9b977d':'#849385',house?29:27);
     m.box(wall+side*2,y,z,1,h,1.5,'#6b7d6d',27);
@@ -7928,7 +7996,13 @@ function rearFacade(m,b,low){
  // Eaves and downpipes sit against existing walls, outside the door facade.
  for(const side of [-1,1]){
   const x=side<0?b.x-1.8:b.x+b.w+1.8;
-  m.branch(x,top,b.y+8,x,8,b.y+8,1.25,'#657265',low?4:6,27);
+  const broken=(seed+(side>0?1:0))%3===0;
+  if(broken){
+   m.branch(x,top,b.y+8,x,36,b.y+8,1.25,'#657265',low?4:6,27);
+   m.branch(x,36,b.y+8,x+side*2,33,b.y+9,1.25,'#657265',low?4:6,27);
+   m.branch(x,24,b.y+8,x,8,b.y+8,1.25,'#657265',low?4:6,27);
+   for(let k=0;k<3;k++)m.box(x-side*1.7,2,b.y+8+k*2, .3,17+k*4,1.3,'#3c493c',8);
+  }else m.branch(x,top,b.y+8,x,8,b.y+8,1.25,'#657265',low?4:6,27);
   m.branch(x,8,b.y+8,x+side*3,3,b.y+8,1.25,'#657265',low?4:6,27);
   if(!low)for(const yy of [18,48,72])m.box(x,yy,b.y+8,3,1.3,3,'#909380',27);
  }
@@ -7953,7 +8027,12 @@ function facadeDetails(m,b,low){
   m.branch(cx,84,front+6,cx,81+rise,front+6,1.1,'#6c6048',4,29);
  }
  if(b.style==='residential'||high){
-  m.quad([door-34,62,front+3],[door+34,62,front+3],[door+34,58,front+27],[door-34,58,front+27],'#657165',1,high?27:11);
+  const torn=(Math.abs(Number(b.id)||Math.floor(b.x+b.y)))%3===1;
+  if(torn){
+   m.quad([door-34,62,front+3],[door+34,62,front+3],[door+34,59,front+16],[door-34,59,front+16],'#606b5e',1,high?27:11);
+   m.quad([door-34,59,front+16],[door+8,59,front+16],[door+3,56,front+27],[door-34,58,front+27],'#596353',1,high?27:11);
+   m.branch(door-30,57,front+26,door+30,57,front+26,.7,'#625a49',4,27);
+  }else m.quad([door-34,62,front+3],[door+34,62,front+3],[door+34,58,front+27],[door-34,58,front+27],'#657165',1,high?27:11);
   for(const side of [-1,1])m.branch(door+side*29,45,front+3,door+side*29,58,front+23,1.1,'#555f52',5,27);
  }
  if(high){
@@ -8185,7 +8264,7 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v16.45: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v16.48: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
  sectorRoof(m,b,t.id,low);
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop',roofTop=b.style==='institute'?161:98;
@@ -9555,7 +9634,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.45'};
+window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.48'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -9566,7 +9645,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.45</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.45 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.48</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.48 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
@@ -10015,6 +10094,36 @@ function dressAftermath(w){
  installWorldCollisions(w);
 }
 
+// Compact yards and supply piles fill gaps without rescaling the map or blocking its road network.
+function dressInfill(w){
+ if((run()?.layoutVersion||1)<10)return;
+ const id=w.theme.id,natural=/redforest|swamp/.test(id),village=/village|swamp/.test(id),industrial=/dump|jupiter|wild|chaes|generators|skadovsk|valley/.test(id);
+ const science=/lab|agroprom|yantar|hospital|sarcophagus|generators/.test(id),military=/military|barrier|post|radar/.test(id);
+ const kits=village?['shed','stockpile','garden']:natural?['stockpile','ruin','reeds']:science?['pipepile','stockpile','console']:military?['sandbags','stockpile','shed']:industrial?['pipepile','stockpile','shed']:['stockpile','shed','bench'];
+ const dims={console:[40,30],sandbags:[58,24],shed:[76,56],stockpile:[62,44],pipepile:[76,44],garden:[62,68],ruin:[64,54],reeds:[40,38],bench:[52,20]};
+ const reserved=[w.exit,{x:140,y:1260},{x:535,y:1110},...w.buildings.map(b=>b.door),...w.crates,...w.people,...w.enemies],placed=[];
+ const overlaps=(a,b,pad)=>a.x<b.x+b.w+pad&&a.x+a.w+pad>b.x&&a.y<b.y+b.h+pad&&a.y+a.h+pad>b.y;
+ const free=p=>p.x>30&&p.y>30&&p.x+p.w<w.w-30&&p.y+p.h<w.h-30&&!reserved.some(q=>rectHit(q.x,q.y,p,80))&&!w.roads.some(q=>overlaps(p,q,24))&&!w.walls.some(q=>overlaps(p,q,20))&&!w.colliders.some(q=>overlaps(p,q,22))&&!placed.some(q=>overlaps(p,q,28));
+ let count=0;
+ const put=(x,y)=>{
+  const kind=kits[count%kits.length],[width,height]=dims[kind],p={x,y,w:width,h:height,kind,story:village?'home':industrial?'industrial':'urban'};
+  if(!free(p))return false;
+  w.dressing.push(p);placed.push(p);count++;
+  return true;
+ };
+ // The first pass attaches outbuildings to existing yards; front approaches stay clear.
+ for(const b of w.buildings)for(const [x,y] of [[b.x-105,b.y+12],[b.x+b.w+28,b.y+18],[b.x+20,b.y-90]])put(x,y);
+ const yardCount=count;
+ for(let y=80;y<w.h-110;y+=natural?260:175)for(let x=80;x<w.w-110;x+=natural?260:175){
+  if(count-yardCount>=180)break;
+  // Deterministic stagger avoids lining every prop up on the same grid.
+  const shift=(Math.floor(x)*17+Math.floor(y)*13)%59;
+  put(x+shift,y+(shift*7)%53);
+ }
+ w.infillSites=count;w.yardSites=yardCount;
+ installWorldCollisions(w);
+}
+
 function connectOuterDistricts(w){
  if((run()?.layoutVersion||1)<8)return;
  const obstacles=(w.landmarks||[]).flatMap(l=>window.ZonaSurvival3D.collisionParts(l));
@@ -10120,7 +10229,7 @@ for(let i=0;i<42;i++)w.scraps.push({...freePoint(),kind:choose(['rock','barrel',
 for(let i=0;i<86;i++)w.decals.push({x:rand()*w.w,y:rand()*w.h,w:4+rand()*20,h:2+rand()*8,rot:rand()*6.28,kind:choose(['soil','scorch','scratch','stone','leaf']),a:.09+rand()*.19});
 for(let i=0;i<6;i++)w.lights.push({...freePoint(),r:34+rand()*48,c:choose(['rgba(255,214,144,.11)','rgba(113,181,163,.10)','rgba(201,141,110,.09)'])});
 for(const room of w.rooms){if(!architectural)for(let i=0;i<14;i++)room.props.push({x:35+rand()*(room.w-70),y:35+rand()*(room.h-70),w:16+rand()*46,h:10+rand()*29,kind:choose(['table','locker','shelf','bed','box','machine','cabinet']),rot:rand()<.35});for(let i=0;i<68;i++)room.debris.push({x:25+rand()*(room.w-50),y:25+rand()*(room.h-50),size:1+rand()*7.8,rot:rand()*6.28,c:choose(['#5b584e','#8a795d','#30342e','#766447','#43483d'])});}
-expandSector(w);expandOuterDistrict(w);expandFrontierDistrict(w);expandAftermathDistrict(w);connectOuterDistricts(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}fitVehicles(w);installWorldCollisions(w);dressSector(w);dressAftermath(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
+expandSector(w);expandOuterDistrict(w);expandFrontierDistrict(w);expandAftermathDistrict(w);connectOuterDistricts(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}fitVehicles(w);installWorldCollisions(w);dressSector(w);dressAftermath(w);dressInfill(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
 function enter(id){
  // Never create a second renderer over an already running Survival session.
  if(visible){return true}
@@ -10140,7 +10249,7 @@ function enter(id){
  if(!oldRun){
   st.visits=st.visits||{};st.visits[id]=(st.visits[id]||0)+1;
   st.selectedLoc=id;
-  st.run={layoutVersion:9,locId:id,seed:seedOf(id+':'+st.visits[id]),room:null,
+  st.run={layoutVersion:10,locId:id,seed:seedOf(id+':'+st.visits[id]),room:null,
    x:id==='loc_kordon_village'?535:140,y:id==='loc_kordon_village'?1110:1260,
    opened:[],talked:[],defeated:[],enemyState:{},bag:{},rubles:0,gram:0,kills:0,
    worldTime:id==='loc_kordon_village'?300:170};
