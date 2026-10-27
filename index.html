@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.40 — Survival Material Remaster</title>
+<title>ZONA Z v16.45 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -7102,9 +7102,65 @@ function dressingParts(p){
 function drawDressing(m,p,low){
  const {x,y,w,h,kind}=p,cx=x+w/2,cz=y+h/2,metal='#535c54',rust='#75604a';
  if(kind==='ruin'){
-  m.box(x+3,0,cz,6,35,h,'#6e6c5e',2);m.box(x+w-3,0,cz,6,22,h,'#555f55',2);m.box(cx,0,y+3,w,18,6,'#757568',2);
-  for(let j=0;j<5;j++){m.box(x+5+j*(w-10)/5,18,y+3,w/6,5+(j%3)*7,6,'#6a6457',2);if(!low)m.branch(x+7+j*9,25,y+3,x+10+j*9,40-j*3,y+3,.7,'#5e4a35',4,3);}
-  m.plane(cx,.12,cz,w-12,h-8,'#373e38',2);
+  // Uneven masonry, exposed reinforcement and fallen roof material.
+  const seed=Math.abs(Math.floor(x*17+y*31)),segments=low?4:7;
+  const story=p.story||'urban',home=story==='home'||story==='forest',industry=story==='industrial',science=story==='research',army=story==='military';
+  const masonry=home?'#78614d':industry?'#68665b':science?'#7c8174':army?'#626854':'#777267';
+  const floor=home?'#494132':industry?'#3f433c':science?'#59625b':'#474940';
+  for(const side of [0,1])for(let j=0;j<segments;j++){
+   const length=h/segments,hh=12+((seed+j*13+side*19)%27);
+   m.box(side?x+w-3:x+3,0,y+(j+.5)*length,6,hh,length,masonry,2);
+   if(!low&&j%2===0)m.branch(side?x+w-3:x+3,hh,y+(j+.5)*length,side?x+w-5:x+5,hh+9,y+(j+.5)*length+3,.6,'#55493e',4,3);
+  }
+  for(let j=0;j<segments;j++)m.box(x+(j+.5)*w/segments,0,y+3,w/segments,14+(seed+j*7)%15,6,masonry,2);
+  m.plane(cx,.22,cz,w-12,h-8,floor,home?4:2);
+  for(let j=0;j<(low?5:11);j++){
+   const px=x+13+(seed+j*37)%Math.max(1,w-26),pz=y+13+(seed+j*23)%Math.max(1,h-26);
+   m.box(px,.4,pz,5+j%4,2+j%3,4+j%5,j%3?'#777466':'#3e3d35',2);
+  }
+  m.branch(x+12,2,y+h*.3,x+w-14,4,y+h*.7,2,'#292b26',4,4);
+  if(!low)m.branch(x+16,3,y+h*.8,x+w-18,3,y+h*.2,1.8,'#3d3930',4,4);
+  // Evidence of the building's former use, kept inside its existing footprint.
+  if(home){
+   for(let row=0;row<4;row++)m.box(cx,.5,y+13+row*(h-20)/4,w-20,.6,2,'#252c26',4);
+   // Fallen bed frame and scorched roof timbers are low enough to step over.
+   const bx=x+w*.35,bz=y+h*.53;
+   m.box(bx,.9,bz,w*.30,2,h*.34,'#39382c',8);
+   for(const side of [-1,1])m.branch(bx+side*w*.16,2,bz-h*.18,bx+side*w*.16,3,bz+h*.18,.9,'#62594a',4,3);
+   for(let k=0;k<3;k++)m.branch(x+9+k*4,5,y+12,x+w*.65+k*4,2,y+h-12,1.1,'#292b25',4,4);
+   m.box(x+3.2,6,y+h*.35,6.5,13,h*.23,'#30332c',2);
+  }else if(industry){
+   for(const dx of [-w*.2,w*.2]){m.box(cx+dx,.7,cz,3,1,h-20,'#6c6250',3);for(const dz of [-h*.22,h*.22])m.box(cx+dx,1.7,cz+dz,5,1.2,5,'#514c41',3);}
+   m.branch(x+12,15,y+3,x+w-12,15,y+3,2.6,'#75614a',6,27);
+   for(let k=0;k<3;k++)m.box(x+18+k*12,1,y+h*.6,9,2,12,'#625e4c',27);
+   // Faded safety markings, broken apart instead of an intact bright stripe.
+   for(let k=0;k<4;k++)m.plane(x+15+k*(w-30)/4,.34,y+h-12,7,3,k%2?'#625d3d':'#252d28',8);
+  }else if(science){
+   for(let row=0;row<4;row++)for(let col=0;col<4;col++){
+    if((seed+row*3+col)%7===0)continue;
+    m.plane(x+10+(col+.5)*(w-20)/4,.32,y+9+(row+.5)*(h-18)/4,(w-20)/4-1,(h-18)/4-1,(row+col)%2?'#6b746a':'#4c5d58',2);
+   }
+   // Broken wall-mounted instrument panel, without a glowing screen.
+   m.box(cx,10,y+3,w*.42,12,6.4,'#4a554e',3);
+   m.box(cx,14,y+6.35,w*.25,6,.5,'#202d2b',8);
+   if(!low)for(let k=0;k<3;k++)m.branch(cx-7+k*5,12,y+6.7,cx-9+k*6,4,y+7.5,.35,'#5a5042',4,3);
+   for(let k=0;k<3;k++)m.plane(x+17+k*11,.4,y+h*.68,7,10,'#a39c82',8);
+  }else if(army){
+   for(let k=0;k<3;k++)m.box(x+14+k*15,3,y+3,12,8,6.4,'#4f5741',4);
+   m.plane(cx,.35,cz,w*.45,h*.36,'#4b513b',8);
+   for(let k=0;k<3;k++)m.branch(x+14+k*5,2,y+h-12,x+w-14,3,y+15+k*4,.8,'#5a5c48',4,3);
+   m.box(x+3,8,cz,6.4,10,14,'#383e32',4);
+  }else{
+   // Shattered checker flooring and fallen domestic furniture in urban blocks.
+   for(let row=0;row<3;row++)for(let col=0;col<4;col++)if((seed+row+col)%5!==0)m.plane(x+12+col*(w-24)/4,.35,y+12+row*(h-24)/3,(w-24)/4-1,(h-24)/3-1,(row+col)%2?'#767566':'#424d45',2);
+   m.box(cx,1.5,y+h*.6,w*.36,2,13,'#6f5c43',4);
+   m.box(x+3,4,y+h*.3,6.4,18,15,'#655c49',4);
+  }
+  // Stable soot marks are baked into geometry; no per-frame random flicker.
+  for(let k=0;k<(low?2:5);k++){
+   const z=y+10+(seed+k*19)%Math.max(1,h-20);
+   m.box(x-.12,2,z,.25,9+(seed+k*7)%13,3+k%3,'#30372f',8);
+  }
  }else if(kind==='garden'){
   m.plane(cx,.12,cz,w,h,'#3b3529',0);
   for(let row=5;row<h;row+=12){m.box(cx,.6,y+row,w-5,.6,2,'#534634',0);if(!low)for(let col=8;col<w;col+=14){const px=x+col,pz=y+row;m.tri([px-3,1,pz],[px+3,1,pz],[px,7,pz+2],'#536147',1,8)}}
@@ -7967,6 +8023,22 @@ function sectorEcology(id){
  if(/kordon_village/.test(id))return 'birch';
  return 'mixed';
 }
+function deadSectorTree(m,tr,t,low){
+ const x=tr.x+15,z=tr.y+15,size=tr.size||28,seed=Math.abs(Math.floor(x*17+z*11)),burned=sectorEcology(t.id)==='scorched';
+ const height=size*(1.7+(seed%9)*.035),lean=Math.sin(seed*.7)*size*.16,bark=burned?'#36382f':'#686858',wood=burned?'#625442':'#9a8d6b';
+ m.branch(x,0,z,x+lean,height,z,Math.max(3,size*.10),bark,low?5:7,31);
+ // Broken crown exposes pale wood, without a floating treetop.
+ m.ellipsoid(x+lean,height,z,2.3,.8,2,wood,3,5,8);
+ for(let j=0;j<(low?4:7);j++){
+  const a=seed*.13+j*2.399,y=height*(.3+j*.075),reach=size*(.45+(j%3)*.12),bx=x+lean*y/height,bz=z;
+  const ex=bx+Math.cos(a)*reach,ez=bz+Math.sin(a)*reach,ey=y+size*.24;
+  m.branch(bx,y,bz,ex,ey,ez,1.4,bark,4,31);
+  m.branch(ex,ey,ez,ex+Math.cos(a+.4)*reach*.35,ey+size*.18,ez+Math.sin(a+.4)*reach*.35,.65,bark,3,31);
+  if(!low)m.branch(ex,ey,ez,ex+Math.cos(a-.6)*reach*.25,ey-size*.12,ez+Math.sin(a-.6)*reach*.25,.5,wood,3,31);
+ }
+ // Roots stay inside the existing 30 by 30 trunk collision footprint.
+ for(let j=0;j<4;j++){const a=j*Math.PI/2+seed;m.branch(x,8,z,x+Math.cos(a)*12,1,z+Math.sin(a)*12,1.7,bark,4,31);}
+}
 function sectorTree(m,tr,t,low){
  const x=tr.x+15,z=tr.y+15,size=tr.size||28,seed=(x*17+z*11)%53,type=sectorEcology(t.id),colors=[t.treeDark,t.treeMid,t.treeLight];
  if(type==='sealed'){
@@ -7978,6 +8050,8 @@ function sectorTree(m,tr,t,low){
   if(!low)for(const yy of [18,42,63])m.box(x,yy,z+11,12,3,1,'#a79657',8);
   return;
  }
+ const decay=Math.abs(Math.floor(x*13+z*29))%11;
+ if(decay<(type==='scorched'?5:type==='wetland'?2:1)){deadSectorTree(m,tr,t,low);return;}
  if(type==='mixed'||type==='scorched'){
   m.foliage(x,0,z,size,colors,low,seed,type==='scorched'?(Math.floor(seed)%3===0?6:1):null);return;
  }
@@ -8002,7 +8076,18 @@ function sectorTree(m,tr,t,low){
 }
 function sectorGroundPlant(m,g,t,low){
  const type=sectorEcology(t.id);if(type==='sealed')return;
- if(type!=='wetland'){m.grassClump(g.x,g.y,g.h,g.c,low);return;}
+ const seed=Math.abs(Math.floor(g.x*19+g.y*7));
+ if(type!=='wetland'){
+  // Dry seed stalks interrupt the uniform green carpet; their roots are world-fixed.
+  if(seed%5===0){
+   for(let j=0;j<(low?2:4);j++){
+    const px=g.x+(j-1)*2,pz=g.y+Math.sin(seed+j)*2,hh=Math.min(25,g.h*(.8+j*.1));
+    m.branch(px,0,pz,px+2,hh,pz,.25,'#8b805c',3,8);
+    if(!low)for(let k=0;k<2;k++)m.branch(px+2,hh-k*2,pz,px+(k?4:-1),hh+1-k*2,pz+1,.45,'#9a8b64',3,8);
+   }
+  }else m.grassClump(g.x,g.y,g.h,g.c,low);
+  return;
+ }
  m.grassClump(g.x,g.y,g.h*.8,t.treeLight,low);
  for(let j=0;j<(low?2:3);j++){
   const x=g.x+(j-1)*2,z=g.y+Math.sin(j+g.x)*2,h=Math.min(34,g.h*1.35+j*2);
@@ -8100,7 +8185,7 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v16.40: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v16.45: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
  sectorRoof(m,b,t.id,low);
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop',roofTop=b.style==='institute'?161:98;
@@ -8432,9 +8517,9 @@ function mob(x,z,id){
   m.data[i+4]=clamp(m.data[i+4]*(shade+belly*.62),0,1);
   m.data[i+5]=clamp(m.data[i+5]*(shade-belly*.12),0,1);
  };
- const ell=(px,y,pz,rx,ry,rz,col=c)=>{
+ const ell=(px,y,pz,rx,ry,rz,col=c,bridge=false)=>{
   const firstPart=m.data.length,skin=col===c;
-  m.ellipsoid(x+px,y,z+pz,rx,ry,rz,col,eco?4:6,eco?6:10,skin?62:8);
+  m.ellipsoid(x+px,y,z+pz,rx,ry,rz,col,bridge?(eco?3:4):(eco?4:6),bridge?(eco?5:8):(eco?6:10),skin?62:8);
   if(skin)for(let i=firstPart;i<m.data.length;i+=10) pigment(i,(m.data[i]-x-px)/rx,(m.data[i+1]-y)/ry,(m.data[i+2]-z-pz)/rz);
  };
  const limb=(ax,ay,az,bx,by,bz,r,col=c)=>{
@@ -8450,7 +8535,21 @@ function mob(x,z,id){
    pigment(i,radial.reduce((sum,v,k)=>sum+v*side[k],0)/r,along/length*2-1,radial.reduce((sum,v,k)=>sum+v*up[k],0)/r);
   }
  };
- const quad=p.family==='quad'||p.family==='crawler';
+ // Rounded anatomical bridges share the same local pigment and normal transform.
+ const muscle=(ax,ay,az,bx,by,bz,r,depth=r)=>{
+  const start=m.data.length,dx=bx-ax,dy=by-ay,dz=bz-az,len=Math.hypot(dx,dy,dz);
+  if(len<.001)return;
+  const axis=[dx/len,dy/len,dz/len],side=norm(cross(axis,Math.abs(axis[1])>.9?[0,0,1]:[0,1,0])),up=cross(axis,side);
+  ell(0,0,0,r,depth,len*.5+r*.35,c,true);
+  for(let i=start;i<m.data.length;i+=10){
+   const q=[m.data[i]-x,m.data[i+1],m.data[i+2]-z],n=m.data.slice(i+6,i+9);
+   for(let k=0;k<3;k++){
+    m.data[i+k]=[x+(ax+bx)*.5,(ay+by)*.5,z+(az+bz)*.5][k]+side[k]*q[0]+up[k]*q[1]+axis[k]*q[2];
+    m.data[i+6+k]=side[k]*n[0]+up[k]*n[1]+axis[k]*n[2];
+   }
+  }
+ };
+ const quad=p.family==='quad'||p.family==='crawler',hoofed=/boar|flesh/.test(id),rodent=/^(rat|tushkano)$/.test(id),bear=/bear/.test(id),crawler=p.family==='crawler';
  if(quad){
   const [cy,breadth,length,head]=p.anatomy;
   ell(0,cy+hop*2,4,breadth*p.width,Math.max(7,cy*.55),length);
@@ -8458,20 +8557,52 @@ function mob(x,z,id){
   for(const side of [-1,1])for(const front of [-1,1]){
    const legPhase=phase+(front*side>0?0:Math.PI),swing=Math.sin(legPhase)*speed*8,lift=Math.max(0,-Math.cos(legPhase))*speed*3.8;
    const kneeZ=front*length*.68+swing*.5+(front>0?3:-3),pawZ=front*length*.7+swing,kneeY=Math.max(7,cy*.48)+lift*.4;
-   limb(side*breadth*.7,cy,front*length*.65,side*breadth*.9,kneeY,kneeZ,3);
-   limb(side*breadth*.9,kneeY,kneeZ,side*breadth,3+lift,pawZ,2.4);ell(side*breadth,3+lift,pawZ,3.5,3,5,dark);
-   if(!eco)for(let k=-1;k<=1;k++)limb(side*breadth+k,2+lift,pawZ-2,side*breadth+k,1+lift,pawZ-6,.55,bone);
+   muscle(side*breadth*.66,cy+hop*2,front*length*.58,side*breadth*.9,kneeY,kneeZ,bear?5.8:hoofed?4.6:crawler?3.5:3.7);
+   ell(side*breadth*.9,kneeY,kneeZ,2.8,3.2,3);
+   limb(side*breadth*.9,kneeY,kneeZ,side*breadth,3+lift,pawZ,2.4);
+   const footX=side*breadth;
+   if(hoofed){for(const split of [-1,1])ell(footX+split*1.4,2.5+lift,pawZ,1.5,2.5,3.8,dark);}
+   else if(crawler){
+    if(front<0){ell(footX,2.4+lift,pawZ,3.5,1.6,4);if(!eco)for(let k=0;k<4;k++)limb(footX+k*1.2-1.8,2+lift,pawZ-2,footX+k*1.4-2.1,1.5+lift,pawZ-6,.65);}
+    else ell(footX,3+lift,pawZ,3.5,3,6,dark);
+   }else{ell(footX,3+lift,pawZ,bear?4.5:3.5,2.8,4.5);if(!eco)for(let k=-1;k<=1;k++){ell(footX+k*1.6,2+lift,pawZ-3,1.2,1.3,2,dark);limb(footX+k*1.6,2+lift,pawZ-4,footX+k*1.6,1.2+lift,pawZ-(bear?7:5.5),.45,bone);}}
   }
-  for(let h=0;h<p.heads;h++){const hx=p.heads===2?(h?9:-9):0;ell(hx,cy+2, -length-attack*6,head,head,head+2);ell(hx,cy-2,-length-head-attack*6,head*.65,head*.55,head*.9,dark);for(const side of [-1,1]){limb(hx+side*6,cy+8,-24,hx+side*8,cy+17+p.crest,-22,2);if(p.tusks)limb(hx+side*7,cy-7,-29,hx+side*10,cy+2,-39,2,bone)}}
-  if(p.tail){limb(0,cy,25,8+stride*7,cy+5,42,2);limb(8+stride*7,cy+5,42,14+stride*9,cy+10,52,1)}
-  if(p.family==='quad'&&!/flesh|rat/.test(id)){
-   const [cy,breadth,length]=p.anatomy;
-   for(let j=0;j<(eco?5:9);j++){
-    const zz=-length*.65+j*length*1.3/(eco?4:8),top=cy+Math.max(7,cy*.55)+hop*2,crest=/boar|bear/.test(id)?7:4;
-    m.tri([x-1.6,top-2,z+zz-3],[x+1.6,top-2,z+zz+3],[x+.8,top+crest,z+zz+4],dark,1,8);
+  for(let h=0;h<p.heads;h++){
+   const hx=p.heads===2?(h?9:-9):0,hz=-length-attack*6;
+   muscle(hx*.65,cy+hop*2,-length*.64,hx,cy+2,hz+head*.35,head*(bear||hoofed?.85:.65));
+   ell(hx,cy+2,hz,head,head,head+2);
+   if(crawler){
+    ell(hx,cy+5,hz,head*1.06,head*.8,head,dark);
+    for(const side of [-1,1])ell(hx+side*head*.43,cy+3,hz-head*.88,head*.32,head*.27,1.7,'#697a76');
+    ell(hx,cy-1,hz-head,head*.5,head*.42,3,'#363d36');
+    ell(hx+head*.6,cy-3,hz-head*.8,2.8,2.8,3,'#4b5146');
+   }else{
+    ell(hx,cy-2,hz-head*.9,head*(hoofed?.78:.63),head*(hoofed?.48:.52),head*(hoofed?.6:1.02));
+    ell(hx,cy-1,hz-head*(hoofed?1.4:1.8),head*(hoofed?.6:.36),head*.25,1.5,dark);
+    for(const side of [-1,1]){
+     if(rodent||bear){ell(hx+side*head*.8,cy+head*.9,hz+1,head*.43,head*.48,2);ell(hx+side*head*.8,cy+head*.9,hz-.8,head*.27,head*.3,.7,'#746354');}
+     else{
+      const ex=hx+side*head*.72,ey=cy+head*.65,eh=head*(hoofed?.65:1.0),tip=[x+ex+side*1.8,ey+eh,z+hz+2];
+      const left=[x+ex-2,ey,z+hz],right=[x+ex+2,ey,z+hz],back=[x+ex,ey,z+hz+3.5];
+      m.tri(left,right,tip,c,1,8);m.tri(right,back,tip,dark,1,8);m.tri(back,left,tip,c,1,8);
+     }
+     if(hoofed)ell(hx+side*head*.28,cy-1,hz-head*1.53,.8,.7,.4,'#161c18');
+     if(p.tusks){limb(hx+side*head*.7,cy-5,hz-head,hx+side*head,cy-3,hz-head*1.6,1.8,bone);limb(hx+side*head,cy-3,hz-head*1.6,hx+side*head*.9,cy+2,hz-head*1.7,1,bone);}
+    }
    }
   }
-  if(p.family==='crawler'){ell(0,20,-29,7,6,5,dark);limb(6,19,-30,12,10,-29,2,dark)}
+  if(p.tail){const tailZ=4+length*.86;limb(0,cy,tailZ,6+stride*5,cy+3,tailZ+length*.65,1.8);limb(6+stride*5,cy+3,tailZ+length*.65,10+stride*7,cy+6,tailZ+length,1);}
+  // Bristles follow the curved back, with their roots inside the body surface.
+  if(p.family==='quad'&&/boar|chimera/.test(id)){
+   const count=eco?5:8,ry=Math.max(7,cy*.55);
+   for(let j=0;j<count;j++){
+    const zz=-length*.55+j*length*1.05/(count-1),q=(zz-4)/length;
+    const top=cy+hop*2+ry*Math.sqrt(Math.max(0,1-q*q)),root=top-1.5,height=/boar/.test(id)?3.4:2.2;
+    m.tri([x-1.3,root,z+zz-1],[x+1.3,root,z+zz-1],[x,top+height,z+zz+2],dark,1,8);
+    m.tri([x+1.3,root,z+zz+1],[x-1.3,root,z+zz+1],[x,top+height,z+zz+2],dark,1,8);
+   }
+  }
+
  }else if(p.family==='spirit'){
   const float=25+Math.sin(time*2+p.crest)*5;ell(0,float,0,11*p.width,16,10);ell(0,float+20,0,7,8,7);
   for(let k=0;k<4+p.crest;k++){const angle=k*Math.PI*2/(4+p.crest)+time*.45;ell(Math.cos(angle)*22,float+Math.sin(angle*2)*10,Math.sin(angle)*22,2+k%2,3,2,bone)}
@@ -8504,15 +8635,12 @@ function mob(x,z,id){
    m.box(x,23,z-9,15,14,2,'#42483c',8);
    for(const side of [-1,1]){m.box(x+side*5,24,z-11,4,6,3,'#6e6d54',8);limb(side*7,37,-7,side*5,21,-10,.9,'#302f27');}
    ell(0,46,-8,5,2,1.2,'#18282c');
-  }else if(quad){
-   for(let k=0;k<5;k++)ell(0,30+(k%2)*2,16-k*7,3+p.crest,2,3,'#3c4035');
-   for(const side of [-1,1])ell(side*6,22,-30,1.3,1.1,1.4,'#baa476');
-  }else if(p.family!=='spirit'){
+  }else if(!quad&&p.family!=='spirit'){
    for(const side of [-1,1])ell(side*3,48,-8,1.1,1,1,'#a18e6a');
    if(p.coat)for(let k=0;k<4;k++)m.box(x,15+k*5,z-12,1.2,1.2,1,'#9a9278',8);
   }
  }
- if(quad){
+ if(quad&&!crawler){
   const [cy,breadth,length,head]=p.anatomy;
   for(let h=0;h<p.heads;h++){
    const hx=p.heads===2?(h?9:-9):0,front=-length-head-attack*6;
@@ -8523,7 +8651,7 @@ function mob(x,z,id){
 
    }
   }
- }else if(p.family!=='spirit'){
+ }else if(!quad&&p.family!=='spirit'){
   for(const side of [-1,1]){
    ell(side*7,9,stride*side*6-2,3.3,4,2.2,dark);
    if(!eco)for(let k=0;k<3;k++)limb(side*16+k*.8,15,-4-attack*17,side*16+k*.8,11,-7-attack*17,.6,bone);
@@ -9427,7 +9555,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.40'};
+window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.45'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -9438,7 +9566,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.40</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.40 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.45</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.45 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
@@ -9839,6 +9967,54 @@ function expandFrontierDistrict(w){
  w.expansionEntrances.push({x:3474,y:2635},{x:3086,y:2930});
 }
 
+// Layout 9 adds land instead of scaling the existing playable geometry.
+function expandAftermathDistrict(w){
+ if((run()?.layoutVersion||1)<9)return;
+ w.w=4860;w.h=3975;
+ const programs=EXTENSION_PROGRAMS[w.theme.id]||['warehouse','workshop'],natural=/redforest|swamp/.test(w.theme.id);
+ const slots=natural?[[4515,650],[1200,3740]]:[[4515,240],[4515,1110],[4515,1980],[4515,2850],[420,3740],[1510,3740],[2600,3740],[3690,3740]];
+ for(let i=0;i<slots.length;i++){
+  const [x,y]=slots[i],id=w.buildings.length,type=programs[i%programs.length];
+  const b={id,x,y,w:220,h:135,interior:type,style:['home','apartment'].includes(type)?'residential':['lab','institute','hospital'].includes(type)?'institute':'storage',name:(type==='home'?'Заброшенный дом':type==='institute'?'Эвакуированный корпус':type==='barracks'?'Покинутая казарма':'Заброшенный '+(type==='workshop'?'ремонтный участок':'корпус'))+' · Окраина '+(i+1)};
+  b.door={x:x+110,y:y+160};b.windows=[.2,.8].map(t=>({x:x+220*t-12,y:y+28,w:24,h:23,lit:false}));
+  w.buildings.push(b);w.walls.push(b);
+  const room=furnishedInterior(b,id,w.theme,w.buildings.length);room.crates=[];room.enemies=[];room.people=[];room.debris=[];room.markings=[];room.dust=[];
+  for(let k=0;k<45;k++)room.debris.push({x:24+rand()*(room.w-48),y:24+rand()*(room.h-48),size:2+rand()*5,c:'#625e50'});
+  w.rooms.push(room);
+ }
+ w.aftermathVersion=1;
+}
+function dressAftermath(w){
+ if((run()?.layoutVersion||1)<9)return;
+ const id=w.theme.id,natural=/redforest|swamp/.test(id),village=/village|swamp/.test(id),military=/post|military|barrier|radar/.test(id),industrial=/dump|jupiter|wild|chaes|generators|skadovsk/.test(id);
+ const kit=natural?['ruin','reeds','ruin']:village?['ruin','garden','well']:military?['sandbags','ruin','console']:industrial?['ruin','turbine','wagon']:['ruin','bench','memorial'];
+ const dims={ruin:[88,68],garden:[62,68],well:[36,36],reeds:[40,38],sandbags:[58,24],console:[40,30],turbine:[56,56],wagon:[48,112],bench:[52,20],memorial:[38,32]};
+ const reserved=[w.exit,{x:140,y:1260},{x:535,y:1110},...w.buildings.map(b=>b.door),...w.crates,...w.people,...w.enemies];
+ const placed=[];
+ const overlap=(a,b,pad=0)=>a.x<b.x+b.w+pad&&a.x+a.w+pad>b.x&&a.y<b.y+b.h+pad&&a.y+a.h+pad>b.y;
+ const free=p=>p.x>40&&p.y>40&&p.x+p.w<w.w-40&&p.y+p.h<w.h-40&&!reserved.some(q=>rectHit(q.x,q.y,p,100))&&!w.roads.some(q=>overlap(p,q,32))&&!w.walls.some(q=>overlap(p,q,24))&&!w.colliders.some(q=>overlap(p,q,24))&&!placed.some(q=>overlap(p,q,26));
+ let count=0;
+ for(let gy=130;gy<w.h-180;gy+=280)for(let gx=130;gx<w.w-180;gx+=280){
+  if(natural&&(Math.floor(gx/280)+Math.floor(gy/280))%2)continue;
+  for(let attempt=0;attempt<6;attempt++){
+   const x=gx+rand()*100,y=gy+rand()*100,kind=kit[count%kit.length],[width,height]=dims[kind],site={x,y,w:width+110,h:height+60};
+   if(!free(site))continue;
+   w.dressing.push({x,y,w:width,h:height,kind,story:/lab|agroprom|yantar/.test(id)?'research':military?'military':industrial?'industrial':village?'home':natural?'forest':'urban'});placed.push(site);count++;
+   // A visible collapse footprint, scattered masonry and abandoned supplies form one scene.
+   w.patches.push({x:x+width*.5,y:y+height*.5,r:65,color:w.theme.mud,alpha:.25});
+   if(!natural&&count%4===0){
+    const vehicle={x:x+width+80,y:y+height+130,kind:'wreck',s:26,rot:0},bounds=window.ZonaSurvival3D.vehicleBounds(vehicle);
+    if(free(bounds)){w.scraps.push(vehicle);placed.push(bounds);}
+   }
+   for(let k=0;k<4;k++)w.scraps.push({x:x+width+25+(k%2)*27,y:y+15+Math.floor(k/2)*28,kind:k===0&&!natural?'barrel':k===1&&!natural?'cratejunk':'rock',s:12+rand()*9,rot:rand()*6.28});
+   for(let k=0;k<8;k++)w.decals.push({x:x+rand()*width,y:y+height+rand()*28,w:4+rand()*10,h:3+rand()*5,rot:rand()*6.28,kind:k%3?'scratch':'scorch',a:.22});
+   break;
+  }
+ }
+ w.aftermathSites=count;
+ installWorldCollisions(w);
+}
+
 function connectOuterDistricts(w){
  if((run()?.layoutVersion||1)<8)return;
  const obstacles=(w.landmarks||[]).flatMap(l=>window.ZonaSurvival3D.collisionParts(l));
@@ -9944,7 +10120,7 @@ for(let i=0;i<42;i++)w.scraps.push({...freePoint(),kind:choose(['rock','barrel',
 for(let i=0;i<86;i++)w.decals.push({x:rand()*w.w,y:rand()*w.h,w:4+rand()*20,h:2+rand()*8,rot:rand()*6.28,kind:choose(['soil','scorch','scratch','stone','leaf']),a:.09+rand()*.19});
 for(let i=0;i<6;i++)w.lights.push({...freePoint(),r:34+rand()*48,c:choose(['rgba(255,214,144,.11)','rgba(113,181,163,.10)','rgba(201,141,110,.09)'])});
 for(const room of w.rooms){if(!architectural)for(let i=0;i<14;i++)room.props.push({x:35+rand()*(room.w-70),y:35+rand()*(room.h-70),w:16+rand()*46,h:10+rand()*29,kind:choose(['table','locker','shelf','bed','box','machine','cabinet']),rot:rand()<.35});for(let i=0;i<68;i++)room.debris.push({x:25+rand()*(room.w-50),y:25+rand()*(room.h-50),size:1+rand()*7.8,rot:rand()*6.28,c:choose(['#5b584e','#8a795d','#30342e','#766447','#43483d'])});}
-expandSector(w);expandOuterDistrict(w);expandFrontierDistrict(w);connectOuterDistricts(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}fitVehicles(w);installWorldCollisions(w);dressSector(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
+expandSector(w);expandOuterDistrict(w);expandFrontierDistrict(w);expandAftermathDistrict(w);connectOuterDistricts(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}fitVehicles(w);installWorldCollisions(w);dressSector(w);dressAftermath(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
 function enter(id){
  // Never create a second renderer over an already running Survival session.
  if(visible){return true}
@@ -9964,7 +10140,7 @@ function enter(id){
  if(!oldRun){
   st.visits=st.visits||{};st.visits[id]=(st.visits[id]||0)+1;
   st.selectedLoc=id;
-  st.run={layoutVersion:8,locId:id,seed:seedOf(id+':'+st.visits[id]),room:null,
+  st.run={layoutVersion:9,locId:id,seed:seedOf(id+':'+st.visits[id]),room:null,
    x:id==='loc_kordon_village'?535:140,y:id==='loc_kordon_village'?1110:1260,
    opened:[],talked:[],defeated:[],enemyState:{},bag:{},rubles:0,gram:0,kills:0,
    worldTime:id==='loc_kordon_village'?300:170};
@@ -10249,11 +10425,12 @@ if(r.room===null){for(const site of map.landmarks||[]){
   g.addColorStop(0,'rgba(142,137,121,'+(.11*(1-phase))+')');g.addColorStop(1,'rgba(142,137,121,0)');c.fillStyle=g;c.fillRect(q.x-radius,q.y-radius,radius*2,radius*2);
  }
 }}
-const indoor=r.room!==null,id=map?.theme?.id||'',swamp=/swamp|marsh|zaton/.test(id),industrial=/factory|jupiter|dump|chaes|wild/.test(id),lab=indoor&&/lab|hospital|radar|tunnel|sarcophagus|generators|under/.test(id);
-if(swamp||(!indoor&&mode==='fog'))for(let k=0;k<(eco?3:7);k++){
- const x=r.x+Math.sin(k*4.7)*280+Math.sin(t*.08+k)*35,z=r.y+Math.cos(k*2.4)*220;
- const q=projected(x,4,z);if(!q)continue;const radius=100,g=c.createRadialGradient(q.x,q.y,0,q.x,q.y,radius);
- g.addColorStop(0,swamp?'rgba(126,149,130,.075)':'rgba(145,155,158,.055)');g.addColorStop(1,'rgba(125,145,135,0)');c.save();c.translate(q.x,q.y);c.scale(1,.26);c.translate(-q.x,-q.y);c.fillStyle=g;c.fillRect(q.x-radius,q.y-radius,radius*2,radius*2);c.restore();
+const indoor=r.room!==null,id=map?.theme?.id||'',swamp=/swamp|marsh|zaton|skadovsk|yantar/.test(id),industrial=/factory|jupiter|dump|chaes|wild/.test(id),lab=indoor&&/lab|hospital|radar|tunnel|sarcophagus|generators|under/.test(id);
+if(!indoor&&(swamp||mode==='fog'||mode==='rain'))for(const patch of groundMist(r.x,r.y,t,r.seed||0,eco,swamp||mode==='fog')){
+ const q=projected(patch.x,4,patch.z);if(!q)continue;
+ const radius=patch.radius,g=c.createRadialGradient(q.x,q.y,0,q.x,q.y,radius);
+ g.addColorStop(0,'rgba('+(swamp?'126,149,130,':'145,155,158,')+patch.alpha+')');g.addColorStop(1,'rgba(125,145,135,0)');
+ c.save();c.translate(q.x,q.y);c.scale(1,.24);c.translate(-q.x,-q.y);c.fillStyle=g;c.fillRect(q.x-radius,q.y-radius,radius*2,radius*2);c.restore();
 }
 if(industrial||indoor){c.fillStyle=lab?'rgba(154,197,185,.20)':'rgba(187,165,128,.22)';for(let k=0;k<(eco?10:28);k++){const q=projected(r.x+Math.sin(k*7.1)*270+Math.sin(t*.2+k)*10,12+(k*17+t*3)%72,r.y+Math.cos(k*3.9)*220);if(q)c.fillRect(q.x,q.y,1.2,1.2)}}
 if(lab){for(const l of world().lights||[]){const q=projected(l.x,45,l.y);if(!q)continue;const alpha=.035+.025*Math.sin(t*8+l.x);c.fillStyle='rgba(113,181,163,'+alpha+')';c.beginPath();c.ellipse(q.x,q.y,50,18,0,0,Math.PI*2);c.fill()}}
@@ -10297,6 +10474,18 @@ if(mode==='rain'&&!indoor){
 }
 else if(['dust','ash','wind','sparks','radiation'].includes(mode)){c.fillStyle=mode==='sparks'?'rgba(240,215,132,.40)':mode==='radiation'?'rgba(138,196,108,.18)':'rgba(200,195,157,.15)';const n=eco?12:36;for(let i=0;i<n;i++){const x=(i*63.8+t*20)%w,y=(i*37.2+t*(mode==='wind'?18:10))%h;c.fillRect(x,y,mode==='sparks'?2:3,mode==='sparks'?2:2)}}
 const fog=c.createRadialGradient(w*.48,h*.48,Math.min(w,h)*.24,w*.48,h*.48,Math.max(w,h)*.7);fog.addColorStop(0,'rgba(4,7,5,0)');fog.addColorStop(.72,mode==='psy'?'rgba(28,10,39,.10)':'rgba(4,8,6,.08)');fog.addColorStop(1,mode==='psy'?'rgba(28,10,39,.33)':'rgba(4,8,6,.30)');c.fillStyle=fog;c.fillRect(0,0,w,h)}
+// Stable world cells prevent the ground haze from travelling with the camera.
+function groundMist(px,pz,time,seed,low,dense){
+ const out=[],cell=240,cx=Math.floor(px/cell),cz=Math.floor(pz/cell);
+ for(let iz=cz-2;iz<=cz+2;iz++)for(let ix=cx-2;ix<=cx+2;ix++){
+  const key=(Math.imul(ix,73856093)^Math.imul(iz,19349663)^seed)>>>0;
+  if(key%(low?4:3)!==0)continue;
+  const phase=(key%997)*.017,x=(ix+.5)*cell+Math.sin(time*.045+phase)*24,z=(iz+.5)*cell+Math.cos(time*.032+phase)*16;
+  const distance=Math.hypot(x-px,z-pz),fade=Math.max(0,Math.min(1,(400-distance)/150));
+  if(fade>0)out.push({x,z,radius:80+key%35,alpha:(dense?.055:.023)*fade});
+ }
+ return out;
+}
 function draw3DMinimap(){
  const mini=$('sv-minimap-3d'),r=run();if(!r||mini.hidden)return;
  const w=world(),N=188,C=N/2,R=88,range=420,scale=R/range;
