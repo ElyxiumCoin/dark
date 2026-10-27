@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.48 — Survival Material Remaster</title>
+<title>ZONA Z v16.53 — Survival Material Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -7099,6 +7099,20 @@ function dressingParts(p){
  if(kind==='laundry')return [{x,y:y+h*.5-2,w:4,h:4},{x:x+w-4,y:y+h*.5-2,w:4,h:4}];
  return [{x,y,w,h}];
 }
+function abandonedCase(m,x,y,z,w,h,d,seed,low){
+ const c=seed%2?'#6b5740':'#555e45';
+ m.box(x,y,z,w,h,d,c,29);
+ m.box(x,y+h*.67,z,w+.2,.7,d+.2,'#353d31',8);
+ for(const side of [-1,1]){
+  m.box(x+side*w*.30,y+h,z,w*.075,.5,d,'#8d7b58',8);
+  m.box(x+side*w*.30,y,z+d*.5+.15,w*.075,h,.3,'#7a684b',8);
+ }
+ const handleY=y+h+.6;
+ m.branch(x-w*.13,handleY,z,x-w*.13,handleY+2,z,.45,'#333b30',4,8);
+ m.branch(x-w*.13,handleY+2,z,x+w*.13,handleY+2,z,.45,'#333b30',4,8);
+ m.branch(x+w*.13,handleY+2,z,x+w*.13,handleY,z,.45,'#333b30',4,8);
+ if(!low){m.box(x+w*.20,y+h*.3,z+d*.5+.35,3,2,.25,'#aaa184',8);m.box(x,y+h*.65,z+d*.5+.35,2,1.8,.4,'#8b8770',27);}
+}
 function drawDressing(m,p,low){
  const {x,y,w,h,kind}=p,cx=x+w/2,cz=y+h/2,metal='#535c54',rust='#75604a';
  if(kind==='shed'){
@@ -7110,6 +7124,11 @@ function drawDressing(m,p,low){
   m.box(cx,5,y+h+.5,w*.38,36,.8,'#363d30',29);
   m.branch(cx-w*.17,8,y+h+1,cx+w*.17,38,y+h+1,1.2,'#7a684d',4,29);
   m.roof(cx,51,cz,w,h,'#646a56');
+  if(Math.floor(x+y)%3!==0){
+   const px=x+w*.79,pz=y+h+.35;
+   m.quad([px-5,22,pz],[px+5,22,pz],[px+5,34,pz],[px-4,33,pz],'#a09675',1,8);
+   if(!low)for(let j=0;j<3;j++)m.box(px,25+j*2,pz+.1,6-j, .45,.1,'#565b47',8);
+  }
  }else if(kind==='stockpile'){
   for(const side of [-1,1])m.box(cx+side*w*.32,0,cz,6,3,h-4,'#514a37',29);
   for(let row=0;row<3;row++)for(let col=0;col<3;col++){
@@ -7216,9 +7235,16 @@ function drawDressing(m,p,low){
   m.branch(x,49,cz,x+w,49,cz,2,rust,6,3);m.branch(cx,49,cz,cx,22,cz,.6,'#79735d',4,3);
   m.roof(cx,55,cz,w+10,h+8,'#5e6252');
  }else if(kind==='bench'){
+  const seed=Math.abs(Math.floor(x*7+y*13)),broken=seed%3!==0;
   for(const px of [x+6,x+w-6])m.box(px,0,cz,4,13,h-4,metal,3);
-  for(const z of [y+3,y+h*.5,y+h-3])m.box(cx,13,z,w,2,4,'#817057',4);
-  m.box(cx,23,y+2,w,8,2,'#6f614c',4);
+  for(let j=0;j<3;j++){
+   const z=y+3+j*(h-6)/2;
+   if(broken&&j===2){m.box(x+w*.22,13,z,w*.43,2,4,'#746146',29);m.box(x+w*.82,11,z,w*.25,2,4,'#63573e',29);}
+   else m.box(cx,13,z,w,2,4,'#817057',29);
+  }
+  m.box(cx,23,y+2,w*(broken?.72:1),8,2,'#6f614c',29);
+  if(seed%2===0)abandonedCase(m,cx-w*.12,15,cz,w*.38,8,Math.min(h*.52,11),seed,low);
+  else{m.box(cx,15.2,cz,w*.32,.5,h*.45,'#a29a7d',8);if(!low)m.box(cx,15.8,cz,1,.1,h*.43,'#736e57',8);}
  }else if(kind==='console'){
   m.box(cx,0,cz,w,28,h,metal,3);m.box(cx,29,cz,w,3,h,'#7d8377',3);
   m.box(cx,19,y+h+.6,w*.6,7,1,'#263e3d',53);for(let k=0;k<4;k++)m.box(x+7+k*7,11,y+h+1,2,2,1,k%2?'#a49c6b':'#6e8b79',8);
@@ -7418,6 +7444,7 @@ function drawRoomFurniture(m,p,scene,theme,low){
  const zone=(scene.zones||[]).find(q=>x>=q.x&&x<=q.x+q.w&&z>=q.y&&z<=q.y+q.h);
  const name=zone?.name||'',profile=roomUse(name,zone?'':theme.id),medical=profile==='medical',lab=profile==='lab';
  const wood=29,metal=27,cloth=57,paint=medical?'#98a194':'#626d5f';
+ const age=Math.abs(Math.floor(p.x*7+p.y*11+w*3+d))%4;
  m.shadow(x,z,w*.52,d*.53);
  if(['table','bed','shelf'].includes(k)){
   for(const a of [-1,1])for(const b of [-1,1])m.box(x+a*w*.43,0,z+b*d*.4,2, k==='shelf'?39:19,2,'#495248',metal);
@@ -7452,11 +7479,27 @@ function drawRoomFurniture(m,p,scene,theme,low){
    }
   }
  }else if(k==='bed'){
-  m.box(x,17,z,w,3,d,'#5c685a',metal);
-  m.box(x,20,z,w*.92,4,d*.94,'#a09c85',cloth);
-  m.box(x,24,z+d*.16,w*.9,1.3,d*.55,medical?'#728c83':'#6c7559',cloth);
-  if(!low)for(let j=-1;j<=1;j++)m.branch(x-w*.38,25.4,z+d*(.16+j*.13),x+w*.38,25.6,z+d*(.18+j*.13),.45,medical?'#879d94':'#7d8568',4,cloth);
-  m.ellipsoid(x,25,z-d*.34,w*.32,2.5,d*.12,'#b4b29d',3,8,8);
+  if(age===0){
+   for(const side of [-1,1]){m.box(x+side*w*.47,17,z,w*.06,3,d,'#5c685a',metal);m.box(x,17,z+side*d*.47,w,3,d*.06,'#5c685a',metal);}
+  }else m.box(x,17,z,w,3,d,'#5c685a',metal);
+  if(age===0){
+   // Missing mattress exposes the spring grid, entirely within the old bed footprint.
+   for(let j=0;j<(low?5:9);j++){
+    const zz=z-d*.4+j*d*.8/((low?5:9)-1);
+    m.branch(x-w*.42,20,zz,x+w*.42,19+(j%2),zz,.45,'#746b55',4,metal);
+   }
+   for(const offset of [-.3,0,.3])m.branch(x+w*offset,20,z-d*.43,x+w*offset,20,z+d*.43,.4,'#66634f',4,metal);
+  }else{
+   m.box(x,20,z,w*.92,4,d*.94,'#92917b',cloth);
+   const blanket=medical?'#728c83':'#6c7559';
+   m.box(x-w*(age===3?.09:0),24,z+d*.16,w*(age===3?.69:.9),1.3,d*.55,blanket,cloth);
+   if(!low)for(let j=-1;j<=1;j++)m.branch(x-w*.32,25.4,z+d*(.16+j*.13),x+w*.26,25.6,z+d*(.18+j*.13),.45,medical?'#879d94':'#7d8568',4,cloth);
+   m.ellipsoid(x,25,z-d*.34,w*.32,2.5,d*.12,'#aaa68e',3,8,8);
+   if(age===3){
+    m.quad([x+w*.18,24.1,z-d*.10],[x+w*.39,24.1,z-d*.03],[x+w*.35,24.1,z+d*.12],[x+w*.21,24.1,z+d*.07],'#45493a',1,8);
+    if(!low)for(let j=0;j<3;j++)m.branch(x+w*(.20+j*.05),24.4,z-d*.025,x+w*(.23+j*.04),24.5,z+d*.045,.35,'#a19778',3,8);
+   }
+  }
   for(const side of [-1,1]){
    m.box(x,25,z+side*d*.47,w,1.6,1.6,'#657268',metal);
    for(const offset of [-.43,.43])m.box(x+w*offset,18,z+side*d*.47,1.5,10,1.5,'#657268',metal);
@@ -7466,6 +7509,7 @@ function drawRoomFurniture(m,p,scene,theme,low){
    m.box(x,height,z,w,1.5,d,'#76634a',wood);
    for(let j=0;j<(low?2:3);j++){
     const bx=x+w*((j+.5)/(low?2:3)-.5);
+    if(age===0&&j===1&&height!==4)continue;
     if(medical||lab){
      m.box(bx,height+1.6,z,w*.23,1,d*.72,'#849082',metal);
      for(let q=0;q<(low?2:3);q++){
@@ -7487,12 +7531,23 @@ function drawRoomFurniture(m,p,scene,theme,low){
   }
  }else if(k==='locker'||k==='cabinet'){
   const height=k==='locker'?47:25;
-  m.box(x,0,z,w,height,d,paint,k==='locker'?20:wood);
+  if(age===1){
+   // Hollow body: a removed door reveals shelves instead of a solid rectangular block.
+   m.box(x,0,z-d*.47,w,height,d*.06,paint,k==='locker'?20:wood);
+   for(const side of [-1,1])m.box(x+side*w*.47,0,z,w*.06,height,d,paint,k==='locker'?20:wood);
+   for(const yy of [0,height-2])m.box(x,yy,z,w,2,d,paint,k==='locker'?20:wood);
+   for(const yy of [height*.3,height*.64]){
+    m.box(x,yy,z,w*.90,1.3,d*.88,'#6e725d',metal);
+    m.box(x-w*.22,yy+1.3,z,w*.22,5,d*.53,lab||medical?'#7b8d7f':'#786548',lab||medical?metal:wood);
+   }
+  }else m.box(x,0,z,w,height,d,paint,k==='locker'?20:wood);
   const doors=k==='locker'?2:3;
   for(let j=0;j<doors;j++){
    const dx=x+w*((j+.5)/doors-.5);
+   if(age===1&&j===0)continue;
    m.box(dx,2,z+d/2+.25,w/doors-1.5,height-4,.7,paint,k==='locker'?20:wood);
    m.box(dx+w/doors*.28,height*.42,z+d/2+1,1.1,5,1,'#aba48c',8);
+   if(!low&&age>=2)for(let mark=0;mark<3;mark++)m.box(dx-w/doors*.24+mark*2,3+mark*3,z+d/2+.68,1.2,4+mark,.12,'#735c42',8);
    if(k==='locker')for(let v=0;v<(low?2:4);v++)m.box(dx,height-7-v*2,z+d/2+.8,w/doors*.52,.65,.3,'#222d28',8);
   }
  }else if(k==='machine'){
@@ -7643,6 +7698,10 @@ function drawWorldScrap(m,s,low){
    m.branch(x-d*.05,15,z+d*.03,x-d*.14,13,z+d*.22,.35,'#51564a',3,27);
    for(const side of [-1,1])m.box(x+d*.2,4,z+side*d*.39,d*.32,.7,.7,'#3a3e32',27);
   }
+  if(worn===0){
+   abandonedCase(m,x+d*.29,roofY+.5,z-d*.08,d*.24,5.5,d*.28,Math.floor(x+z),low);
+   if(!low)for(const side of [-1,1])m.branch(x+d*.29,roofY+6.5,z+side*d*.14,x+d*.29,roofY,z+side*d*.25,.38,'#3a4134',3,8);
+  }
   scaleMeshRange(m,first,x,z,1,1.45,.8);
   return true;
  }
@@ -7682,6 +7741,40 @@ function roomPalette(name=''){
  if(/Склад|Стеллаж|Оружейн|Хранил|Трюм/.test(name))return {floor:22,wall:16,trim:'#76765e',service:false};
  return {floor:21,wall:23,trim:'#858170',service:false};
 }
+function roomWallWear(m,wall,low){
+ const alongX=wall.w>=wall.h,length=alongX?wall.w:wall.h,depth=alongX?wall.h:wall.w;
+ if(length<9)return;
+ const seed=Math.abs(Math.floor(wall.x*13+wall.y*17)),start=alongX?wall.x:wall.y,across=alongX?wall.y:wall.x;
+ const point=(u,height,face)=>alongX?[u,height,face]:[face,height,u];
+ // Each piece is confined to an existing wall segment, including walls next to door openings.
+ const strips=Math.max(1,Math.ceil(length/55)),unit=length/strips;
+ for(let j=0;j<strips;j++){
+  const center=start+(j+.5)*unit,span=Math.max(1,unit-3-(seed+j)%4);
+  if((seed+j)%5!==0){
+   if(alongX)m.box(center,0,across+depth*.5,span,3,depth+.6,'#535a4e',27);
+   else m.box(across+depth*.5,0,center,depth+.6,3,span,'#535a4e',27);
+  }
+ }
+ const count=Math.min(low?3:7,Math.max(1,Math.floor(length/38)));
+ for(const side of [-1,1]){
+  const face=across+(side>0?depth:0)+side*.18,flip=alongX?side<0:side>0;
+  const tri=(a,b,c,color,light,mat)=>flip?m.tri(c,b,a,color,light,mat):m.tri(a,b,c,color,light,mat);
+  const quad=(a,b,c,d,color,light,mat)=>flip?m.quad(d,c,b,a,color,light,mat):m.quad(a,b,c,d,color,light,mat);
+  for(let j=0;j<count;j++){
+   const u=start+(j+.5)*length/count,half=Math.min(13,length/count*.32),base=8+(seed+j*7)%15,top=base+10+(seed+j)%7;
+   // Irregular plaster loss, rather than rectangular patches laid on the floor.
+   tri(point(u-half,base+2,face),point(u+half,base,face),point(u+half*.5,top,face),'#777569',1,34);
+   tri(point(u-half,base+2,face),point(u+half*.5,top,face),point(u-half*.6,top-3,face),'#696d5e',1,34);
+   if(!low){
+    const crack=face+side*.01;
+    m.branch(...point(u,top,crack),...point(u-2,top+5,crack),.25,'#353e33',3,8);
+    m.branch(...point(u-2,top+5,crack),...point(u+1,Math.min(55,top+11),crack),.22,'#353e33',3,8);
+   }
+   const stainU=u+half*.65,stainBottom=3+(seed+j)%4,stainTop=base+5;
+   quad(point(stainU-1.2,stainBottom,face+side*.08),point(stainU+1.1,stainBottom+2,face+side*.08),point(stainU+2,stainTop,face+side*.08),point(stainU-2,stainTop+2,face+side*.08),'#424f3e',1,8);
+  }
+ }
+}
 function roomFinish(m,scene,low){
  for(const z of scene.zones||[]){
   const palette=roomPalette(z.name),left=z.x<scene.w/2,wallX=left?z.x+z.w+12:z.x-12,cx=wallX+6;
@@ -7705,7 +7798,7 @@ function roomFinish(m,scene,low){
    }
   }
  }
- for(const wall of scene.walls||[])m.box(wall.x+wall.w/2,0,wall.y+wall.h/2,wall.w+.8,3,wall.h+.8,'#535a4e',27);
+ for(const wall of scene.walls||[])roomWallWear(m,wall,low);
 }
 
 function applySurfacePack(m,map,room){
@@ -7789,15 +7882,48 @@ function roadSurface(m,map,low){
   }
  }
 }
+function siteGroundPatches(map){
+ const sealed=sectorEcology(map.theme.id)==='sealed',soil=sealed?'#454740':map.theme.mud||'#403b2e',out=[];
+ for(const p of map.dressing||[]){
+  if(['rail','mosaic','garden','reeds'].includes(p.kind))continue;
+  out.push({x:p.x+p.w*.5,y:p.y+p.h*.5,r:Math.max(p.w,p.h)*.85+20,color:p.kind==='ruin'?'#424238':soil,strength:.46});
+ }
+ for(const b of map.buildings||[])for(const side of [-1,1])out.push({x:side<0?b.x:b.x+b.w,y:b.y+b.h*.56,r:Math.min(85,b.h*.5),color:sealed?'#4b4b42':'#414b32',strength:.28});
+ return out;
+}
+function siteOvergrowth(m,map,low){
+ const t=map.theme;if(sectorEcology(t.id)==='sealed')return;
+ const inside=(x,z,p,pad)=>x>p.x-pad&&x<p.x+p.w+pad&&z>p.y-pad&&z<p.y+p.h+pad;
+ const clear=(x,z)=>x>15&&z>15&&x<map.w-15&&z<map.h-15&&!map.roads.some(p=>inside(x,z,p,9))&&!map.buildings.some(p=>inside(x,z,p,2))&&map.buildings.every(b=>Math.hypot(x-b.door.x,z-b.door.y)>45);
+ const plant=(x,z,seed)=>{if(!clear(x,z))return;sectorGroundPlant(m,{x,y:z,h:8+seed%8,c:seed%3?t.treeMid:t.treeLight},t,low);};
+ for(const p of map.dressing||[]){
+  if(['rail','mosaic','pit','reeds'].includes(p.kind))continue;
+  const seed=Math.abs(Math.floor(p.x*13+p.y*19)),count=low?2:5;
+  for(let j=0;j<count;j++){
+   const side=j%2?-1:1,x=p.x+(side<0?-6:p.w+6),z=p.y+6+((seed+j*17)%Math.max(1,p.h-12));
+   plant(x,z,seed+j);
+  }
+ }
+ for(const b of map.buildings||[]){
+  const seed=Math.abs(Math.floor(b.x+b.y));
+  for(let j=0;j<(low?4:10);j++){
+   const side=j%2?-1:1,x=side<0?b.x-7:b.x+b.w+7,z=b.y+12+((seed+j*29)%Math.max(1,b.h-24));
+   plant(x,z,seed+j);
+  }
+ }
+}
 function terrainMesh(m,map,low){
  // One ground surface: overlapping coplanar triangle fans caused camera-dependent flicker.
- const step=low?64:40,cols=Math.ceil(map.w/step),rows=Math.ceil(map.h/step),base=rgb(map.theme.ground),patches=(map.patches||[]).map(p=>({...p,c:rgb(p.color)}));
+ const step=low?64:40,cols=Math.ceil(map.w/step),rows=Math.ceil(map.h/step),base=rgb(map.theme.ground),patches=[...(map.patches||[]),...siteGroundPatches(map)].map(p=>({...p,c:rgb(p.color)}));
+ // Sample only nearby soil patches; extra yard detail does not require a full-map scan per vertex.
+ const patchGrid=new Map(),cell=128;
+ for(const p of patches)for(let gz=Math.floor((p.y-p.r)/cell);gz<=Math.floor((p.y+p.r)/cell);gz++)for(let gx=Math.floor((p.x-p.r)/cell);gx<=Math.floor((p.x+p.r)/cell);gx++){const key=gx+','+gz;if(!patchGrid.has(key))patchGrid.set(key,[]);patchGrid.get(key).push(p);}
  const colors=new Array((cols+1)*(rows+1));
  for(let iz=0;iz<=rows;iz++)for(let ix=0;ix<=cols;ix++){
   const x=Math.min(map.w,ix*step),z=Math.min(map.h,iz*step),c=base.slice();
-  for(const p of patches){
+  for(const p of patchGrid.get(Math.floor(x/cell)+','+Math.floor(z/cell))||[]){
    const d=Math.hypot(x-p.x,z-p.y)/Math.max(1,p.r);if(d>=1)continue;
-   const edge=1-d,weight=edge*edge*(3-2*edge)*.72;
+   const edge=1-d,weight=edge*edge*(3-2*edge)*(p.strength??.72);
    for(let k=0;k<3;k++)c[k]+=(p.c[k]-c[k])*weight;
   }
   colors[iz*(cols+1)+ix]=c;
@@ -8181,6 +8307,7 @@ if(room==null){
 // Soil/wet patches are blended into terrainMesh, never stacked as disks.
 if(!low){for(const mud of map.pebbles||[])if(mud.r>22)m.puddle(mud.x,mud.y,mud.r*.9,mud.r*.48)}
 roadSurface(m,map,low);
+siteOvergrowth(m,map,low);
 for(const a of map.landmarks||[])decorateLandmark(m,a,!low);
 // Lamp posts give a physical source to the warm pools of light.
 for(const l of map.lights||[])streetFixture(m,l,low);
@@ -8236,6 +8363,11 @@ for(const f of map.fences||[]){
  for(let v=0;v<=f.w;v+=27){const [px,pz]=point(v),height=29+Math.sin(v+f.x)*3;m.box(px,0,pz,4,height,4,'#796d53',29);m.box(px,height,pz,5,1,5,'#4d5145',27);}
  for(let v=0;v<f.w;v+=27){
   const end=Math.min(v+27,f.w),[ax,az]=point(v),[bx,bz]=point(end),broken=Math.floor(v/27+f.x+f.y)%7===0;
+  if(Math.floor(v/27+f.x*3+f.y)%9===0&&end-v>22){
+   const [rx,rz]=point(v+5),[tx,tz]=point(v+21),[mx,mz]=point(v+14);
+   m.tri([rx,24,rz+.35],[tx,23,tz+.35],[mx,8,mz+.75],'#666c50',1,57);
+   m.tri([rx,24,rz+.35],[mx,8,mz+.75],[rx+1,13,rz+.8],'#515b43',1,57);
+  }
   for(const h of [11,23]){
    if(broken&&h===23){const [mx,mz]=point(v+(end-v)*.57);m.branch(ax,h,az,mx,h-7,mz,1.4,'#695b43',4,29);}
    else m.branch(ax,h,az,bx,h-1,bz,1.4,'#716148',4,29);
@@ -8264,7 +8396,7 @@ for(const mk of scene.markings||[])if(!low)m.plane(mk.x,.22,mk.y,mk.w,mk.h,'#3d3
 m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
 for(let i=0;i<6;i++)m.box(40+i*115,0,scene.h-8,44,28,8,'#3c4841');
 }
-// v16.48: detailed roof forms and surface dressing; all geometry is non-interactive.
+// v16.53: detailed roof forms and surface dressing; all geometry is non-interactive.
 if(room==null)for(const b of map.buildings||[]){
  sectorRoof(m,b,t.id,low);
  const cx=b.x+b.w/2,cz=b.y+b.h/2,sloped=b.style==='residential'||b.style==='shop',roofTop=b.style==='institute'?161:98;
@@ -8932,10 +9064,12 @@ float beamLimit(float theta){
  return mix(uTorchBands[2].y,uTorchBands[2].z,t-7.);
 }
 float rainRipple(vec2 p){
- vec2 cell=floor(p*.038);vec2 center=(cell+vec2(.2+.6*hash21(cell),.2+.6*hash21(cell+17.)))/.038;
- float age=fract(uTime*.72+hash21(cell+31.));float radius=age*10.;
- float ring=1.-smoothstep(.35,1.15,abs(length(p-center)-radius));
- return ring*sin(age*3.14159)*(1.-age)*uWetness;
+ vec2 cell=floor(p*.038);
+ vec2 center=(cell+vec2(.35+.30*hash21(cell),.35+.30*hash21(cell+17.)))/.038;
+ float age=fract(uTime*.72+hash21(cell+31.)),radius=age*7.2,dist=length(p-center);
+ float ring=1.-smoothstep(.35,1.05,abs(dist-radius));
+ float echo=(1.-smoothstep(.28,.85,abs(dist-max(0.,radius-2.3))))*smoothstep(2.3,4.,radius)*.35;
+ return (ring+echo)*sin(age*3.14159)*(1.-age)*uWetness;
 }
 vec3 weatherSurface(vec3 base,float mat,vec3 n,vec2 surface){
  float broad=noise21(surface*.012);
@@ -9212,10 +9346,12 @@ float beamLimit(float theta){
  return mix(uTorchBands[2].y,uTorchBands[2].z,t-7.);
 }
 float rainRipple(vec2 p){
- vec2 cell=floor(p*.038);vec2 center=(cell+vec2(.2+.6*hash21(cell),.2+.6*hash21(cell+17.)))/.038;
- float age=fract(uTime*.72+hash21(cell+31.));float radius=age*10.;
- float ring=1.-smoothstep(.35,1.15,abs(length(p-center)-radius));
- return ring*sin(age*3.14159)*(1.-age)*uWetness;
+ vec2 cell=floor(p*.038);
+ vec2 center=(cell+vec2(.35+.30*hash21(cell),.35+.30*hash21(cell+17.)))/.038;
+ float age=fract(uTime*.72+hash21(cell+31.)),radius=age*7.2,dist=length(p-center);
+ float ring=1.-smoothstep(.35,1.05,abs(dist-radius));
+ float echo=(1.-smoothstep(.28,.85,abs(dist-max(0.,radius-2.3))))*smoothstep(2.3,4.,radius)*.35;
+ return (ring+echo)*sin(age*3.14159)*(1.-age)*uWetness;
 }
 vec3 weatherSurface(vec3 base,float mat,vec3 n,vec2 surface){
  float broad=noise21(surface*.012);
@@ -9249,6 +9385,7 @@ float lampMask(vec4 bounds){
  vec2 edge=min(vWorld-bounds.xy,bounds.zw-vWorld);
  return smoothstep(-2.,6.,min(edge.x,edge.y));
 }
+
 void main(){
  if(uCutFade>.001&&vHeight>30.&&vWorld.x>uCutaway.x&&vWorld.y>uCutaway.y&&vWorld.x<uCutaway.z&&vWorld.y<uCutaway.w){
   vec2 cell=floor(gl_FragCoord.xy*.5);float dither=(mod(cell.x+mod(cell.y,2.)*2.,4.)+4.*mod(cell.y,4.)+.5)/16.;
@@ -9350,6 +9487,7 @@ void main(){
  if(mat>4.5&&mat<5.5)base+=vColor*.10;
  float skyFacing=.35+.65*max(0.,normal.y);
  base+=vColor*vec3(.025,.034,.041)*skyFacing;
+ if(mat>5.5&&mat<6.5)base+=vec3(.015,.024,.030)*rainRipple(vWorld);
  vec3 light=vec3(0.);
  for(int i=0;i<3;i++){
   vec2 delta=(vWorld-uLights[i].xy)/max(1.,uLights[i].z);
@@ -9634,7 +9772,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.48'};
+window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.53'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -9645,7 +9783,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.48</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.48 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.53</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.53 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
@@ -10573,6 +10711,18 @@ if(mode==='rain'&&!indoor){
   c.strokeStyle='rgba(171,191,190,'+alpha+')';c.beginPath();c.ellipse(q.x,q.y,radius,radius*.38,0,0,Math.PI*2);c.stroke();
   if(phase<.10){c.beginPath();c.moveTo(q.x-2,q.y-2);c.lineTo(q.x-3,q.y-5);c.moveTo(q.x+2,q.y);c.lineTo(q.x+3,q.y-3);c.stroke();}
  }
+ // Runoff falls from actual eaves; gravity accelerates the drops before a small ground splash.
+ for(const drop of roofRunoff(map.buildings,r.x,r.y,rainTime,wind,eco)){
+  const q=projected(drop.x,drop.y,drop.z),tail=projected(drop.x-wind*.08,Math.min(drop.top,drop.y+drop.tail),drop.z);
+  if(!q||!tail)continue;
+  c.lineWidth=eco?.65:.8;c.strokeStyle='rgba(169,190,193,'+(.16+storm.flash*.12)+')';
+  if(drop.phase<.86){c.beginPath();c.moveTo(tail.x,tail.y);c.lineTo(q.x,q.y);c.stroke();}
+  if(drop.phase>=.86){
+   const hit=projected(drop.x,.8,drop.z),edge=projected(drop.x+2+(drop.phase-.86)*28,.8,drop.z);if(!hit||!edge)continue;
+   const radius=Math.max(1,Math.hypot(edge.x-hit.x,edge.y-hit.y));
+   c.strokeStyle='rgba(169,190,193,'+((1-drop.phase)*1.4)+')';c.beginPath();c.ellipse(hit.x,hit.y,radius,radius*.32,0,0,Math.PI*2);c.stroke();
+  }
+ }
  // A diffuse cloud flash accompanies real surface illumination, not a screen-wide bolt.
  if(storm.flash>.002){
   const sx=w*(.15+hash(storm.cycle+93)*.7),glow=c.createRadialGradient(sx,0,0,sx,0,h*.85);
@@ -10584,6 +10734,18 @@ if(mode==='rain'&&!indoor){
 else if(['dust','ash','wind','sparks','radiation'].includes(mode)){c.fillStyle=mode==='sparks'?'rgba(240,215,132,.40)':mode==='radiation'?'rgba(138,196,108,.18)':'rgba(200,195,157,.15)';const n=eco?12:36;for(let i=0;i<n;i++){const x=(i*63.8+t*20)%w,y=(i*37.2+t*(mode==='wind'?18:10))%h;c.fillRect(x,y,mode==='sparks'?2:3,mode==='sparks'?2:2)}}
 const fog=c.createRadialGradient(w*.48,h*.48,Math.min(w,h)*.24,w*.48,h*.48,Math.max(w,h)*.7);fog.addColorStop(0,'rgba(4,7,5,0)');fog.addColorStop(.72,mode==='psy'?'rgba(28,10,39,.10)':'rgba(4,8,6,.08)');fog.addColorStop(1,mode==='psy'?'rgba(28,10,39,.33)':'rgba(4,8,6,.30)');c.fillStyle=fog;c.fillRect(0,0,w,h)}
 // Stable world cells prevent the ground haze from travelling with the camera.
+function roofRunoff(buildings,px,pz,time,wind,low){
+ const out=[],near=(buildings||[]).filter(b=>Math.hypot(b.x+b.w*.5-px,b.y+b.h*.5-pz)<650).sort((a,b)=>Math.hypot(a.x-px,a.y-pz)-Math.hypot(b.x-px,b.y-pz)).slice(0,low?4:7);
+ for(const b of near){
+  const seed=Math.abs(Math.floor(b.x*17+b.y*29)),pitched=b.style==='residential'||b.style==='shop',height=pitched?83:b.style==='institute'?161:98;
+  for(let k=0;k<(low?3:6);k++){
+   const n=(seed+k*137)%997,f=n/997,rate=.72+f*.31,phase=(time*rate+f*3.7)%1,side=k%2?-1:1;
+   const x=pitched?(side<0?b.x-7:b.x+b.w+7):b.x+14+f*Math.max(1,b.w-28),z=pitched?b.y+12+f*Math.max(1,b.h-24):b.y+b.h+7;
+   out.push({x:x+wind*phase*1.2,z,y:Math.max(1,height*(1-Math.min(1,phase/.86)**2)),top:height,phase,tail:3+phase*5});
+  }
+ }
+ return out;
+}
 function groundMist(px,pz,time,seed,low,dense){
  const out=[],cell=240,cx=Math.floor(px/cell),cz=Math.floor(pz/cell);
  for(let iz=cz-2;iz<=cz+2;iz++)for(let ix=cx-2;ix<=cx+2;ix++){
