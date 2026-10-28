@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>ZONA Z v16.54 — Survival Sector Atmosphere</title>
+<title>ZONA Z v16.54 — Survival Atmosphere & Detail Remaster</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -76,7 +76,7 @@ html.zona-interface-ready #zona-startup-screen{display:none}
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)protectScroll();});
 })();
 </script>
-<script src="./telegram-cloud-save.js"></script>
+<script src="./telegram-cloud-save.js" onerror="window.zonaCloudScriptMissing=true"></script>
 <style>
 :root{--bg:#070c09;--panel:#0d150f;--card:#121c14;--border:#1e3323;--green:#2ecc71;--neon:#00ff88;--gold:#f1c40f;--red:#ff4757;--cyan:#00d2d3;--tg:#229ED9;--text:#e2f0e5;--muted:#789980}
 *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent}
@@ -6750,130 +6750,6 @@ html.proportion-v2 body #app #refuge-workshop .workshop-filters .btn{padding:6px
 #sv-screen #sv-camera-tools{top:140px!important;}
 #sv-screen .sv-actions button{width:56px!important;min-width:56px!important;height:56px!important;min-height:56px!important;font-size:10px!important;}
 #sv-screen #sv-stick{width:85px!important;height:85px!important;}}</style>
-<script id="zona-sector-atmosphere">
-/* ZONA Z — Sector Atmosphere Pack v1: own weather, colour grade, particles, ambience and set dressing for each of the 28 Survival sectors. Render/audio only: gameplay, saves and collisions are untouched. */
-(function(){'use strict';
-const fr=n=>n-Math.floor(n),KC={dust:'214,184,128',ash:'205,205,210',spore:'150,235,150',fly:'235,235,120',ember:'255,150,60',rad:'170,255,110',psy:'190,140,255',spark:'190,235,255',mote:'220,215,190'};
-// [weather,rain,tint,sky,grade,particle,density,beam,fog,fogAlpha,crystal,glow,ambience,set dressing,vignette]
-const S={
-loc_kordon_village:['rain',.55,[.97,.96,.84],'#1b2619','255,190,110,.05','fly',.6,'255,205,130',0,0,'#ffd27a','255,200,110','cricket',['hay','flags','crate','barrel','tarp']],
-loc_kordon_post:['rain',.5,[.9,.95,.86],'#182018','130,165,125,.05','dust',.35,0,'150,160,150',.05,'#c9d36a','200,220,120','wind',['sandbag','sign','block','tarp','barrel']],
-loc_swamp_base:['fog',.35,[.8,.95,.9],'#142620','70,150,120,.08','spore',.9,0,'120,150,130',.1,'#9be8a0','150,235,160','drip',['reed','pool','deadtree','tarp','reed']],
-loc_dump_depo:['dust',.1,[1,.9,.78],'#2a2218','205,140,80,.07','dust',.8,0,'170,140,100',.05,'#ff9b4a','255,160,80','creak',['sleeper','barrel','block','pole','rubble']],
-loc_dump_graveyard:['dust',0,[1,.88,.76],'#2c2016','190,120,70,.08','ember',.4,0,'150,120,90',.05,'#ff8a3a','255,140,60','creak',['rubble','barrel','sign','pool','rubble']],
-loc_agroprom_inst:['fog',.45,[.9,.95,.95],'#18201f','150,175,175,.06','dust',.3,'200,220,220','160,175,175',.07,'#cfe4e0','200,230,225','wind',['crate','sign','pole','block','rubble']],
-loc_agroprom_under:['sparks',0,[.8,.92,1],'#10191c','60,125,135,.1','spark',.5,0,'110,150,150',.12,'#7fe0e0','110,230,230','drip',['pipe','pool','sign','cable','rubble'],.5],
-loc_valley_bandit:['dust',.2,[1,.9,.8],'#271e17','205,130,90,.07','ember',.5,0,'160,125,100',.05,'#ff7a3a','255,140,70','creak',['barrel','tarp','crate','block','sign']],
-loc_lab18:['sparks',0,[.78,.9,1],'#0f1a20','60,140,170,.1','spark',.5,0,'110,160,170',.1,'#8fe8ff','110,215,255','hum',['crystal','cable','sign','pool','crystal'],.5],
-loc_bar_100:['rain',.6,[1,.93,.8],'#201c16','235,170,90,.06','dust',.3,'255,195,120',0,0,'#ffcf7a','255,190,100','wind',['flags','barrel','crate','block','tarp']],
-loc_wild_territory:['dust',.1,[1,.9,.78],'#2a2218','195,140,80,.07','dust',.9,0,'175,145,105',.06,'#ff9b4a','255,160,80','creak',['sleeper','rubble','barrel','pole','wire']],
-loc_yantar_bunker:['psy',.2,[.9,.85,1],'#1a1626','150,100,220,.09','psy',.8,0,'150,130,180',.09,'#c7a0ff','180,130,255','psy',['spire','pool','reed','deadtree','crystal']],
-loc_lab16:['sparks',0,[.8,.9,1],'#101520','90,120,210,.1','spark',.5,0,'110,130,170',.1,'#8aa8ff','110,150,255','hum',['crystal','cable','sign','pool','pipe'],.5],
-loc_military_base:['wind',.3,[.92,.97,.86],'#182016','125,150,100,.05','dust',.4,0,0,0,'#c9d36a','200,220,120','wind',['block','tarp','sign','barrel','sandbag']],
-loc_barrier:['wind',.15,[1,.93,.8],'#262016','205,160,90,.07','dust',.9,0,'175,150,110',.06,'#ffb866','255,180,100','wind',['sandbag','block','wire','sign','barrel']],
-loc_deadcity:['ash',.25,[.88,.92,.98],'#181c22','110,130,165,.07','ash',.75,0,'140,150,160',.07,'#cfd8e8','200,215,235','wind',['rubble','block','sign','pole','wire']],
-loc_redforest:['fog',0,[1,.84,.72],'#2a1a12','235,110,50,.1','spore',.9,0,'190,120,80',.1,'#ff9a52','255,150,70','rad',['deadtree','pool','crystal','rubble','deadtree']],
-loc_skadovsk:['rain',.7,[.82,.95,.94],'#12221f','70,140,130,.08','spore',.3,0,'125,155,150',.1,'#9be8d0','150,235,210','creak',['reed','barrel','crate','tarp','pool']],
-loc_jupiter_janov:['sparks',.35,[.95,.92,.88],'#1c1c1a','170,150,120,.07','spark',.4,0,'150,145,135',.05,'#ffd27a','255,200,110','hum',['pipe','sleeper','barrel','cable','block']],
-loc_limansk:['ash',.3,[.9,.92,.95],'#1d1c1c','135,120,120,.08','ash',.85,0,'150,140,140',.07,'#d8d0c8','215,205,195','wind',['sandbag','rubble','wire','block','sign']],
-loc_hospital:['fog',.3,[.9,1,.97],'#16221d','120,200,170,.08','dust',.3,'185,230,210','150,185,170',.08,'#9fe8c8','150,235,200','hum',['bed','sign','crate','pool','rubble']],
-loc_radar:['psy',.2,[.85,.95,.9],'#16201a','140,170,110,.08','psy',.6,0,'140,160,130',.07,'#b8e890','170,235,130','psy',['spire','cable','sign','block','pole']],
-loc_tunnel_pripyat:['fog',0,[.82,.95,.9],'#0f1a17','80,135,110,.1','spark',.35,0,'110,150,130',.16,'#7fe8b0','120,235,170','drip',['pipe','pool','cable','sign','rubble'],.5],
-loc_pripyat_center:['ash',.25,[.93,.95,.9],'#1c1e19','175,175,120,.07','ash',.6,'235,235,195','150,155,140',.06,'#e8e0a0','235,225,150','wind',['flags','rubble','sign','pole','wire']],
-loc_lab8:['sparks',0,[.78,.9,1],'#0e1a22','60,150,195,.1','spark',.6,0,'110,165,185',.1,'#7fe0ff','100,215,255','hum',['cable','crystal','sign','pool','pipe'],.5],
-loc_chaes_roof:['radiation',0,[1,.9,.78],'#241f12','195,205,80,.09','rad',.9,0,'170,170,100',.08,'#d8ff5a','200,255,90','rad',['shard','pool','pipe','block','rubble']],
-loc_sarcophagus:['radiation',0,[.82,.92,.9],'#102018','110,195,150,.1','rad',1,0,'110,170,140',.1,'#7fffc0','110,255,180','rad',['shard','crystal','pool','rubble','shard'],.5],
-loc_generators:['psy',0,[.8,.95,.9],'#1d1020','235,70,125,.1','psy',1,0,'180,110,150',.1,'#ff6ab0','255,100,170','psy',['shard','spire','crystal','cable','shard'],.5]};
-const POOL={loc_swamp_base:'#2f5b45',loc_dump_graveyard:'#5d7a2c',loc_agroprom_under:'#2d6b6a',loc_lab18:'#3b8f8b',loc_yantar_bunker:'#5b4a8c',loc_lab16:'#35508f',loc_redforest:'#7a3b1f',loc_chaes_roof:'#8a9a22',loc_sarcophagus:'#2f9a6a',loc_hospital:'#5c2a2a',loc_tunnel_pripyat:'#2a5d52',loc_lab8:'#2f7f9a',loc_generators:'#8a2f66',loc_skadovsk:'#2f5b50'};
-const T={},GL={};
-for(const id in S){const a=S[id];T[id]={w:a[0],rain:a[1],tint:a[2],sky:a[3],g:a[4].split(',').map(Number),pk:a[5],pd:a[6],beam:a[7],fog:a[8],fa:a[9],cc:a[10],gc:a[11],ak:a[12],sig:a[13],vv:a[14]||.42,pool:POOL[id]||'#2d4a46'}}
-// ---- static set dressing (tile ids >= 8 are kept by applySurfacePack) ----
-const B={
-hay:(m,x,z)=>{for(let i=0;i<3;i++)m.cylinder(x+i*17-17,0,z+(i%2)*9,8,9,'#a0884c',9,29)},
-flags:(m,x,z)=>{m.branch(x,0,z,x,40,z,1,'#4b4338',4,29);m.branch(x+46,0,z,x+46,40,z,1,'#4b4338',4,29);const c=['#b5493c','#d7a548','#4f7f8c','#c9c1a5'];for(let i=0;i<5;i++){const t=i/5,px=x+t*46,py=38-Math.sin(t*3.14)*5;m.tri([px,py,z],[px+8,py,z],[px+4,py-9,z],c[i%4],1,8)}},
-crate:(m,x,z,r)=>{m.box(x,0,z,16,13,16,'#6c5737',29);m.box(x+3,13,z-1,13,11,13,'#7a6341',29);if(r()>.5)m.quad([x-9,25,z-9],[x+9,25,z-9],[x+9,22,z+9],[x-9,22,z+9],'#4e5745',1,60)},
-barrel:(m,x,z,r,G,P)=>{const fire=/ember|dust|rad/.test(P.pk)?r()>.5:r()>.85;m.cylinder(x,0,z,6,16,fire?'#5b4030':'#6c4a2e',9,27);m.cylinder(x,16,z,6.2,1.5,'#2b2e2b',9,27);if(fire){m.cone(x,17,z,4.6,9,'#ffb04a',6,8);m.cone(x+1,17,z,2.6,14,'#ffe19a',5,8);G.push({x,y:22,z,c:'255,150,60',r:70,a:.34,f:1})}},
-sign:(m,x,z,r,G,P)=>{m.branch(x,0,z,x,34,z,.9,'#4a4f49',5,27);m.tri([x-8,34,z],[x+8,34,z],[x,48,z],/rad|psy/.test(P.pk)?'#9bd23c':'#d6b33c',1,8);m.tri([x-5,36,z+.3],[x+5,36,z+.3],[x,44,z+.3],'#25251e',1,8)},
-block:(m,x,z,r)=>{const a=r()*3;for(let i=0;i<3;i++)m.box(x+i*25-25,0,z+Math.sin(a+i)*3,22,13,10,'#77766d',34)},
-sandbag:(m,x,z)=>{for(let k=0;k<2;k++)for(let i=0;i<4;i++)m.ellipsoid(x+i*13-20+k*6,3+k*5,z,7,4,5,'#8a7c60',4,7,8)},
-tarp:(m,x,z,r)=>{m.branch(x-16,0,z,x-16,24,z,1,'#4b4338',4,29);m.branch(x+16,0,z,x+16,16,z,1,'#4b4338',4,29);m.quad([x-18,25,z-14],[x+18,17,z-14],[x+18,16,z+14],[x-18,24,z+14],r()>.5?'#58634a':'#6b6a55',1,60)},
-sleeper:(m,x,z,r)=>{const a=r()*.4;for(let i=0;i<5;i++)m.plank(x+i*9-18,z+Math.sin(a+i)*2,3,16,a,'#4b3a2b');m.rail(x-24,z-4,x+24,z-4,2,'#6a5c4c',.9,27)},
-pole:(m,x,z)=>{m.branch(x,0,z,x,74,z,1.6,'#4c4234',5,29);m.rail(x-14,z,x+14,z,66,'#4c4234',1.1,29);for(const s of [-12,12])m.box(x+s,63,z,2.4,3,2.4,'#aab0a6',55)},
-cable:(m,x,z,r)=>{const L=40+r()*30;m.branch(x,0,z,x,34,z,1.2,'#3b403c',5,27);m.branch(x+L,0,z,x+L,34,z,1.2,'#3b403c',5,27);for(let i=0;i<8;i++){const t=i/8,u=(i+1)/8;m.branch(x+L*t,34-Math.sin(t*3.14)*10,z,x+L*u,34-Math.sin(u*3.14)*10,z,.5,'#1f2321',3,27)}},
-pipe:(m,x,z,r)=>{const L=50+r()*40;m.branch(x,10,z,x+L,10,z,3.4,'#6a665a',8,27);for(let i=1;i<4;i++)m.box(x+L*i/4,0,z,4,10,6,'#4b4f49',27);m.cylinder(x+L,0,z,3.6,10,'#6a665a',8,27)},
-pool:(m,x,z,r,G,P)=>{const R=10+r()*14;m.disk(x,3.95,z,R,P.pool,14,6);m.disk(x+R*.1,3.97,z,R*.55,P.pool,12,6);if(P.ak!=='drip')G.push({x,y:6,z,c:P.gc,r:R*4.5,a:.16,f:0})},
-reed:(m,x,z,r)=>{for(let i=0;i<9;i++){const a=i*2.4,d=3+i%4*2.5,px=x+Math.cos(a)*d,pz=z+Math.sin(a)*d,h=16+r()*16;m.tri([px-.8,0,pz],[px+.8,0,pz],[px+Math.cos(a)*3,h,pz+Math.sin(a)*3],i%2?'#6a7a43':'#58683a',1,32)}},
-deadtree:(m,x,z,r)=>{const h=40+r()*30;m.branch(x,0,z,x+r()*6-3,h,z,3,'#4e4337',6,31);for(let i=0;i<4;i++){const a=i*1.9+r(),y=h*(.45+i*.12);m.branch(x,y,z,x+Math.cos(a)*16,y+10,z+Math.sin(a)*16,1.1,'#5a4d3e',4,31)}},
-rubble:(m,x,z,r)=>{for(let i=0;i<7;i++){const s=3+r()*7;m.box(x+(r()-.5)*28,0,z+(r()-.5)*20,s,s*(.5+r()),s*.8,i%3?'#6d6a60':'#4f4e48',34)}m.box(x,3,z,16,2,3,'#7a5a3f',3)},
-crystal:(m,x,z,r,G,P)=>{for(let i=0;i<5;i++){const a=i*1.3+r(),d=i?8+r()*8:0,h=14+r()*26;m.cone(x+Math.cos(a)*d,0,z+Math.sin(a)*d,3+r()*3,h,P.cc,5,55)}G.push({x,y:18,z,c:P.gc,r:90,a:.3,f:2})},
-shard:(m,x,z,r,G,P)=>{const h=40+r()*50;m.branch(x,0,z,x+r()*8-4,h,z,5+r()*3,'#1c2125',4,27);m.branch(x+1,6,z+1,x,h-4,z,1.2,P.cc,4,55);G.push({x,y:h*.6,z,c:P.gc,r:80,a:.28,f:2})},
-spire:(m,x,z,r,G,P)=>{m.cylinder(x,0,z,3,58,'#6d7068',7,27);for(let i=0;i<4;i++)m.cylinder(x,12+i*13,z,6-i,1.6,P.cc,10,55);m.cone(x,58,z,2,12,'#8e948a',5,27);G.push({x,y:64,z,c:P.gc,r:70,a:.3,f:3})},
-bed:(m,x,z)=>{m.box(x,5,z,16,2.5,34,'#8e9890',34);m.box(x,7.5,z-8,14,2,14,'#a9aaa0',8);for(const dx of [-7,7])for(const dz of [-15,15])m.box(x+dx,0,z+dz,1.4,5,1.4,'#51564f',27)},
-wire:(m,x,z)=>{for(let i=0;i<=60;i+=15)m.branch(x+i,0,z,x+i,18,z,.9,'#4a4b43',4,27);for(let k=0;k<3;k++)for(let i=0;i<60;i+=5)m.branch(x+i,6+k*4+Math.sin(i),z,x+i+5,6+k*4+1,z,.32,'#2a2b27',3,27)}};
-function detail(m,map,scene,room,low){
- const id=map.theme&&map.theme.id,P=T[id];if(!P)return;
- let s=2166136261;for(const ch of id+(room==null?'o':'i'))s=Math.imul(s^ch.charCodeAt(0),16777619);s=(s>>>0)||1;
- const r=()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return (s>>>0)/4294967296};
- if(room!=null){ // interior: stains that match the sector's character
-  const col=/hospital/.test(id)?['#4a1f1d','#3a2a24']:/lab|under|tunnel|sarco|generators|radar/.test(id)?[P.pool,'#26302f']:['#2a2b26','#3a3226'];
-  for(let i=0;i<(low?8:26);i++){const a=6+r()*20;m.plane(30+r()*(scene.w-60),.3,30+r()*(scene.h-60),a,a*(.4+r()*.5),col[i%2],34)}return}
- const bl=map.buildings||[],rd=map.roads||[],lm=map.landmarks||[],ex=map.exit||{x:140,y:1290},keep=[].concat(map.crates||[],map.people||[],map.enemies||[],bl.map(b=>b.door));
- const ok=(x,z)=>x>45&&z>45&&x<scene.w-45&&z<scene.h-45&&!bl.some(b=>x>b.x-26&&x<b.x+b.w+26&&z>b.y-26&&z<b.y+b.h+34)&&!rd.some(q=>x>q.x-8&&x<q.x+q.w+8&&z>q.y-8&&z<q.y+q.h+8)&&!lm.some(l=>Math.hypot(x-l.x,z-l.y)<(l.size||60)*1.15)&&!keep.some(k=>k&&Math.hypot(x-k.x,z-k.y)<56)&&Math.hypot(x-ex.x,z-ex.y)>170;
- const G=[],N=low?30:95;let n=0;
- for(let i=0;i<N*3&&n<N;i++){
-  const x=60+r()*(scene.w-120),z=60+r()*(scene.h-120);if(!ok(x,z))continue;
-  const code=P.sig[n%P.sig.length],f=B[code];n++;
-  for(let k=0;k<(code==='reed'||code==='rubble'?3:1+(r()>.6?1:0));k++){const px=x+(k?(r()-.5)*54:0),pz=z+(k?(r()-.5)*54:0);if(k&&!ok(px,pz))continue;f(m,px,pz,r,G,P)}}
- GL[id]=G.slice(0,60);
-}
-// ---- screen-space atmosphere (drawn on the 2D fx layer over the WebGL scene) ----
-function fx(c,o){
- const id=o.map&&o.map.theme&&o.map.theme.id,P=T[id];if(!P)return;
- const w=o.w,h=o.h,t=o.t,indoor=o.indoor,K=(o.eco?.5:1)*(o.reduced?.4:1),seed=(o.seed||1)*.001,hs=n=>fr(Math.sin(n*127.1+seed)*43758.5453),rgb=KC[indoor?'mote':P.pk];
- if(!indoor){const gl=GL[id];if(gl){c.globalCompositeOperation='lighter';let n=0;for(const g of gl){const q=o.project(g.x,g.y,g.z);if(!q||q.x<-90||q.y<-90||q.x>w+90||q.y>h+90)continue;if(++n>(o.eco?16:34))break;const R=g.r*(w<700?.8:1),a=g.a*(g.f?.82+.18*Math.sin(t*g.f*2.7+g.x):1),gr=c.createRadialGradient(q.x,q.y,0,q.x,q.y,R);gr.addColorStop(0,'rgba('+g.c+','+a+')');gr.addColorStop(1,'rgba('+g.c+',0)');c.fillStyle=gr;c.fillRect(q.x-R,q.y-R,R*2,R*2)}c.globalCompositeOperation='source-over'}}
- if(P.fog&&!indoor)for(let k=0;k<(o.eco?2:4);k++){const x=fr(hs(k+90)+t*.005*(k%2?1:-1))*(w+300)-150,y=h*(.3+.5*hs(k+50)),R=w*.34,gr=c.createRadialGradient(x,y,0,x,y,R);gr.addColorStop(0,'rgba('+P.fog+','+P.fa+')');gr.addColorStop(1,'rgba('+P.fog+',0)');c.save();c.translate(x,y);c.scale(1,.38);c.translate(-x,-y);c.fillStyle=gr;c.fillRect(x-R,y-R,R*2,R*2);c.restore()}
- if(P.beam&&!indoor){c.globalCompositeOperation='lighter';for(let k=0;k<3;k++){const bx=w*(.25+.3*k)+Math.sin(t*.07+k)*w*.05,gr=c.createLinearGradient(bx,0,bx-w*.2,h);gr.addColorStop(0,'rgba('+P.beam+','+(.055+.02*Math.sin(t*.4+k))+')');gr.addColorStop(1,'rgba('+P.beam+',0)');c.fillStyle=gr;c.beginPath();c.moveTo(bx,-10);c.lineTo(bx+w*.09,-10);c.lineTo(bx-w*.2+w*.09,h);c.lineTo(bx-w*.2,h);c.fill()}c.globalCompositeOperation='source-over'}
- const kind=indoor?'mote':P.pk,cnt=Math.round(P.pd*(indoor?20:62)*K);
- for(let i=0;i<cnt;i++){
-  const a=hs(i),b=hs(i+211),d=hs(i+433);let x,y,al,sz=1.4,st=0;
-  if(kind==='dust'){x=fr(a+t*(.04+.03*d))*(w+80)-40;y=b*h+Math.sin(t*.5+i)*6;al=.08+.1*d;st=6+d*10}
-  else if(kind==='ash'){x=fr(a+t*.01+Math.sin(t*.3+i)*.02)*w;y=fr(b+t*(.02+.03*d))*(h+20)-10;al=.12+.2*d;sz=1+d*1.6}
-  else if(kind==='spore'||kind==='fly'){x=a*w+Math.sin(t*.5+i*3)*18;y=fr(b-t*.012*(.4+d))*h;al=(.2+.55*Math.max(0,Math.sin(t*1.7+i*5)))*.8;sz=1.6+d*1.8}
-  else if(kind==='ember'){x=a*w+Math.sin(t*2+i)*8;y=fr(b-t*(.05+.05*d))*h;al=.25+.5*Math.abs(Math.sin(t*6+i));sz=1+d*1.4}
-  else if(kind==='rad'){x=a*w;y=b*h;al=Math.pow(Math.max(0,Math.sin(t*5+i*9)),6)*.7;sz=1.5}
-  else if(kind==='psy'){x=fr(a+t*.01)*w;y=b*h+Math.sin(t*.8+i)*20;al=.12+.3*Math.abs(Math.sin(t*.9+i*2));sz=1.6+d*1.4}
-  else if(kind==='spark'){const ph=fr(t*.35+a);if(ph>.06)continue;x=a*w;y=b*h*.7;c.strokeStyle='rgba('+rgb+','+(.75*(1-ph/.06))+')';c.lineWidth=1;c.beginPath();c.moveTo(x,y);c.lineTo(x+8*(d-.5)*4,y+9);c.lineTo(x-5,y+17);c.stroke();continue}
-  else{x=a*w+Math.sin(t*.3+i)*10;y=b*h+Math.cos(t*.25+i)*8;al=.1+.1*d}
-  c.fillStyle='rgba('+rgb+','+al+')';st?c.fillRect(x,y,st,1):c.fillRect(x,y,sz,sz)}
- if(!indoor){ // periodic anomalies of the sector
-  if(P.pk==='rad'||P.w==='radiation'){const ph=fr(t/17);if(ph<.12){c.fillStyle='rgba(160,255,120,'+(1-ph/.12)*.07+')';c.fillRect(0,0,w,h)}}
-  if(P.pk==='psy'){const ph=fr(t/11),R=ph*Math.max(w,h)*.8;c.strokeStyle='rgba(190,140,255,'+(1-ph)*.16+')';c.lineWidth=2+ph*6;c.beginPath();c.arc(w/2,h/2,R,0,6.283);c.stroke()}}
- if(P.pk==='spark'&&fr(t*.23)<.025){c.fillStyle='rgba(0,0,0,.13)';c.fillRect(0,0,w,h)}
- const gk=indoor?.7:1;c.fillStyle='rgba('+P.g[0]+','+P.g[1]+','+P.g[2]+','+P.g[3]*gk+')';c.fillRect(0,0,w,h);
- const vg=c.createRadialGradient(w/2,h/2,Math.min(w,h)*.38,w/2,h/2,Math.hypot(w,h)*.62);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(3,5,5,'+P.vv+')');c.fillStyle=vg;c.fillRect(0,0,w,h);
-}
-// ---- sector ambience: sparse one-shots layered over the existing rain/steps/growls ----
-function audio(a,run,map,t,inside){
- const P=T[map.theme&&map.theme.id];if(!P||!a.ctx||a.ctx.state!=='running')return;
- const z=a._z||(a._z={n:0});if(t<z.n)return;
- const c=a.ctx,R=Math.random,k=inside&&P.ak!=='drip'?'hum':P.ak;
- const tone=(f,f2,d,v,type)=>{if(!a.active)return;const o=c.createOscillator(),g=c.createGain(),now=c.currentTime;o.type=type||'sine';o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(f2,now+d);g.gain.setValueAtTime(.0001,now);g.gain.linearRampToValueAtTime(v,now+d*.3);g.gain.exponentialRampToValueAtTime(.0001,now+d);o.connect(g);g.connect(a.master);a.sources.add(o);o.onended=()=>{o.disconnect();g.disconnect();a.sources.delete(o)};o.start();o.stop(now+d+.05)};
- switch(k){
-  case 'wind':a.noise(3.5,.05,420+R()*500,'bandpass');z.n=t+4+R()*6;break;
-  case 'rad':for(let i=0;i<1+(R()*3|0);i++)setTimeout(()=>a.noise(.015,.05,5200,'highpass'),i*R()*400);z.n=t+.5+R()*1.4;break;
-  case 'psy':tone(330+R()*60,300+R()*50,3.2,.014);tone(333,350,3.2,.009);z.n=t+6+R()*6;break;
-  case 'spark':a.noise(.07,.07,3800,'highpass');z.n=t+1.5+R()*4;break;
-  case 'drip':tone(1100+R()*600,700,.09,.02);z.n=t+1.2+R()*3.5;break;
-  case 'hum':tone(54,52,4.2,.02,'triangle');if(R()<.3)a.noise(.06,.05,4200,'highpass');z.n=t+3.8;break;
-  case 'creak':tone(190+R()*60,110,.7,.01,'sawtooth');z.n=t+7+R()*9;break;
-  case 'cricket':for(let i=0;i<3;i++)setTimeout(()=>tone(4300,4200,.05,.006),i*70);z.n=t+.8+R()*1.6;break;
-  default:z.n=t+5}
-}
-window.ZonaAtmos={version:'1.0',profiles:T,
- theme:id=>{const P=T[id];return P?{weather:P.w,sky:P.sky,particle:'rgba('+KC[P.pk]+',.18)'}:null},
- tint:id=>T[id]?T[id].tint:null,rain:id=>T[id]?T[id].rain:1,wet:id=>T[id]?(T[id].rain>=.25?1:0):1,detail,fx,audio};
-})();
-</script>
 <script id="zona-3d-engine">
 /* ZONA Z 3D Engine, offline native WebGL1; no remote libraries. */
 (function(){
@@ -8089,6 +7965,42 @@ const SECTOR_LOOKS={
  loc_sarcophagus:['containment','#343938','#465b4f','#849885','#7c8c89'],
  loc_generators:['power','#454333','#486638','#9ca45c','#99a57b']
 };
+// Visual profiles are presentation-only: all sector layouts, rewards and saves are unchanged.
+const SECTOR_ATMOSPHERES={
+ // weather, sky, fog reach, surface wetness, night bias, low mist, light tint
+ loc_kordon_village:['fog','#82978f',1020,.52,.28,.42,[1.02,1.00,.87]],
+ loc_kordon_post:['rain','#728b9c',900,.95,.46,.26,[.88,.95,1.03]],
+ loc_swamp_base:['fog','#7b9b8a',620,.88,.40,.95,[.85,1.02,.92]],
+ loc_dump_depo:['dust','#a3957b',1050,.25,.25,.18,[1.07,.96,.81]],
+ loc_dump_graveyard:['wind','#ad8c68',1120,.18,.30,.12,[1.12,.93,.77]],
+ loc_agroprom_inst:['rain','#7e9395',880,.90,.40,.26,[.89,1.00,1.01]],
+ loc_agroprom_under:['sparks','#6a8983',920,.48,.72,.30,[.80,.98,.95]],
+ loc_valley_bandit:['dust','#a18a72',1060,.24,.36,.20,[1.08,.92,.80]],
+ loc_lab18:['psy','#7e9b83',790,.35,.67,.48,[.86,1.02,.88]],
+ loc_bar_100:['fog','#a09878',1180,.36,.31,.18,[1.05,1.00,.86]],
+ loc_wild_territory:['ash','#8d9290',930,.47,.47,.30,[.92,.98,1.02]],
+ loc_yantar_bunker:['psy','#a1aa7b',680,.72,.46,.82,[.97,1.03,.78]],
+ loc_lab16:['psy','#7b95a3',720,.35,.75,.52,[.82,.96,1.07]],
+ loc_military_base:['wind','#929e84',1100,.32,.29,.16,[.96,1.03,.88]],
+ loc_barrier:['rain','#75878b',790,.92,.49,.36,[.86,.95,1.02]],
+ loc_deadcity:['ash','#9b9b97',820,.42,.48,.52,[.95,.97,1.02]],
+ loc_redforest:['wind','#b3916b',740,.25,.46,.68,[1.12,.87,.70]],
+ loc_skadovsk:['rain','#7b959b',740,.98,.40,.74,[.87,1.00,1.02]],
+ loc_jupiter_janov:['fog','#a19d89',1020,.49,.28,.42,[1.02,1.00,.88]],
+ loc_limansk:['dust','#ae9b83',1050,.26,.30,.23,[1.08,.98,.85]],
+ loc_hospital:['fog','#92a3a2',760,.48,.62,.56,[.89,1.00,1.02]],
+ loc_radar:['psy','#8e9c72',730,.42,.57,.62,[.91,1.02,.80]],
+ loc_tunnel_pripyat:['sparks','#72868c',980,.58,.76,.38,[.81,.94,1.04]],
+ loc_pripyat_center:['ash','#a6a69e',940,.43,.43,.48,[1.00,1.01,.94]],
+ loc_lab8:['sparks','#7195a4',1050,.27,.71,.21,[.78,.97,1.10]],
+ loc_chaes_roof:['radiation','#a9ac85',800,.35,.52,.42,[1.02,1.04,.83]],
+ loc_sarcophagus:['psy','#7d8c9d',630,.40,.80,.80,[.83,.92,1.09]],
+ loc_generators:['radiation','#8aab92',680,.52,.61,.76,[.86,1.06,.92]]
+};
+function sectorAtmosphere(id){
+ const a=SECTOR_ATMOSPHERES[id]||SECTOR_ATMOSPHERES.loc_kordon_village;
+ return {weather:a[0],sky:a[1],fogReach:a[2],wetness:a[3],nightBias:a[4],mist:a[5],lightTint:a[6]};
+}
 function sectorLook(id){
  const a=SECTOR_LOOKS[id]||SECTOR_LOOKS.loc_kordon_village;
  return {identity:a[0],ground:a[1],groundAlt:a[1],treeDark:a[2],treeMid:a[2],treeLight:a[3],bushColors:[a[2],a[3],a[3]],building:a[4],accent:a[4]};
@@ -8138,15 +8050,8 @@ function sectorRoof(m,b,id,low){
  }
 }
 function sectorTint(id,inside=false){
- if(inside)return [1.03,.98,.91];
- {const A=window.ZonaAtmos&&window.ZonaAtmos.tint(id);if(A)return A}
- if(/swamp|skadovsk/.test(id))return [.83,.94,.92];
- if(/redforest/.test(id))return [.96,.87,.79];
- if(/kordon_village/.test(id))return [.94,.95,.86];
- if(/lab|under|sarcophagus|generators/.test(id))return [.81,.91,.99];
- if(/dump|jupiter|wild|valley|chaes/.test(id))return [.97,.90,.83];
- if(/deadcity|limansk|pripyat|hospital/.test(id))return [.90,.93,.96];
- return [.88,.94,.89];
+ const tint=sectorAtmosphere(id).lightTint;
+ return inside?tint.map((v,i)=>v*.45+[1.02,.99,.94][i]*.55):tint;
 }
 function streetFixture(m,l,low){
  const x=l.x,z=l.y,col=/120,210,255/.test(l.c)?'#a6c9d0':/255,120,120/.test(l.c)?'#c58a65':'#dbc093';
@@ -8425,6 +8330,153 @@ function sectorGroundPlant(m,g,t,low){
   m.cylinder(x+1,h-5,z,.8,5,'#735335',low?4:6,8);
  }
 }
+/* Sector-specific visual history. Decorative surfaces stay on existing facades/roofs;
+   they never add obstacles, actors, loot, or random calls to the map generator. */
+const SURVIVAL_SECTOR_STORIES={
+ loc_kordon_village:[1,'#b8aa7c','home','civil'],
+ loc_kordon_post:[2,'#bfaa69','checkpoint','military'],
+ loc_swamp_base:[3,'#9ea987','fish','marsh'],
+ loc_dump_depo:[4,'#bd9470','rail','rail'],
+ loc_dump_graveyard:[5,'#bd875e','wrench','scrap'],
+ loc_agroprom_inst:[6,'#b5bdab','atom','science'],
+ loc_agroprom_under:[7,'#8caaa1','descent','utility'],
+ loc_valley_bandit:[8,'#bb9270','blades','scrap'],
+ loc_lab18:[9,'#c2b77c','bio','science'],
+ loc_bar_100:[10,'#c6ad72','cup','civil'],
+ loc_wild_territory:[11,'#b5a18a','fracture','rail'],
+ loc_yantar_bunker:[12,'#b6ba87','radiation','science'],
+ loc_lab16:[13,'#99b3b2','wave','utility'],
+ loc_military_base:[14,'#b4b68a','star','military'],
+ loc_barrier:[15,'#c0ab7b','shield','military'],
+ loc_deadcity:[16,'#b6b0a0','windows','urban'],
+ loc_redforest:[17,'#c6a077','pine','forest'],
+ loc_skadovsk:[18,'#b5b9a0','anchor','marsh'],
+ loc_jupiter_janov:[19,'#bcb58b','signal','rail'],
+ loc_limansk:[20,'#bdb299','bridge','urban'],
+ loc_hospital:[21,'#c1c5b3','cross','medical'],
+ loc_radar:[22,'#aeb99b','radar','utility'],
+ loc_tunnel_pripyat:[23,'#a9b5b6','tunnel','utility'],
+ loc_pripyat_center:[24,'#c6bb94','wheel','urban'],
+ loc_lab8:[25,'#94b2bf','server','science'],
+ loc_chaes_roof:[26,'#bdb58e','reactor','utility'],
+ loc_sarcophagus:[27,'#a1b5a6','monolith','sealed'],
+ loc_generators:[28,'#b8be9a','coil','utility']
+};
+function sectorStorytelling(m,map,low){
+ const cfg=SURVIVAL_SECTOR_STORIES[map.theme.id];if(!cfg)return;
+ const [number,ink,symbol,group]=cfg;
+ // XY-plane symbols are readable from the normal angled gameplay camera.
+ const line=(x,y,z,ax,ay,bx,by,s=1,col=ink,width=.32)=>{const dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy)||1,nx=-dy/len*width,ny=dx/len*width;const p=(a,b)=>[x+a*s,y+b*s,z];m.quad(p(ax+nx,ay+ny),p(bx+nx,by+ny),p(bx-nx,by-ny),p(ax-nx,ay-ny),col,1,8);};
+ const ring=(x,y,z,r,col=ink,n=low?10:16)=>{for(let k=0;k<n;k++){const a=k*6.283185/n,b=(k+1)*6.283185/n;line(x,y,z,Math.cos(a)*r,Math.sin(a)*r,Math.cos(b)*r,Math.sin(b)*r,1,col,.28);}};
+ const rect=(x,y,z,w,h,col,mat=8)=>m.quad([x-w/2,y,z],[x+w/2,y,z],[x+w/2,y+h,z],[x-w/2,y+h,z],col,1,mat);
+ const icon=(x,y,z,size)=>{
+  const l=(a,b,c,d)=>line(x,y,z,a,b,c,d,size),r=(a,b,c)=>ring(x+a*size,y+b*size,z,c*size);
+  switch(symbol){
+   case 'home':l(-.8,-.3,0,.6);l(0,.6,.8,-.3);l(-.55,-.1,-.55,-.8);l(.55,-.1,.55,-.8);l(-.55,-.8,.55,-.8);l(-.1,-.8,-.1,-.4);break;
+   case 'checkpoint':for(let j=-1;j<=1;j++){l(-.8,j*.35,-.12,j*.35+.3);l(-.12,j*.35+.3,.65,j*.35);}break;
+   case 'fish':l(-.8,0,-.2,.5);l(-.2,.5,.6,0);l(.6,0,-.2,-.5);l(-.2,-.5,-.8,0);l(.6,0,1,.5);l(1,.5,1,-.5);l(1,-.5,.6,0);break;
+   case 'rail':l(-.5,-.8,-.5,.8);l(.5,-.8,.5,.8);for(let j=-1;j<=1;j++)l(-.8,j*.55,.8,j*.55);break;
+   case 'wrench':r(-.35,.4,.42);l(-.12,.08,.65,-.7);l(-.36,-.04,.41,-.84);l(.41,-.84,.65,-.7);rect(x-.35*size,y+.63*size,z+.5,.35*size,.36*size,'#363e37');break;
+   case 'atom':r(0,0,.18);for(let k=0;k<3;k++){const a=k*2.094;for(let j=0;j<12;j++){const p=j*6.283/12,q=(j+1)*6.283/12;const a1=Math.cos(p)*.9,b1=Math.sin(p)*.32,a2=Math.cos(q)*.9,b2=Math.sin(q)*.32;l(a1*Math.cos(a)-b1*Math.sin(a),a1*Math.sin(a)+b1*Math.cos(a),a2*Math.cos(a)-b2*Math.sin(a),a2*Math.sin(a)+b2*Math.cos(a));}}break;
+   case 'descent':for(let j=0;j<4;j++){l(-.65+j*.38,.65-j*.4,-.27+j*.38,.65-j*.4);l(-.27+j*.38,.65-j*.4,-.27+j*.38,.25-j*.4);}l(.7,.7,.7,-.1);l(.5,.1,.7,-.1);l(.9,.1,.7,-.1);break;
+   case 'blades':l(-.7,-.7,.65,.65);l(-.7,.65,.65,-.7);l(-.8,-.35,-.35,-.8);l(.35,-.8,.8,-.35);l(.45,.65,.65,.65);l(.65,.65,.65,.45);break;
+   case 'bio':r(0,-.05,.23);for(let k=0;k<3;k++){const a=k*2.094+.52;r(Math.cos(a)*.44,Math.sin(a)*.44,.43);}break;
+   case 'cup':l(-.6,.45,.4,.45);l(-.5,.45,-.38,-.55);l(-.38,-.55,.25,-.55);l(.25,-.55,.4,.45);l(.4,.3,.8,.3);l(.8,.3,.8,-.2);l(.8,-.2,.35,-.2);l(-.7,-.8,.65,-.8);break;
+   case 'fracture':l(-.85,.65,-.15,.65);l(-.15,.65,-.45,.05);l(-.45,.05,.32,.05);l(.32,.05,-.1,-.75);l(.25,-.75,.85,-.75);break;
+   case 'radiation':r(0,0,.14);for(let k=0;k<3;k++){const a=k*2.094+.2;for(let j=0;j<3;j++){const p=a+j*.25,q=p+.25;m.tri([x+Math.cos(p)*size*.28,y+Math.sin(p)*size*.28,z],[x+Math.cos(p)*size*.85,y+Math.sin(p)*size*.85,z],[x+Math.cos(q)*size*.85,y+Math.sin(q)*size*.85,z],ink,1,8);}}break;
+   case 'wave':for(let i=0;i<10;i++){const a=-1+i*.2,b=a+.2;l(a,Math.sin(a*6)*.55,b,Math.sin(b*6)*.55);}l(-.9,-.8,.9,-.8);break;
+   case 'star':for(let k=0;k<5;k++){const a=k*2.513+1.57,b=a+2.513;l(Math.cos(a)*.85,Math.sin(a)*.85,Math.cos(b)*.85,Math.sin(b)*.85);}break;
+   case 'shield':l(-.7,.7,.7,.7);l(.7,.7,.6,-.25);l(.6,-.25,0,-.85);l(0,-.85,-.6,-.25);l(-.6,-.25,-.7,.7);l(-.4,.3,.4,.3);l(-.3,-.05,.3,-.05);break;
+   case 'windows':for(const a of [-.55,.35])for(const b of [-.65,.3]){l(a,b,a+.45,b);l(a,b,a,b+.55);l(a+.45,b,a+.45,b+.55);l(a,b+.55,a+.45,b+.55);}l(-.6,-.75,.65,.75);break;
+   case 'pine':l(0,.9,-.55,.2);l(-.55,.2,-.2,.2);l(-.2,.2,-.8,-.5);l(-.8,-.5,.8,-.5);l(.8,-.5,.2,.2);l(.2,.2,.55,.2);l(.55,.2,0,.9);l(0,-.5,0,-.95);break;
+   case 'anchor':r(0,.6,.22);l(0,.35,0,-.7);l(-.55,.15,.55,.15);l(-.8,-.25,-.55,-.6);l(-.55,-.6,0,-.85);l(0,-.85,.55,-.6);l(.55,-.6,.8,-.25);l(-.8,-.25,-.85,-.6);l(.8,-.25,.85,-.6);break;
+   case 'signal':l(-.3,-.8,-.3,.8);l(-.6,-.8,.15,-.8);r(-.3,.55,.22);r(-.3,-.05,.22);l(0,.15,.75,.15);l(.75,.15,.75,.65);break;
+   case 'bridge':l(-.85,-.2,.85,-.2);l(-.7,-.8,-.7,.8);l(.7,-.8,.7,.8);l(-.7,.6,0,-.1);l(0,-.1,.7,.6);l(-.85,-.45,.85,-.45);break;
+   case 'cross':for(const [a,b,c,d] of [[-.24,-.85,-.24,-.24],[-.24,-.24,-.85,-.24],[-.85,-.24,-.85,.24],[-.85,.24,-.24,.24],[-.24,.24,-.24,.85],[-.24,.85,.24,.85],[.24,.85,.24,.24],[.24,.24,.85,.24],[.85,.24,.85,-.24],[.85,-.24,.24,-.24],[.24,-.24,.24,-.85],[.24,-.85,-.24,-.85]])l(a,b,c,d);break;
+   case 'radar':r(0,0,.8);r(0,0,.45);l(0,0,.55,.6);l(-.9,0,.9,0);l(0,-.9,0,.9);break;
+   case 'tunnel':l(-.8,-.8,-.8,.3);l(-.8,.3,-.45,.7);l(-.45,.7,.45,.7);l(.45,.7,.8,.3);l(.8,.3,.8,-.8);l(-.5,-.8,-.2,.1);l(.5,-.8,.2,.1);break;
+   case 'wheel':r(0,0,.82);r(0,0,.17);for(let k=0;k<8;k++){const a=k*.7854;l(Math.cos(a)*.18,Math.sin(a)*.18,Math.cos(a)*.82,Math.sin(a)*.82);}l(-.6,-.95,0,0);l(.6,-.95,0,0);break;
+   case 'server':for(const a of [-.7,.18]){l(a,-.8,a,.8);l(a,.8,a+.48,.8);l(a+.48,.8,a+.48,-.8);l(a,-.8,a+.48,-.8);for(const b of [-.4,.05,.5])l(a+.12,b,a+.36,b);}break;
+   case 'reactor':l(-.65,-.8,-.35,.6);l(-.35,.6,.35,.6);l(.35,.6,.65,-.8);l(-.65,-.8,.65,-.8);r(0,-.15,.22);l(-.45,.25,.45,.25);break;
+   case 'monolith':l(0,.95,-.55,.35);l(-.55,.35,-.4,-.85);l(-.4,-.85,.4,-.85);l(.4,-.85,.55,.35);l(.55,.35,0,.95);l(0,.95,0,-.65);break;
+   case 'coil':l(-.85,-.8,-.85,.8);l(.85,-.8,.85,.8);for(let j=0;j<4;j++){const a=-.65+j*.4;l(-.5,a,.5,a+.2);l(.5,a+.2,-.5,a+.4);}break;
+  }
+ };
+ const digits=['abcedf','bc','abged','abgcd','fgbc','afgcd','afgecd','abc','abcdefg','abfgcd'];
+ const segments={a:[0,1,1,1],b:[1,1,1,.5],c:[1,.5,1,0],d:[0,0,1,0],e:[0,0,0,.5],f:[0,.5,0,1],g:[0,.5,1,.5]};
+ const digit=(n,x,y,z,s)=>{for(const k of digits[n]){const a=segments[k];line(x,y,z,a[0],a[1]*1.5,a[2],a[3]*1.5,s,ink,.09);}};
+ const buildings=map.buildings||[],step=Math.max(1,Math.ceil(buildings.length/24));
+ for(let index=0;index<buildings.length;index+=step){
+  const b=buildings[index],z=b.y+b.h+6.5,x=b.x+b.w*.22,y=65.5;
+  // Stencilled sector marker: icon, number, scraped paint, and exposed fasteners.
+  rect(x,y,z,44,15,'#303c35',27);rect(x,y+.6,z+.15,41,13.8,'#3e473c',8);
+  icon(x-12,y+7.5,z+.6,5.6);rect(x-3.8,y+2,z+.6,.55,11,'#8a8e72');
+  digit(Math.floor(number/10),x+1,y+3,z+.6,5);digit(number%10,x+9,y+3,z+.6,5);
+  for(const a of [-19,19])for(const h of [2,13])rect(x+a,y+h,z+.8,.9,.9,'#aaa68d',3);
+  if(!low){
+   // Rain-dark streaks descend unevenly from the plate; paint chips expose its metal.
+   for(let k=0;k<5;k++){const px=x-17+k*7.6;rect(px,y-3-k%3,z-.6,1.1,3+k%3,'#424e40');}
+   for(let k=0;k<4;k++)rect(x-16+k*9,y+1+(index+k)%11,z+.9,1.7,.55,'#777b66');
+  }
+  if(index%3===0){
+   // Faded posted instructions below the window sill, with torn corner silhouettes.
+   const px=b.x+b.w*.79,pz=b.y+b.h+5.8;
+   rect(px,10,pz,25,19,'#7c7e67',8);rect(px,11,pz+.15,22,16,'#a5a38a',8);
+   rect(px,23,pz+.3,17,1.2,group==='medical'?'#7b4c40':'#4d5c4c');
+   for(let k=0;k<(low?3:5);k++)rect(px-2+(k%2)*2,13+k*1.8,pz+.3,13-(k%3)*2,.5,'#6a705e');
+   m.tri([px+9,11,pz+.5],[px+11,11,pz+.5],[px+11,15,pz+.5],'#495342',1,8);
+  }
+  if(index%4!==0)continue;
+  // Small storytelling fixtures attached above walking height, chosen by sector.
+  const rx=b.x+b.w-14,rz=b.y+b.h*.23;
+  if(group==='civil'||group==='forest'){
+   // A repaired timber nesting box survives on the side wall.
+   const xx=b.x+b.w+3;
+   m.box(xx,48,rz,5,13,10,'#796748',29);m.box(xx+3,53,rz,1,4,4,'#26312a',8);
+   m.quad([xx-3,61,rz-7],[xx+6,61,rz-7],[xx+6,65,rz],[xx-3,65,rz],'#5b5e47',1,29);
+   m.quad([xx-3,65,rz],[xx+6,65,rz],[xx+6,61,rz+7],[xx-3,61,rz+7],'#74705a',1,29);
+  }else if(group==='marsh'){
+   // Tide gauge and rusted mooring ring are mounted flush to the wall.
+   const xx=b.x+b.w+3;
+   m.box(xx,9,rz,1.8,42,6,'#9e9e81',27);
+   for(let k=0;k<7;k++)m.box(xx+1.2,12+k*5,rz,1,1,k%2?3:5,'#4a5d52',8);
+   m.branch(xx,51,rz-5,xx,51,rz+9,.7,'#785e42',5,27);
+  }else if(group==='military'){
+   // Weathered wall loudspeaker, grille, and its clamped cable.
+   const xx=b.x+b.w+3;
+   m.box(xx,61,rz,6,9,12,'#6d735a',27);m.box(xx+3.4,62,rz,1,7,10,'#28392e',54);
+   for(let k=0;k<4;k++)m.box(xx+4,63+k*1.5,rz,1,.4,8,'#7a8068',27);
+   m.branch(xx,62,rz,xx,26,rz, .55,'#2e3b30',5,8);
+  }else if(group==='science'||group==='medical'){
+   // Sample/service cabinet and a broken conduit stay against the existing wall.
+   const xx=b.x+b.w+2.8;
+   m.box(xx,48,rz,4,18,14,group==='medical'?'#969f8b':'#718d85',27);
+   m.box(xx+2.5,50,rz,1,14,10,'#354e49',55);
+   for(let k=0;k<3;k++)m.box(xx+3,52+k*3,rz,1,.7,7,'#95a69a',8);
+   m.branch(xx,66,rz,xx,76,rz,.6,'#5a7566',5,27);
+  }else if(group==='rail'||group==='scrap'){
+   const xx=b.x+b.w+2.8;
+   m.box(xx,49,rz,4,15,14,'#7b7258',27);
+   m.box(xx+2.5,51,rz,1,10,10,'#303a33',8);
+   for(let k=0;k<3;k++)m.box(xx+3.1,53+k*2.5,rz,1,.7,7,'#b1a27b',8);
+   m.branch(xx,64,rz-8,xx,64,rz+9,.65,'#8b7555',5,27);
+  }else if(group==='urban'){
+   // TV feed boxes and a dangling loop preserve traces of the former residents.
+   const xx=b.x+b.w+2.8;
+   m.box(xx,63,rz,3,9,11,'#858774',27);
+   m.branch(xx+1,63,rz,xx+1,48,rz,.45,'#35463b',4,8);
+   m.branch(xx+1,48,rz,xx+1,44,rz+8,.45,'#35463b',4,8);
+   m.branch(xx+1,44,rz+8,xx+1,51,rz+13,.45,'#35463b',4,8);
+  }else{
+   // Pipe identification bands, corroded isolation valve, service channel.
+   const xx=b.x+b.w+3;
+   m.branch(xx,39,rz-18,xx,39,rz+18,1.4,'#60766d',low?5:7,27);
+   for(const dz of [-12,10])m.box(xx,37,rz+dz,4,4,2,'#b6ac75',8);
+   m.box(xx,39,rz,4,10,5,'#7c6552',27);m.box(xx+2.3,49,rz,7,2,10,'#9c7760',27);
+  }
+ }
+}
+
 function staticMesh(map,room,eco){const scene=room==null?map:map.rooms[room],t=map.theme,m=new Mesh(),low=eco;
 const alt=t.groundAlt||t.ground,ground=room==null?t.ground:t.roomGround;
 if(room==null)terrainMesh(m,map,low);else m.plane(scene.w/2,-1,scene.h/2,scene.w,scene.h,ground,2);m.plane(scene.w/2,-3,scene.h/2,scene.w+140,scene.h+140,t.groundAlt||ground,0);
@@ -8701,7 +8753,8 @@ for(const o of (room==null?map.buildings:scene.props)||[]){
   if(room==null&&j%3===0)for(let k=0;k<3;k++)m.tri([px-2,0,pz+k],[px+2,0,pz+k],[px-4+vr()*8,7+vr()*9,pz+k],'#55573c',1,5);
  }
 }
-detailSurvivalEnvironment(m,map,scene,room,low);try{window.ZonaAtmos&&window.ZonaAtmos.detail(m,map,scene,room,low)}catch(e){console.warn('ZonaAtmos detail',e)}if(room==null)for(const p of map.dressing||[])drawDressing(m,p,low);
+detailSurvivalEnvironment(m,map,scene,room,low);if(room==null)for(const p of map.dressing||[])drawDressing(m,p,low);
+if(room==null)sectorStorytelling(m,map,low);
 applySurfacePack(m,map,room);return new Float32Array(m.data)}
 const MOB_PROFILES={"rat":{"family":"quad","size":0.47,"width":0.87,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[11,8,16,6,1.7],"heightScale":1},"dog":{"family":"quad","size":1.035,"width":0.925,"crest":1,"gear":1,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[21,10,23,7,1.3],"heightScale":1},"flesh":{"family":"quad","size":1.09,"width":0.98,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,23,23,7,0.7],"heightScale":1},"boar":{"family":"quad","size":1.145,"width":1.035,"crest":3,"gear":3,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[18,19,24,10,0.85],"heightScale":1},"maroder":{"family":"soldier","size":1.2,"width":1.09,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudodog":{"family":"quad","size":0.98,"width":1.145,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[21,10,23,7,1.3],"heightScale":1},"zombie":{"family":"mutant","size":1.035,"width":1.2,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"snork":{"family":"crawler","size":1.09,"width":0.87,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[13,11,19,7,1.35],"heightScale":1},"fracture":{"family":"mutant","size":1.145,"width":0.925,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":true,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1.1},"mercenary":{"family":"soldier","size":1.2,"width":0.98,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"bloodsucker":{"family":"mutant","size":0.98,"width":1.035,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"poltergeist":{"family":"spirit","size":1.035,"width":1.09,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"psydog":{"family":"quad","size":1.09,"width":1.145,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[21,10,23,7,1.3],"heightScale":1},"burer":{"family":"caster","size":1.145,"width":1.2,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"monolith":{"family":"soldier","size":1.2,"width":0.87,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudogiant":{"family":"giant","size":0.98,"width":1.2,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#555a55","anatomy":[26,21,24,9,0.75],"heightScale":1},"controller":{"family":"caster","size":1.035,"width":0.98,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"exo_monolith":{"family":"soldier","size":1.09,"width":1.035,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera":{"family":"quad","size":1.145,"width":1.09,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[24,16,30,8,1.25],"heightScale":1},"phantom":{"family":"spirit","size":1.2,"width":1.145,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"tushkano":{"family":"quad","size":0.47,"width":1.2,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[11,8,16,6,1.7],"heightScale":1},"swamp_flesh":{"family":"quad","size":1.035,"width":0.87,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,23,23,7,0.7],"heightScale":1},"blind_dog_pack":{"family":"quad","size":1.09,"width":0.925,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[21,10,23,7,1.3],"heightScale":1},"bandit_sniper":{"family":"soldier","size":1.145,"width":0.98,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"bandit_chief":{"family":"soldier","size":1.2,"width":1.035,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"snork_stalker":{"family":"crawler","size":0.98,"width":1.09,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[13,11,19,7,1.35],"heightScale":1},"swamp_beast":{"family":"quad","size":1.035,"width":1.145,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[15,20,30,10,0.85],"heightScale":1},"military_spetsnaz":{"family":"soldier","size":1.09,"width":1.2,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_sniper":{"family":"soldier","size":1.145,"width":0.87,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"pyro_poltergeist":{"family":"spirit","size":0.98,"width":0.98,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"electric_poltergeist":{"family":"spirit","size":1.035,"width":1.035,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"bloodsucker_black":{"family":"mutant","size":1.09,"width":1.09,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"burer_elder":{"family":"caster","size":1.145,"width":1.145,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"controller_master":{"family":"caster","size":1.2,"width":1.2,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"mutant_bear":{"family":"quad","size":1.617,"width":0.87,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[29,21,28,10,0.65],"heightScale":1},"monolith_gauss_sniper":{"family":"soldier","size":1.035,"width":0.925,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"giant_titan":{"family":"giant","size":1.798,"width":0.98,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera_shadow":{"family":"quad","size":1.145,"width":1.035,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[24,16,30,8,1.25],"heightScale":1},"dark_stalker_boss":{"family":"soldier","size":1.2,"width":1.09,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"master_zone":{"family":"caster","size":0.98,"width":1.145,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"cat_bayun":{"family":"quad","size":1.035,"width":1.2,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[16,9,21,6,1.4],"heightScale":1},"zombie_civilian":{"family":"mutant","size":1.09,"width":0.87,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"zombie_soldier":{"family":"mutant","size":1.145,"width":0.925,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"renegade_scout":{"family":"soldier","size":1.2,"width":0.98,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"renegade_veteran":{"family":"soldier","size":0.98,"width":1.035,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudodog_stalker":{"family":"quad","size":1.035,"width":1.09,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[21,10,23,7,1.3],"heightScale":1},"swamp_snork":{"family":"crawler","size":1.09,"width":1.145,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[13,11,19,7,1.35],"heightScale":1},"dark_stalker_novice":{"family":"soldier","size":1.145,"width":1.2,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"military_heavy":{"family":"soldier","size":1.2,"width":0.87,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_infiltrator":{"family":"soldier","size":0.47,"width":0.925,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1],"heightScale":1},"bloodsucker_swamp":{"family":"mutant","size":1.035,"width":0.98,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"poltergeist_frost":{"family":"spirit","size":1.09,"width":1.035,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"burer_telekinesis":{"family":"caster","size":1.145,"width":1.09,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"controller_psystorm":{"family":"caster","size":1.2,"width":1.145,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"mutant_boar_iron":{"family":"quad","size":0.98,"width":1.2,"crest":3,"gear":1,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[18,19,24,10,0.85],"heightScale":1},"pseudogiant_fury":{"family":"giant","size":1.035,"width":1.32,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#726b58","anatomy":[26,21,24,9,0.75],"heightScale":1},"monolith_berserk":{"family":"soldier","size":1.09,"width":0.925,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"monolith_commander":{"family":"soldier","size":1.145,"width":0.98,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera_frost":{"family":"quad","size":1.2,"width":1.035,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[24,16,30,8,1.25],"heightScale":1},"chimera_blood":{"family":"quad","size":0.98,"width":1.09,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[24,16,30,8,1.25],"heightScale":1},"phantom_monolith":{"family":"spirit","size":1.035,"width":1.145,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"gargoyle_mutant":{"family":"wing","size":1.09,"width":1.2,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"spectral_stalker":{"family":"soldier","size":1.145,"width":0.87,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"titan_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"avatar_noosphere_prime":{"family":"spirit","size":0.98,"width":0.98,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1}};
 function combatProfile(id){
@@ -9130,7 +9183,7 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform vec3 uEye;uniform vec4 uShadows[12];uniform vec4 uLights[5];uniform vec4 uLightBounds[5];uniform vec3 uLightColors[5];uniform float uNight;uniform float uStorm;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;uniform sampler2D uAtlas;uniform float uTextureReady;
+varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform vec4 uAir;uniform vec3 uEye;uniform vec4 uShadows[12];uniform vec4 uLights[5];uniform vec4 uLightBounds[5];uniform vec3 uLightColors[5];uniform float uNight;uniform float uStorm;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;uniform sampler2D uAtlas;uniform float uTextureReady;
 varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;
 float surfaceKind(float tile){if(tile>59.5&&tile<62.5)return 8.;if(tile<9.5)return tile;if(tile<34.5){if(tile<22.5){if(tile<16.5){if(tile<13.5){if(tile<11.5){if(tile<10.5){return 2.;}else{return 3.;}}else{if(tile<12.5){return 2.;}else{return 2.;}}}else{if(tile<15.5){if(tile<14.5){return 1.;}else{return 0.;}}else{return 2.;}}}else{if(tile<19.5){if(tile<18.5){if(tile<17.5){return 3.;}else{return 3.;}}else{return 0.;}}else{if(tile<21.5){if(tile<20.5){return 3.;}else{return 2.;}}else{return 2.;}}}}else{if(tile<28.5){if(tile<25.5){if(tile<24.5){if(tile<23.5){return 2.;}else{return 2.;}}else{return 7.;}}else{if(tile<27.5){if(tile<26.5){return 3.;}else{return 3.;}}else{return 7.;}}}else{if(tile<31.5){if(tile<30.5){if(tile<29.5){return 4.;}else{return 0.;}}else{return 4.;}}else{if(tile<33.5){if(tile<32.5){return 5.;}else{return 0.;}}else{return 2.;}}}}}else{if(tile<47.5){if(tile<41.5){if(tile<38.5){if(tile<36.5){if(tile<35.5){return 0.;}else{return 1.;}}else{if(tile<37.5){return 0.;}else{return 4.;}}}else{if(tile<40.5){if(tile<39.5){return 2.;}else{return 1.;}}else{return 1.;}}}else{if(tile<44.5){if(tile<43.5){if(tile<42.5){return 1.;}else{return 2.;}}else{return 2.;}}else{if(tile<46.5){if(tile<45.5){return 0.;}else{return 6.;}}else{return 2.;}}}}else{if(tile<53.5){if(tile<50.5){if(tile<49.5){if(tile<48.5){return 2.;}else{return 2.;}}else{return 2.;}}else{if(tile<52.5){if(tile<51.5){return 3.;}else{return 3.;}}else{return 3.;}}}else{if(tile<56.5){if(tile<55.5){if(tile<54.5){return 3.;}else{return 8.;}}else{return 3.;}}else{if(tile<58.5){if(tile<57.5){return 7.;}else{return 3.;}}else{return 2.;}}}}}}
 float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -9153,7 +9206,7 @@ float visibility(){
  if(uShadowReady<.5)return 1.;vec3 q=vShadow.xyz/vShadow.w*.5+.5;
  if(q.x<.002||q.x>.998||q.y<.002||q.y>.998||q.z>1.||q.z<0.)return 1.;
  vec2 t=vec2(uShadowTexel*1.15,0.);float v=shadowTap(q.xy+t,q.z)+shadowTap(q.xy-t,q.z)+shadowTap(q.xy+t.yx,q.z)+shadowTap(q.xy-t.yx,q.z);
- return .38+.62*v*.25;
+ return .38+.62*(v+2.*shadowTap(q.xy,q.z))/6.;
 }
 
 vec2 reliefUV(float tile,vec3 normal){
@@ -9168,6 +9221,40 @@ vec3 reliefNormal(float tile,vec3 n,vec2 encoded){
  float strength=mat<1.5?1.85:mat<2.5?1.55:mat<3.5?.85:1.10;
  vec2 slope=(encoded-.5)*strength;
  return normalize(n+(abs(n.y)>.55?vec3(-slope.x,0.,slope.y):(abs(n.x)>.55?vec3(0.,-slope.y,-slope.x):vec3(-slope.x,-slope.y,0.))));
+}
+
+
+// v16.54: roughness-aware surfaces and thin-leaf light transmission.
+vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface){
+ vec3 viewDir=normalize(uEye-vWorldPos);
+ vec3 sunDir=normalize(vec3(-.44,.82,.38));
+ float facing=max(0.,dot(n,sunDir));
+ float grazing=pow(1.-max(0.,dot(n,viewDir)),4.);
+ float broad=noise21(surface*.021);
+ float rough=clamp(surfaceInfo.b,.24,.98);
+ if(mat>2.5&&mat<3.5){
+  // Polished scratches catch light between matte rust deposits.
+  float oxide=smoothstep(.48,.78,broad);
+  float highlight=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(72.,12.,rough));
+  base+=vec3(.19,.21,.20)*highlight*(1.-oxide)*(.32+.48*(1.-uNight));
+  base=mix(base,base*vec3(1.13,.92,.76),oxide*.18);
+ }else if(mat>4.5&&mat<5.5){
+  // Backlit foliage keeps its local colour instead of becoming a black silhouette.
+  float thin=max(0.,dot(-n,sunDir))*(.45+.55*max(0.,dot(viewDir,-sunDir)));
+  base+=vColor*vec3(.31,.39,.16)*thin*(1.-uNight*.62);
+  base+=vColor*.055*grazing;
+ }else if(mat<2.5){
+  float pores=smoothstep(.63,.87,noise21(surface*.43));
+  base*=1.-pores*.065;
+  // A restrained sheen on damp mineral surfaces, never on dry dust.
+  float sheen=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(48.,9.,rough));
+  base+=vec3(.065,.085,.10)*sheen*uWetness*(.25+.75*broad)*facing;
+  if(mat>1.5&&abs(n.y)<.55){
+   float algae=(1.-smoothstep(3.,19.,vHeight))*smoothstep(.37,.72,broad);
+   base=mix(base,base*vec3(.73,.89,.68),algae*.26);
+  }
+ }
+ return base;
 }
 
 vec3 gradeScene(vec3 c){
@@ -9216,12 +9303,16 @@ vec3 weatherSurface(vec3 base,float mat,vec3 n,vec2 surface){
  return base;
 }
 vec3 atmosphericScene(vec3 base){
- if(uWetness<.5)return mix(base,uSky,clamp(vFog*.38,0.,.65));
  float depth=clamp(vFog,0.,1.);
- float lowMist=(1.-smoothstep(4.,92.,vHeight))*(.5+.5*noise21(vWorld*.008+vec2(uTime*.002,0.)));
- float haze=clamp(depth*.36+lowMist*smoothstep(.15,.75,depth)*.08,0.,.68);
- vec3 air=max(uSky,vec3(.055,.071,.079));
- return mix(base,air,haze);
+ // Slow, world-space layers put fog in the low terrain without veiling nearby actors.
+ float cloud=noise21(vWorld*.006+vec2(uTime*.0017,-uTime*.0011));
+ float lowMist=(1.-smoothstep(5.,105.,vHeight))*(.30+.70*cloud)*uAir.x;
+ float haze=(1.-exp(-depth*(.48+uAir.x*.22)))+lowMist*smoothstep(.10,.78,depth)*.14;
+ haze*=mix(1.,.30,uAir.w);
+ vec3 air=max(uSky,vec3(.038,.044,.047));
+ // Soft overhead bounce keeps weathered surfaces readable in dark sectors.
+ base*=uAir.z;
+ return mix(base,air,clamp(haze,0.,.68));
 }
 float lampMask(vec4 bounds){
  if(bounds.z<=bounds.x)return 1.;
@@ -9327,6 +9418,7 @@ void main(){
  if(mat>4.5&&mat<5.5)base+=vColor*.10;
  float skyFacing=.35+.65*max(0.,normal.y);
  base+=vColor*vec3(.025,.034,.041)*skyFacing;
+ base=materialFinish(base,mat,normal,surfaceInfo,surface);
  vec3 light=vec3(0.0);
  for(int i=0;i<5;i++){
   vec2 delta=(vWorld-uLights[i].xy)/max(1.0,uLights[i].z);
@@ -9421,7 +9513,7 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform float uNight;uniform float uStorm;uniform vec3 uEye;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;
+varying vec4 vShadow;uniform sampler2D uShadowMap;uniform float uShadowReady;uniform float uShadowTexel;uniform vec4 uTorch;uniform vec3 uTorchBands[3];uniform vec3 uSky;uniform vec4 uAir;uniform float uNight;uniform float uStorm;uniform vec3 uEye;uniform float uWetness;uniform sampler2D uSurfaceAtlas;uniform float uSurfaceReady;uniform vec4 uCutaway;uniform float uCutFade;uniform float uTime;uniform float uDetail;
 uniform sampler2D uAtlas;uniform float uTextureReady;
 uniform vec4 uLights[3];uniform vec4 uLightBounds[3];uniform vec3 uLightColors[3];uniform vec4 uShadows[4];
 varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;
@@ -9435,7 +9527,7 @@ float visibility(){
  if(uShadowReady<.5)return 1.;vec3 q=vShadow.xyz/vShadow.w*.5+.5;
  if(q.x<.002||q.x>.998||q.y<.002||q.y>.998||q.z>1.||q.z<0.)return 1.;
  vec2 t=vec2(uShadowTexel*1.15,0.);float v=shadowTap(q.xy+t,q.z)+shadowTap(q.xy-t,q.z)+shadowTap(q.xy+t.yx,q.z)+shadowTap(q.xy-t.yx,q.z);
- return .38+.62*v*.25;
+ return .38+.62*(v+2.*shadowTap(q.xy,q.z))/6.;
 }
 
 vec2 reliefUV(float tile,vec3 normal){
@@ -9450,6 +9542,40 @@ vec3 reliefNormal(float tile,vec3 n,vec2 encoded){
  float strength=mat<1.5?1.85:mat<2.5?1.55:mat<3.5?.85:1.10;
  vec2 slope=(encoded-.5)*strength;
  return normalize(n+(abs(n.y)>.55?vec3(-slope.x,0.,slope.y):(abs(n.x)>.55?vec3(0.,-slope.y,-slope.x):vec3(-slope.x,-slope.y,0.))));
+}
+
+
+// v16.54: roughness-aware surfaces and thin-leaf light transmission.
+vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface){
+ vec3 viewDir=normalize(uEye-vWorldPos);
+ vec3 sunDir=normalize(vec3(-.44,.82,.38));
+ float facing=max(0.,dot(n,sunDir));
+ float grazing=pow(1.-max(0.,dot(n,viewDir)),4.);
+ float broad=noise21(surface*.021);
+ float rough=clamp(surfaceInfo.b,.24,.98);
+ if(mat>2.5&&mat<3.5){
+  // Polished scratches catch light between matte rust deposits.
+  float oxide=smoothstep(.48,.78,broad);
+  float highlight=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(72.,12.,rough));
+  base+=vec3(.19,.21,.20)*highlight*(1.-oxide)*(.32+.48*(1.-uNight));
+  base=mix(base,base*vec3(1.13,.92,.76),oxide*.18);
+ }else if(mat>4.5&&mat<5.5){
+  // Backlit foliage keeps its local colour instead of becoming a black silhouette.
+  float thin=max(0.,dot(-n,sunDir))*(.45+.55*max(0.,dot(viewDir,-sunDir)));
+  base+=vColor*vec3(.31,.39,.16)*thin*(1.-uNight*.62);
+  base+=vColor*.055*grazing;
+ }else if(mat<2.5){
+  float pores=smoothstep(.63,.87,noise21(surface*.43));
+  base*=1.-pores*.065;
+  // A restrained sheen on damp mineral surfaces, never on dry dust.
+  float sheen=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(48.,9.,rough));
+  base+=vec3(.065,.085,.10)*sheen*uWetness*(.25+.75*broad)*facing;
+  if(mat>1.5&&abs(n.y)<.55){
+   float algae=(1.-smoothstep(3.,19.,vHeight))*smoothstep(.37,.72,broad);
+   base=mix(base,base*vec3(.73,.89,.68),algae*.26);
+  }
+ }
+ return base;
 }
 
 vec3 gradeScene(vec3 c){
@@ -9498,12 +9624,16 @@ vec3 weatherSurface(vec3 base,float mat,vec3 n,vec2 surface){
  return base;
 }
 vec3 atmosphericScene(vec3 base){
- if(uWetness<.5)return mix(base,uSky,clamp(vFog*.38,0.,.65));
  float depth=clamp(vFog,0.,1.);
- float lowMist=(1.-smoothstep(4.,92.,vHeight))*(.5+.5*noise21(vWorld*.008+vec2(uTime*.002,0.)));
- float haze=clamp(depth*.36+lowMist*smoothstep(.15,.75,depth)*.08,0.,.68);
- vec3 air=max(uSky,vec3(.055,.071,.079));
- return mix(base,air,haze);
+ // Slow, world-space layers put fog in the low terrain without veiling nearby actors.
+ float cloud=noise21(vWorld*.006+vec2(uTime*.0017,-uTime*.0011));
+ float lowMist=(1.-smoothstep(5.,105.,vHeight))*(.30+.70*cloud)*uAir.x;
+ float haze=(1.-exp(-depth*(.48+uAir.x*.22)))+lowMist*smoothstep(.10,.78,depth)*.14;
+ haze*=mix(1.,.30,uAir.w);
+ vec3 air=max(uSky,vec3(.038,.044,.047));
+ // Soft overhead bounce keeps weathered surfaces readable in dark sectors.
+ base*=uAir.z;
+ return mix(base,air,clamp(haze,0.,.68));
 }
 float lampMask(vec4 bounds){
  if(bounds.z<=bounds.x)return 1.;
@@ -9612,6 +9742,7 @@ void main(){
  if(mat>4.5&&mat<5.5)base+=vColor*.10;
  float skyFacing=.35+.65*max(0.,normal.y);
  base+=vColor*vec3(.025,.034,.041)*skyFacing;
+ base=materialFinish(base,mat,normal,surfaceInfo,surface);
  if(mat>5.5&&mat<6.5)base+=vec3(.015,.024,.030)*rainRipple(vWorld);
  vec3 light=vec3(0.);
  for(int i=0;i<3;i++){
@@ -9710,7 +9841,7 @@ try{
  catch(fallbackError){console.warn('Survival 3D shader unsupported:',fallbackError);return null}
 }
 try{staticBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer()}catch(e){console.warn('Survival 3D buffers:',e);return null}
-const A={position:gl.getAttribLocation(program,'aPosition'),color:gl.getAttribLocation(program,'aColor'),normal:gl.getAttribLocation(program,'aNormal'),material:gl.getAttribLocation(program,'aMaterial')},U={shadowMatrix:gl.getUniformLocation(program,'uShadowMatrix'),shadowMap:gl.getUniformLocation(program,'uShadowMap'),shadowReady:gl.getUniformLocation(program,'uShadowReady'),shadowTexel:gl.getUniformLocation(program,'uShadowTexel'),torchBands:gl.getUniformLocation(program,'uTorchBands[0]'),torch:gl.getUniformLocation(program,'uTorch'),mvp:gl.getUniformLocation(program,'uMVP'),cam:gl.getUniformLocation(program,'uCamera'),fog:gl.getUniformLocation(program,'uFog'),sky:gl.getUniformLocation(program,'uSky'),eye:gl.getUniformLocation(program,'uEye'),shadows:gl.getUniformLocation(program,'uShadows[0]'),tint:gl.getUniformLocation(program,'uTint'),lights:gl.getUniformLocation(program,'uLights[0]'),lightBounds:gl.getUniformLocation(program,'uLightBounds[0]'),lightColors:gl.getUniformLocation(program,'uLightColors[0]'),night:gl.getUniformLocation(program,'uNight'),wetness:gl.getUniformLocation(program,'uWetness'),storm:gl.getUniformLocation(program,'uStorm'),cutaway:gl.getUniformLocation(program,'uCutaway'),cutFade:gl.getUniformLocation(program,'uCutFade'),time:gl.getUniformLocation(program,'uTime'),detail:gl.getUniformLocation(program,'uDetail'),atlas:gl.getUniformLocation(program,'uAtlas'),surfaceAtlas:gl.getUniformLocation(program,'uSurfaceAtlas'),surfaceReady:gl.getUniformLocation(program,'uSurfaceReady'),textureReady:gl.getUniformLocation(program,'uTextureReady')};
+const A={position:gl.getAttribLocation(program,'aPosition'),color:gl.getAttribLocation(program,'aColor'),normal:gl.getAttribLocation(program,'aNormal'),material:gl.getAttribLocation(program,'aMaterial')},U={shadowMatrix:gl.getUniformLocation(program,'uShadowMatrix'),shadowMap:gl.getUniformLocation(program,'uShadowMap'),shadowReady:gl.getUniformLocation(program,'uShadowReady'),shadowTexel:gl.getUniformLocation(program,'uShadowTexel'),torchBands:gl.getUniformLocation(program,'uTorchBands[0]'),torch:gl.getUniformLocation(program,'uTorch'),mvp:gl.getUniformLocation(program,'uMVP'),cam:gl.getUniformLocation(program,'uCamera'),fog:gl.getUniformLocation(program,'uFog'),sky:gl.getUniformLocation(program,'uSky'),air:gl.getUniformLocation(program,'uAir'),eye:gl.getUniformLocation(program,'uEye'),shadows:gl.getUniformLocation(program,'uShadows[0]'),tint:gl.getUniformLocation(program,'uTint'),lights:gl.getUniformLocation(program,'uLights[0]'),lightBounds:gl.getUniformLocation(program,'uLightBounds[0]'),lightColors:gl.getUniformLocation(program,'uLightColors[0]'),night:gl.getUniformLocation(program,'uNight'),wetness:gl.getUniformLocation(program,'uWetness'),storm:gl.getUniformLocation(program,'uStorm'),cutaway:gl.getUniformLocation(program,'uCutaway'),cutFade:gl.getUniformLocation(program,'uCutFade'),time:gl.getUniformLocation(program,'uTime'),detail:gl.getUniformLocation(program,'uDetail'),atlas:gl.getUniformLocation(program,'uAtlas'),surfaceAtlas:gl.getUniformLocation(program,'uSurfaceAtlas'),surfaceReady:gl.getUniformLocation(program,'uSurfaceReady'),textureReady:gl.getUniformLocation(program,'uTextureReady')};
 const shadowSize=eco?256:(compactMode?512:1024);let shadowProgram=null,shadowFBO=null,shadowTexture=null,shadowDepth=null,shadowMatrix=orthographic(-1,1,-1,1,1,2),shadowTick=0,shadowAnchor=null,shadowValid=false,shadowPosition=-1,shadowUniform=null;
 const shadowVS=`attribute vec3 aPosition;uniform mat4 uLightMatrix;varying float vCasterHeight;void main(){vCasterHeight=aPosition.y;gl_Position=uLightMatrix*vec4(aPosition,1.);}`;
 const shadowFS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -9833,8 +9964,8 @@ if(cutBuilding&&cutBuilding!==blocking){cutFade=Math.max(0,cutFade-fadeStep);if(
 else{cutBuilding=blocking;cutFade=blocking?Math.min(.92,cutFade+fadeStep):0;}
 const dyn=entityMesh(w,map,run,enemyData,time,eco,animation);bindBuffer(dynamicBuffer,dyn,gl.DYNAMIC_DRAW);
 if(!shadowValid||needsShadowRefresh(shadowAnchor,target,asp,zoom))renderShadow(target,asp,dyn.length/10);
-gl.viewport(0,0,canvas.width,canvas.height);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthFunc(gl.LEQUAL);gl.disable(gl.BLEND);const sky=rgb(map.theme.sky||'#080c0d').map(v=>Math.min(.12,v*.40+.006));gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.uniformMatrix4fv(U.mvp,false,new Float32Array(M));
-gl.uniformMatrix4fv(U.shadowMatrix,false,new Float32Array(shadowMatrix));gl.uniform1f(U.shadowReady,shadowValid?1:0);gl.uniform1f(U.shadowTexel,1/shadowSize);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadowTexture||atlasTexture);gl.uniform1i(U.shadowMap,1);gl.activeTexture(gl.TEXTURE0);gl.uniform3fv(U.cam,new Float32Array(target));if(U.eye)gl.uniform3fv(U.eye,new Float32Array(eye));gl.uniform3fv(U.sky,new Float32Array(sky));gl.uniform1f(U.fog,eco?700:900);gl.uniform3fv(U.tint,new Float32Array(sectorTint(map.theme.id,run.room!=null)));const phase=((run.worldTime||0)+((run.seed%94)*1.6))/520*Math.PI*2;const night=clamp(.34+(.5-.5*Math.cos(phase))*.66,.34,.96);const l=sceneLights(run,time);if(U.lightBounds)gl.uniform4fv(U.lightBounds,compactMode?l.bounds.subarray(0,12):l.bounds);if(U.lights)gl.uniform4fv(U.lights,compactMode?l.pos.subarray(0,12):l.pos);if(U.lightColors)gl.uniform3fv(U.lightColors,compactMode?l.colors.subarray(0,9):l.colors);gl.uniform4fv(U.cutaway,new Float32Array(cutBuilding?[cutBuilding.x-10,cutBuilding.y-10,cutBuilding.x+cutBuilding.w+10,cutBuilding.y+cutBuilding.h+12]:[0,0,0,0]));gl.uniform1f(U.cutFade,cutFade);gl.uniform1f(U.night,night);gl.uniform1f(U.wetness,run.room==null?(window.ZonaAtmos?window.ZonaAtmos.wet(map.theme.id):1):0);gl.uniform1f(U.storm,stormState(run.worldTime||0,run.seed,run.room!=null,window.matchMedia?.('(prefers-reduced-motion: reduce)').matches).flash);gl.uniform1f(U.time,time);
+gl.viewport(0,0,canvas.width,canvas.height);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthFunc(gl.LEQUAL);gl.disable(gl.BLEND);const atmosphere=sectorAtmosphere(map.theme.id),inside=run.room!=null;const sky=rgb(atmosphere.sky).map(v=>v*(inside?.085:.145));gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.uniformMatrix4fv(U.mvp,false,new Float32Array(M));
+gl.uniformMatrix4fv(U.shadowMatrix,false,new Float32Array(shadowMatrix));gl.uniform1f(U.shadowReady,shadowValid?1:0);gl.uniform1f(U.shadowTexel,1/shadowSize);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadowTexture||atlasTexture);gl.uniform1i(U.shadowMap,1);gl.activeTexture(gl.TEXTURE0);gl.uniform3fv(U.cam,new Float32Array(target));if(U.eye)gl.uniform3fv(U.eye,new Float32Array(eye));gl.uniform3fv(U.sky,new Float32Array(sky));gl.uniform1f(U.fog,inside?1800:atmosphere.fogReach);if(U.air)gl.uniform4fv(U.air,new Float32Array([inside?.14:atmosphere.mist,0,inside?1.04:1.07,inside?1:0]));gl.uniform3fv(U.tint,new Float32Array(sectorTint(map.theme.id,run.room!=null)));const phase=((run.worldTime||0)+((run.seed%94)*1.6))/520*Math.PI*2;const night=clamp(atmosphere.nightBias+(.5-.5*Math.cos(phase))*.21,.18,.94);const l=sceneLights(run,time);if(U.lightBounds)gl.uniform4fv(U.lightBounds,compactMode?l.bounds.subarray(0,12):l.bounds);if(U.lights)gl.uniform4fv(U.lights,compactMode?l.pos.subarray(0,12):l.pos);if(U.lightColors)gl.uniform3fv(U.lightColors,compactMode?l.colors.subarray(0,9):l.colors);gl.uniform4fv(U.cutaway,new Float32Array(cutBuilding?[cutBuilding.x-10,cutBuilding.y-10,cutBuilding.x+cutBuilding.w+10,cutBuilding.y+cutBuilding.h+12]:[0,0,0,0]));gl.uniform1f(U.cutFade,cutFade);gl.uniform1f(U.night,night);gl.uniform1f(U.wetness,inside?atmosphere.wetness*.22:atmosphere.wetness);gl.uniform1f(U.storm,stormState(run.worldTime||0,run.seed,inside||atmosphere.weather!=='rain',window.matchMedia?.('(prefers-reduced-motion: reduce)').matches).flash);gl.uniform1f(U.time,time);
  const tx=Math.sin(pose.angle),tz=-Math.cos(pose.angle),reach=215;
  if(U.torchBands)gl.uniform3fv(U.torchBands,torchRanges(w,run.x,run.y,pose.angle,reach));
  if(U.torch)gl.uniform4fv(U.torch,new Float32Array([run.x,run.y,tx*reach,tz*reach]));gl.uniform1f(U.detail,eco?0:1);if(U.shadows)gl.uniform4fv(U.shadows,compactMode?sceneShadows(run,enemyData).subarray(0,16):sceneShadows(run,enemyData));gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.uniform1i(U.atlas,0);gl.uniform1f(U.textureReady,textureReady?1:0);gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);gl.uniform1i(U.surfaceAtlas,2);gl.uniform1f(U.surfaceReady,surfaceReady?1:0);gl.activeTexture(gl.TEXTURE0);drawBuffer(staticBuffer,staticData.length/10,staticChunks,M);
@@ -9885,19 +10016,19 @@ class SurvivalAudio {
   const small=/rat|tushkano|cat/.test(id),heavy=/giant|bear|titan/.test(id);o.type='sawtooth';o.frequency.setValueAtTime(small?210:heavy?42:78,now);o.frequency.exponentialRampToValueAtTime(small?110:heavy?28:48,now+.42);f.type='lowpass';f.frequency.value=small?850:320;g.gain.setValueAtTime(volume,now);g.gain.exponentialRampToValueAtTime(.0001,now+.55);o.connect(f);f.connect(g);g.connect(this.master);this.sources.add(o);o.onended=()=>{o.disconnect();f.disconnect();g.disconnect();this.sources.delete(o)};o.start();o.stop(now+.6);
  }
  tick(run,map,scene,health,enemyData){if(!this.active||!this.enabled||!this.ctx||this.ctx.state!=='running')return;const t=run.worldTime||0,c=this.ctx,inside=run.room!==null;
-  const wind=window.ZonaSurvival3D.stormState(t,run.seed,inside),rain=inside?.012:(.075+wind.wind*.013)*(window.ZonaAtmos?window.ZonaAtmos.rain(map.theme.id):1)+.006;
+  const weather=map.theme.weather,wind=window.ZonaSurvival3D.stormState(t,run.seed,inside||weather!=='rain'),rain=inside?.008:weather==='rain'?.075+wind.wind*.013:weather==='wind'?.033:weather==='dust'?.022:.012;
   this.rain.gain.setTargetAtTime(rain,c.currentTime,.35);
   const same=this.last?.room===run.room,dist=same?Math.hypot(run.x-this.last.x,run.y-this.last.y):0;
   this.walk+=Math.min(dist,12);if(this.walk>32){this.walk%=32;const road=(map.roads||[]).some(q=>run.x>=q.x&&run.x<q.x+q.w&&run.y>=q.y&&run.y<q.y+q.h);this.noise(.10,inside?.10:road?.09:.065,inside?1300:road?900:430);if(!inside)this.noise(.16,.025,2300,'bandpass');}
   const breath=(health<.3?.035:dist>.1?.012:.003)*(.45+.55*Math.sin(t*2.2)**2);this.breath.gain.setTargetAtTime(breath,c.currentTime,.12);
-  if(!inside){if(this.cycle===null)this.cycle=wind.cycle;if(wind.flash>.65&&this.cycle!==wind.cycle+'f'){this.cycle=wind.cycle+'f';this.thunderAt=t+1.8+(run.seed%21)/10;}if(this.thunderAt!==null&&t>=this.thunderAt){this.noise(3.2,.35,180);this.noise(1.3,.12,700);this.thunderAt=null;}}
+  if(!inside&&weather==='rain'){if(this.cycle===null)this.cycle=wind.cycle;if(wind.flash>.65&&this.cycle!==wind.cycle+'f'){this.cycle=wind.cycle+'f';this.thunderAt=t+1.8+(run.seed%21)/10;}if(this.thunderAt!==null&&t>=this.thunderAt){this.noise(3.2,.35,180);this.noise(1.3,.12,700);this.thunderAt=null;}}
   else this.thunderAt=null;
   if(t-this.lastGrowl>8){const near=(scene.enemies||[]).filter(e=>!run.defeated.includes(e.id)).map(e=>({e,d:Math.hypot(enemyData(e).x-run.x,enemyData(e).y-run.y)})).filter(o=>o.d<210).sort((a,b)=>a.d-b.d)[0];if(near){this.lastGrowl=t;this.growl(near.e.enemyId,.055*(1-near.d/260));}}
-  this.last={x:run.x,y:run.y,room:run.room};try{window.ZonaAtmos&&window.ZonaAtmos.audio(this,run,map,t,inside)}catch(e){}
+  this.last={x:run.x,y:run.y,room:run.room};
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.53'};
+window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,sectorAtmosphere,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.54'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -9908,7 +10039,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.53</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.53 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.54</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.54 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span>РАДИАЦИЯ</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
@@ -10030,7 +10161,7 @@ else if(/military|barrier/.test(id)){Object.assign(t,{ground:'#2b3328',groundAlt
 else if(/redforest/.test(id)){Object.assign(t,{ground:'#2d3328',groundAlt:'#3b402f',road:'#574d39',roadEdge:'#25261f',water:'#33453e',mud:'#49352c',treeMid:'#5a452f',treeLight:'#875d37',weather:'fog',particle:'rgba(228,214,176,.12)',puddles:7,trees:58,grassTufts:130,scraps:62,anomalies:3});}
 else if(/kordon/.test(id)){Object.assign(t,{ground:'#262a28',groundAlt:'#30332f',road:'#514a41',roadEdge:'#242521',water:'#2a3437',mud:'#46372d',treeDark:'#152019',treeMid:'#2b3f2c',treeLight:'#46573e',grass:['#32422d','#42543a','#576347'],weather:'rain',sky:'#090d11',vignette:'rgba(4,6,8,.42)',particle:'rgba(190,202,214,.18)',puddles:18,trees:30,grassTufts:76,scraps:96,anomalies:1});}
 else if(/yantar/.test(id)){Object.assign(t,{ground:'#31352b',groundAlt:'#3a3f30',road:'#5a5741',roadEdge:'#23261f',water:'#556545',mud:'#4a4530',weather:'psy',particle:'rgba(170,120,255,.18)',puddles:10,trees:22,grassTufts:82,scraps:70,anomalies:4});}
-Object.assign(t,window.ZonaSurvival3D.sectorLook(id));{const A=window.ZonaAtmos&&window.ZonaAtmos.theme(id);if(A)Object.assign(t,A);else t.weather='rain'}return t}
+Object.assign(t,window.ZonaSurvival3D.sectorLook(id),window.ZonaSurvival3D.sectorAtmosphere(id));return t}
 function randInt(a,b){return Math.floor(rand()*(b-a+1))+a}
 function choose(arr){return arr[Math.floor(rand()*arr.length)]}
 function arrangeLegacyFurniture(scene){
@@ -10798,8 +10929,8 @@ if(r.room===null){for(const site of map.landmarks||[]){
  }
 }}
 const indoor=r.room!==null,id=map?.theme?.id||'',swamp=/swamp|marsh|zaton|skadovsk|yantar/.test(id),industrial=/factory|jupiter|dump|chaes|wild/.test(id),lab=indoor&&/lab|hospital|radar|tunnel|sarcophagus|generators|under/.test(id);
-if(!indoor&&(swamp||mode==='fog'||mode==='rain'))for(const patch of groundMist(r.x,r.y,t,r.seed||0,eco,swamp||mode==='fog')){
- const q=projected(patch.x,4,patch.z);if(!q)continue;
+if(!indoor&&(map.theme.mist>.35||swamp||mode==='fog'||mode==='rain'))for(const patch of groundMist(r.x,r.y,t,r.seed||0,eco,map.theme.mist>.55||swamp||mode==='fog')){
+ if((map.buildings||[]).some(b=>patch.x>b.x-8&&patch.x<b.x+b.w+8&&patch.z>b.y-8&&patch.z<b.y+b.h+8))continue;const q=projected(patch.x,4,patch.z);if(!q)continue;
  const radius=patch.radius,g=c.createRadialGradient(q.x,q.y,0,q.x,q.y,radius);
  g.addColorStop(0,'rgba('+(swamp?'126,149,130,':'145,155,158,')+patch.alpha+')');g.addColorStop(1,'rgba(125,145,135,0)');
  c.save();c.translate(q.x,q.y);c.scale(1,.24);c.translate(-q.x,-q.y);c.fillStyle=g;c.fillRect(q.x-radius,q.y-radius,radius*2,radius*2);c.restore();
@@ -10807,14 +10938,14 @@ if(!indoor&&(swamp||mode==='fog'||mode==='rain'))for(const patch of groundMist(r
 if(industrial||indoor){c.fillStyle=lab?'rgba(154,197,185,.20)':'rgba(187,165,128,.22)';for(let k=0;k<(eco?10:28);k++){const q=projected(r.x+Math.sin(k*7.1)*270+Math.sin(t*.2+k)*10,12+(k*17+t*3)%72,r.y+Math.cos(k*3.9)*220);if(q)c.fillRect(q.x,q.y,1.2,1.2)}}
 if(lab){for(const l of world().lights||[]){const q=projected(l.x,45,l.y);if(!q)continue;const alpha=.035+.025*Math.sin(t*8+l.x);c.fillStyle='rgba(113,181,163,'+alpha+')';c.beginPath();c.ellipse(q.x,q.y,50,18,0,0,Math.PI*2);c.fill()}}
 if(hitLine){const q=projected(r.x,25,r.y);if(q){c.fillStyle='rgba(255,205,119,'+(hitLine.t/.14*.7)+')';c.beginPath();c.arc(q.x,q.y,3+hitLine.t*28,0,Math.PI*2);c.fill()}}
-const rainK=window.ZonaAtmos?window.ZonaAtmos.rain(map&&map.theme&&map.theme.id):1;if(rainK>0&&!indoor){
+if(mode==='rain'&&!indoor){
  const rainTime=r.worldTime||0,seed=r.seed>>>0,reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
  const storm=window.ZonaSurvival3D.stormState(rainTime,seed,false,reduced),wind=storm.wind;
  const fract=n=>n-Math.floor(n),hash=n=>fract(Math.sin(n*127.1+seed*.001)*43758.5453);
  c.save();c.lineCap='round';
  // Three depths: short distant drops, main rain, a sparse soft foreground layer.
  for(let layer=0;layer<3;layer++){
-  const n=Math.round((eco?[30,22,8][layer]:[65,45,14][layer])*rainK),speed=[180,330,490][layer],len=[7,15,25][layer];
+  const n=eco?[30,22,8][layer]:[65,45,14][layer],speed=[180,330,490][layer],len=[7,15,25][layer];
   c.lineWidth=[.55,.85,1.25][layer];
   for(let i=0;i<n;i++){
    const x=fract(hash(i+layer*103)+rainTime*(-.025+wind*.013))* (w+60)-30;
@@ -10856,8 +10987,22 @@ const rainK=window.ZonaAtmos?window.ZonaAtmos.rain(map&&map.theme&&map.theme.id)
  }
  c.restore();
 }
-else if(['dust','ash','wind','sparks','radiation'].includes(mode)){c.fillStyle=mode==='sparks'?'rgba(240,215,132,.40)':mode==='radiation'?'rgba(138,196,108,.18)':'rgba(200,195,157,.15)';const n=eco?12:36;for(let i=0;i<n;i++){const x=(i*63.8+t*20)%w,y=(i*37.2+t*(mode==='wind'?18:10))%h;c.fillRect(x,y,mode==='sparks'?2:3,mode==='sparks'?2:2)}}
-const fog=c.createRadialGradient(w*.48,h*.48,Math.min(w,h)*.24,w*.48,h*.48,Math.max(w,h)*.7);fog.addColorStop(0,'rgba(4,7,5,0)');fog.addColorStop(.72,mode==='psy'?'rgba(28,10,39,.10)':'rgba(4,8,6,.08)');fog.addColorStop(1,mode==='psy'?'rgba(28,10,39,.33)':'rgba(4,8,6,.30)');c.fillStyle=fog;c.fillRect(0,0,w,h);try{window.ZonaAtmos&&window.ZonaAtmos.fx(c,{w,h,t,eco,indoor,map,seed:r.seed,project:projected,reduced:!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)})}catch(e){}}
+else if(!indoor&&['dust','ash','wind','sparks','radiation','psy'].includes(mode)){
+ const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,clock=reduced?0:(r.worldTime||0),n=eco?12:30;
+ const frac=v=>v-Math.floor(v),cx=Math.floor(r.x/210),cz=Math.floor(r.y/210),psy=mode==='psy'||mode==='radiation';
+ const color=mode==='sparks'?'202,196,144':mode==='radiation'?'150,182,124':mode==='psy'?'153,173,188':mode==='ash'?'191,193,181':'185,160,117';
+ for(let k=0;k<n;k++){
+  const gx=cx+(k%6)-3,gz=cz+Math.floor(k/6)-2,seed=(Math.imul(gx,73856093)^Math.imul(gz,19349663)^r.seed)>>>0;
+  const phase=frac(seed*.000073),age=frac(clock*(psy?.018:.038)+phase),drift=mode==='wind'?52:mode==='dust'?28:8;
+  const x=(gx+phase)*210+Math.sin(clock*.12+phase*31)*drift,z=(gz+frac(phase*9.7))*210;
+  const y=psy?8+Math.sin(clock*.25+phase*8)*6+phase*25:mode==='sparks'?8+age*55:80-age*75;
+  const q=projected(x,y,z);if(!q)continue;
+  const alpha=(psy?.23:.26)*Math.sin(Math.PI*age),size=mode==='ash'?1.7:mode==='sparks'?1.3:1.1;
+  c.fillStyle='rgba('+color+','+Math.max(0,alpha)+')';c.beginPath();c.ellipse(q.x,q.y,size,size*(mode==='wind'?.3:1),-.4,0,Math.PI*2);c.fill();
+  if(mode==='sparks'&&age<.35){c.strokeStyle='rgba('+color+','+alpha*.6+')';c.lineWidth=.6;c.beginPath();c.moveTo(q.x,q.y);c.lineTo(q.x+2,q.y+4);c.stroke()}
+ }
+}
+const fog=c.createRadialGradient(w*.48,h*.48,Math.min(w,h)*.24,w*.48,h*.48,Math.max(w,h)*.7);fog.addColorStop(0,'rgba(4,7,5,0)');fog.addColorStop(.72,mode==='psy'?'rgba(28,10,39,.10)':'rgba(4,8,6,.08)');fog.addColorStop(1,mode==='psy'?'rgba(28,10,39,.33)':'rgba(4,8,6,.30)');c.fillStyle=fog;c.fillRect(0,0,w,h)}
 // Stable world cells prevent the ground haze from travelling with the camera.
 function roofRunoff(buildings,px,pz,time,wind,low){
  const out=[],near=(buildings||[]).filter(b=>Math.hypot(b.x+b.w*.5-px,b.y+b.h*.5-pz)<650).sort((a,b)=>Math.hypot(a.x-px,a.y-pz)-Math.hypot(b.x-px,b.y-pz)).slice(0,low?4:7);
@@ -11114,5 +11259,18 @@ html.proportion-v2 body #app #kpk-survival .sv-version-badge{display:inline-grid
 html.proportion-v2 body #app #kpk-survival .sv-version-badge i{width:4px;height:4px;border-radius:50%;background:#b5a16a;box-shadow:0 0 5px #c1a45d55;}
 html.proportion-v2 body #app #kpk-survival .sv-version-badge small{grid-column:1 / -1;display:block!important;font:6px/1 var(--st-body,Arial)!important;letter-spacing:.6px!important;color:#aaa58c!important;border-top:1px solid #9f8f6155;padding-top:3px;}
 </style>
-<style>#sv-screen #sv-sound{flex:0 0 38px;width:38px;height:38px;padding:0;border:0;border-left:1px solid #7e735449;background:transparent;color:#bdb89e;font:8px var(--st-body,Arial);touch-action:manipulation;}#sv-screen #sv-sound[aria-pressed="false"]{color:#7d8776;}</style></body>
+<style>#sv-screen #sv-sound{flex:0 0 38px;width:38px;height:38px;padding:0;border:0;border-left:1px solid #7e735449;background:transparent;color:#bdb89e;font:8px var(--st-body,Arial);touch-action:manipulation;}#sv-screen #sv-sound[aria-pressed="false"]{color:#7d8776;}</style><script id="zona-local-bootstrap">
+// The downloadable HTML also works without the optional Telegram save companion.
+// Telegram sessions keep their original cloud initialization sequence.
+(()=>{
+ function startLocal(){
+  if(window.game||!window.zonaCloudScriptMissing||window.Telegram?.WebApp?.initData)return;
+  window.dispatchEvent(new Event('zona:ready'));
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startLocal,{once:true});
+ else startLocal();
+})();
+</script>
+
+</body>
 </html>
