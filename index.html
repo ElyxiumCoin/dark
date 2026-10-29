@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>ZONA Z v16.57 — Survival Mobile Field Detail</title>
+<title>ZONA Z v16.59 — Survival Depth & Surface Detail</title>
 <style id="zona-startup-gate">
 #zona-startup-screen .startup-version{display:flex;justify-content:flex-end;margin:22px 0 -10px;line-height:1}
 #zona-startup-screen .startup-version-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid #aa925940;border-radius:3px;background:linear-gradient(120deg,#182017d9,#0a120ed9);box-shadow:inset 0 1px 0 #dfc98a0a;color:#c6b482;font:9px/1.2 Consolas,monospace;letter-spacing:.35px;white-space:nowrap}
@@ -6831,12 +6831,13 @@ class Mesh{
   }
  }
  leafSpray(x,y,z,rx,ry,rz,color,eco=false,seed=0){
-  // Stable, folded leaf clusters: four facets catch different amounts of light.
-  const count=eco?14:24;
+  // A shaded leaf mass closes canopy holes; larger folded leaves define the rim.
+  this.ellipsoid(x,y,z,Math.max(1,rx*.72),Math.max(1,ry*.64),Math.max(1,rz*.72),tint(typeof color==='string'?rgb(color):color,.70),2,eco?5:6,32);
+  const count=eco?10:16;
   for(let j=0;j<count;j++){
    const a=j*2.399+seed,rad=Math.sqrt((j+.5)/count),py=y+Math.sin(j*2.17+seed)*ry*.75;
    const px=x+Math.cos(a)*rx*rad,pz=z+Math.sin(a)*rz*rad;
-   const width=Math.max(1.4,rx*(.20+.04*Math.sin(j*1.7))),length=Math.max(2,ry*.55);
+   const width=Math.max(1.4,rx*(.27+.04*Math.sin(j*1.7))),length=Math.max(2,ry*.73);
    const ux=Math.cos(a)*width,uz=Math.sin(a)*width,vx=-Math.sin(a)*length*.7,vz=Math.cos(a)*length*.7;
    const tilt=Math.sin(j*1.31+seed)*length*.45;
    const points=[[px-vx,py-tilt,pz-vz],[px+ux,py,pz+uz],[px+vx,py+tilt,pz+vz],[px-ux,py,pz-uz]];
@@ -6912,17 +6913,64 @@ class Mesh{
   this.rail(lx,z-d*.48,lx,z+d*.48,y,'#6b5b4a',2,3);
   this.rail(rx,z-d*.48,rx,z+d*.48,y,'#6b5b4a',2,3);
  }
- plank(x,z,w,d,angle=0,color='#67523c'){const c=Math.cos(angle),q=Math.sin(angle),a=[-w/2,-d/2],b=[w/2,-d/2],g=[w/2,d/2],h=[-w/2,d/2],pt=p=>[x+p[0]*c-p[1]*q,.8,z+p[0]*q+p[1]*c];this.quad(pt(a),pt(b),pt(g),pt(h),color,.9,4)}
+ plank(x,z,w,d,angle=0,color='#67523c'){const c=Math.cos(angle),q=Math.sin(angle),a=[-w/2,-d/2],b=[w/2,-d/2],g=[w/2,d/2],h=[-w/2,d/2],pt=p=>[x+p[0]*c-p[1]*q,2.42,z+p[0]*q+p[1]*c];this.quad(pt(a),pt(b),pt(g),pt(h),color,.9,4)}
  puddle(x,z,rx,rz){
  const surface=3.9+(Math.abs(x*17+z*31)%97)/97*.12;
  const point=(a,k)=>{const r=.83+.11*Math.sin(a*3+x)+.06*Math.cos(a*7+z);return [x+Math.cos(a)*rx*r*k,surface,z+Math.sin(a)*rz*r*k]};
  for(let i=0;i<20;i++){
   const a=i*Math.PI/10,b=(i+1)*Math.PI/10,ia=point(a,.88),ib=point(b,.88);
+  // Shallow water picks up the muddy bank colour at its edge, without extra faces.
+  const waterStart=this.data.length;
   this.tri([x,surface,z],ia,ib,'#29343b',1,6);
-  this.quad(ia,point(a,1),point(b,1),ib,'#393b2f',1,15);
+  if(this.data.length-waterStart===30){
+   const shore=[.205,.237,.201];
+   for(const v of [1,2])for(let c=0;c<3;c++)this.data[waterStart+v*10+3+c]=shore[c];
+  }
+  const mudStart=this.data.length;
+  this.quad(ia,point(a,1),point(b,1),ib,'#494638',1,15);
+  if(this.data.length-mudStart===60){
+   // Dark capillary contact fades into the drier, irregular outer shoulder.
+   const wet=[.142,.180,.150];
+   for(const v of [0,3,5])for(let c=0;c<3;c++)this.data[mudStart+v*10+3+c]=wet[c];
+  }
  }
  }
 }
+// A beached flat-bottomed river boat; all low geometry follows the old vehicle envelope.
+function riverBoatRemaster(m,l,low){
+ const x=l.x,z=l.y,steel='#657668',rust='#805e44',dark='#2d4238',wood='#7b6b4b';
+ const rim=[[-97,-28],[-90,-35],[78,-35],[88,-25],[88,25],[78,35],[-90,35],[-97,28]];
+ const p=(v,y,scale=1)=>[x+v[0]*scale,y,z+v[1]*scale];
+ for(let j=0;j<rim.length;j++){
+  const a=rim[j],b=rim[(j+1)%rim.length];
+  m.quad(p(a,30),p(a,6,.84),p(b,6,.84),p(b,30),j%3?rust:steel,1,27);
+  m.quad(p(a,28,.92),p(b,28,.92),p(b,12,.72),p(a,12,.72),j%2?'#586a57':'#435b4c',1,27);
+  m.branch(...p(a,30),...p(b,30),.9,steel,low?4:5,27);
+  if(!low)m.branch(...p(a,8,.85),...p(b,8,.85),.5,dark,4,27);
+ }
+ m.box(x-4,10,z,144,2.2,42,dark,27);
+ for(let j=0;j<(low?7:12);j++)m.box(x-68+j*(low?19:12),12.4,z,low?17:10.5,.8,39,j%3?wood:'#655b42',29);
+ for(const dx of [-54,-8,35]){
+  m.box(x+dx,23,z,9,2.4,54,wood,29);
+  for(const side of [-1,1])m.box(x+dx,13,z+side*21,3,10,3,'#4b5c47',27);
+ }
+ // Oars lie on the gunwales; their blades do not add a new solid on the approach.
+ for(const side of [-1,1]){
+  m.branch(x-66,31,z+side*24,x+53,32,z+side*21,.7,'#a08c62',low?4:5,29);
+  m.quad([x+43,32,z+side*18],[x+66,32,z+side*16],[x+68,32,z+side*23],[x+44,32,z+side*24],'#8b7853',1,29);
+ }
+ // Compact outboard, stern bracket and a folded fuel line.
+ m.box(x-88,27,z,12,11,13,steel,27);m.box(x-88,38,z,13,2,14,'#43594d',27);
+ m.branch(x-91,28,z,x-94,10,z,2.0,dark,low?5:7,27);
+ m.branch(x-91,29,z,x-68,29,z+4,.5,'#283e32',4,8);
+ m.branch(x-94,11,z-6,x-94,11,z+6,.7,steel,4,27);
+ if(!low)for(let j=0;j<10;j++){
+  const a=j*Math.PI/5,b=(j+1)*Math.PI/5;
+  m.branch(x-54+Math.cos(a)*5,26,z+8+Math.sin(a)*5,x-54+Math.cos(b)*5,26,z+8+Math.sin(b)*5,.55,'#9c8b5e',4,29);
+ }
+ m.cylinder(x-69,13,z+7,4,6,'#71826c',low?6:8,27);
+}
+
 function decorateLandmark(m,l,hi){const x=l.x,z=l.y,s=l.size||55,kind=l.kind,metal='#62655c',rust='#79563d',concrete='#6b6e64',dark='#303933',glow='#95cbb4',canvas='#5e6553',wood='#66543d',amber='#d8a45c';
 const building=(w,d,h)=>m.box(x,0,z,w,h,d,concrete);
 const tent=(dx,dz,w=56,d=42,h=26,col=canvas)=>{
@@ -7054,7 +7102,7 @@ case 'well':m.cylinder(x,0,z,25,22,concrete,9);m.box(x,63,z,70,6,70,rust);for(co
 case 'shack':building(88,73,55);m.box(x,55,z,95,11,80,rust);m.box(x,0,z+42,54,7,14,wood);m.box(x-50,0,z-26,16,22,16,rust);tent(54,30,38,26,18,'#5f6652');break;
 case 'tower':case 'watch':m.box(x,87,z,67,13,67,rust);for(const dx of [-27,27])for(const dz of [-27,27])m.box(x+dx,0,z+dz,7,90,7,metal);m.box(x,101,z,78,7,78,metal);m.box(x,108,z+22,26,12,10,'#bba774');m.box(x+36,92,z,18,6,18,'#524833');lamp(x+20,z-24,36);break;
 case 'truck':case 'ambulance':case 'wreck':vehicle(s,kind==='ambulance'?'#a2a39c':rust);m.box(x-36,0,z+44,26,16,24,wood);m.box(x+44,0,z-38,22,12,18,'#565f52');break;
-case 'boat':vehicle(92,'#57594f');m.box(x-56,0,z+29,18,12,18,wood);break;
+case 'boat':if(m.colliderCount)vehicle(92,'#57594f');else riverBoatRemaster(m,l,!hi);m.box(x-56,0,z+29,18,12,18,wood);break;
 case 'ship':m.box(x,0,z,190,30,76,rust);m.box(x+30,30,z,95,53,65,concrete);m.cylinder(x+23,80,z,4,90,metal);m.box(x-72,0,z+34,42,24,18,'#655641');lamp(x-46,z-30,34);lamp(x+54,z+18,34);break;
 case 'pier':m.box(x,17,z,165,6,35,rust);for(const dx of [-67,65])for(const dz of [-15,15])m.box(x+dx,0,z+dz,6,20,6,metal);m.box(x+72,0,z+24,22,12,18,wood);break;
 case 'rail':case 'wagon':m.box(x,1,z-27,190,4,7,metal);m.box(x,1,z+27,190,4,7,metal);if(kind==='wagon')vehicle(155,concrete);m.box(x-64,0,z+48,20,12,18,wood);break;
@@ -7852,6 +7900,42 @@ function roadSurfaceParts(roads){
  }
  return {cores,shoulders};
 }
+// Ground-level service fittings are decorative; existing paths and solids are untouched.
+function serviceSurfaceDetails(m,map,scene,room,low,roadParts=null){
+ const t=map.theme,sealed=sectorEcology(t.id)==='sealed';
+ const industrial=/deadcity|limansk|pripyat|hospital|jupiter|dump|wild|agroprom|valley|military|barrier|bar_100|radar|chaes|generators|lab|sarcophagus/.test(t.id);
+ const cover=(x,z,y,square=false)=>{
+  if(square){
+   m.box(x,y,z,22,.20,25,'#6d7466',27);m.box(x,y+.21,z,18,.08,21,'#27372f',8);
+   for(let k=-3;k<=3;k++)m.rail(x-8,z+k*2.5,x+8,z+k*2.5,y+.32,'#727c6b',.48,27);
+  }else{
+   m.disk(x,y,z,13,'#6e6c58',low?10:14,27);m.disk(x,y+.08,z,11.6,'#34473b',low?10:14,27);
+   for(let k=-3;k<=3;k++){const zz=k*2.7,len=Math.sqrt(Math.max(0,115-zz*zz));m.rail(x-len,z+zz,x+len,z+zz,y+.18,'#6c7562',.38,27);}
+   if(!low)for(const side of [-1,1])m.box(x+side*7.6,y+.20,z,1.8,.12,3.4,'#26352e',8);
+  }
+ };
+ if(room==null){
+  if(!industrial)return;
+  const parts=roadParts?.cores||[],used=[],limit=low?4:8;
+  for(let i=0;i<parts.length&&used.length<limit;i++){
+   const p=parts[i];if(p.source?.trail||Math.min(p.w,p.h)<42||Math.max(p.w,p.h)<88)continue;
+   const x=p.x+p.w*.5,z=p.y+p.h*.5;
+   if((map.buildings||[]).some(b=>x>b.x-17&&x<b.x+b.w+17&&z>b.y-17&&z<b.y+b.h+17))continue;
+   if(used.some(q=>Math.hypot(x-q.x,z-q.z)<110)||Math.hypot(x-map.exit.x,z-map.exit.y)<65)continue;
+   cover(x,z,2.42,sealed);used.push({x,z});
+  }
+ }else{
+  let used=0;
+  for(const zone of scene.zones||[]){
+   const kind=roomUse(zone.name,t.id);if(!['service','lab','medical'].includes(kind))continue;
+   const x=zone.x+zone.w*.69,z=zone.y+zone.h*.72;
+   if((scene.props||[]).some(p=>x>p.x-14&&x<p.x+p.w+14&&z>p.y-14&&z<p.y+p.h+14)||(scene.walls||[]).some(p=>x>p.x-14&&x<p.x+p.w+14&&z>p.y-14&&z<p.y+p.h+14))continue;
+   if(Math.hypot(x-scene.exit.x,z-scene.exit.y)<65)continue;
+   cover(x,z,.08,true);if(++used>=(low?2:5))break;
+  }
+ }
+}
+
 function roadSurface(m,map,low){
  const t=map.theme,parts=roadSurfaceParts(map.roads),urban=/city|limansk|pripyat_center|jupiter|dump|wild|agroprom_inst/.test(t.id);
  const plane=(r,color,material)=>m.plane(r.x+r.w/2,.55,r.y+r.h/2,r.w,r.h,color,material);
@@ -7866,16 +7950,16 @@ function roadSurface(m,map,low){
   }else plane(r,trail?t.ground:t.road,trail?15:1);
   if(!low&&r.w>16&&r.h>16){
    const ax=r.x+r.w*.18,az=r.y+r.h*.36,bx=r.x+r.w*.48,bz=r.y+r.h*.54,cx=r.x+r.w*.78,cz=r.y+r.h*.43;
-   m.branch(ax,1.15,az,bx,1.15,bz,.30,trail?'#514a35':'#242c27',3,8);
-   m.branch(bx,1.15,bz,cx,1.15,cz,.23,trail?'#514a35':'#242c27',3,8);
-   if(!trail)m.branch(bx,1.15,bz,r.x+r.w*.57,1.15,r.y+r.h*.78,.18,'#293029',3,8);
+   m.branch(ax,2.40,az,bx,2.40,bz,.42,trail?'#514a35':'#242c27',3,8);
+   m.branch(bx,2.40,bz,cx,2.40,cz,.32,trail?'#514a35':'#242c27',3,8);
+   if(!trail)m.branch(bx,2.40,bz,r.x+r.w*.57,2.40,r.y+r.h*.78,.24,'#293029',3,8);
   }
   if(urban&&!trail&&Math.min(road.w,road.h)>=50){
    const horizontal=road.w>road.h,length=horizontal?r.w:r.h;
    for(let k=18;k<length-24;k+=87){
     const x=horizontal?r.x+k:r.x+r.w/2,z=horizontal?r.y+r.h/2:r.y+k;
     if(Math.abs((horizontal?z:x)-(horizontal?road.y+road.h/2:road.x+road.w/2))>2)continue;
-    m.plane(x,1.15,z,horizontal?19:1.4,horizontal?1.4:19,'#85816b',8);
+    m.plane(x,2.40,z,horizontal?19:1.4,horizontal?1.4:19,'#85816b',8);
    }
   }
  }
@@ -7888,6 +7972,7 @@ function roadSurface(m,map,low){
    m.ellipsoid(x,1,z,Math.min(rad,r.w*.35),1.2,Math.min(rad*.8,r.h*.35),j%2?'#6a6652':'#555644',2,5,34);
   }
  }
+ serviceSurfaceDetails(m,map,map,null,low,parts);
 }
 function siteGroundPatches(map){
  const sealed=sectorEcology(map.theme.id)==='sealed',soil=sealed?'#454740':map.theme.mud||'#403b2e',out=[];
@@ -8316,9 +8401,65 @@ function sectorTree(m,tr,t,low){
   }else m.leafSpray(px,py,pz,size*(poplar?.28:.39),size*(poplar?.40:.30),size*(poplar?.28:.36),colors[j%3],low,seed+j);
  }
 }
+// Small-scale botanical forms use existing plant roots and building footprints only.
+function fernRosette(m,x,z,height,t,low){
+ const fronds=low?4:7,steps=low?4:6,seed=x*.17+z*.11;
+ for(let f=0;f<fronds;f++){
+  const a=f*2.399+seed,ux=Math.cos(a),uz=Math.sin(a),reach=height*(.62+.16*Math.sin(f*3+seed));
+  const pt=u=>[x+ux*reach*u,height*Math.sin(u*Math.PI*.78)*(.72+.12*Math.sin(f+1)),z+uz*reach*u];
+  for(let j=0;j<steps;j++){
+   const u=(j+.5)/steps,p=pt(u),q=pt(Math.min(1,u+.13)),width=height*.19*(1-u*.78);
+   if(j%2===0)m.branch(...pt(j/steps),...pt((j+1)/steps),.18,t.treeMid,3,31);
+   for(const side of [-1,1]){
+    const tip=[p[0]+ux*height*.08-uz*side*width,p[1]+height*.04,p[2]+uz*height*.08+ux*side*width];
+    const fold=[(p[0]+tip[0])*.5,(p[1]+tip[1])*.5+.6,(p[2]+tip[2])*.5];
+    m.tri(p,q,fold,j%2?t.treeMid:t.treeLight,1,32);m.tri(q,tip,fold,j%2?t.treeLight:t.treeMid,1,32);
+   }
+  }
+ }
+}
+function biomeEdgeDetails(m,map,low){
+ const t=map.theme,ecology=sectorEcology(t.id),sealed=ecology==='sealed';
+ if(sealed){
+  const supports=map.trees||[],stride=Math.max(1,Math.ceil(supports.length/(low?6:14)));
+  for(let i=0;i<supports.length;i+=stride){const tr=supports[i],x=tr.x+15,z=tr.y+15;
+   m.box(x+6.8,11,z+2, .35,17,2,'#344c43',8);
+   m.branch(x-4,46,z+10,x+4,49,z+10,.38,'#485c52',4,27);
+   if(!low)m.box(x-3,31,z+11.3,4,2,.3,'#a1a78d',8);
+  }
+  return;
+ }
+ const buildings=map.buildings||[],stride=Math.max(1,Math.ceil(buildings.length/(low?7:18)));
+ for(let i=0;i<buildings.length;i+=stride){
+  const b=buildings[i],x=b.x+Math.min(13,b.w*.12),z=b.y+b.h+4.5,hh=24+(i*17)%29,spread=Math.min(12,b.w*.10);
+  const nodes=low?4:7;
+  for(let j=0;j<nodes;j++){
+   const y=j*hh/nodes,px=x+Math.sin(j*.8+i)*spread*.35,nx=x+Math.sin((j+1)*.8+i)*spread*.35;
+   m.branch(px,y,z,nx,y+hh/nodes,z,.25,'#5c6040',3,31);
+   for(const side of [-1,1]){
+    const lx=px+side*(2.5+j%2*1.3),ly=y+3.5,lz=z+.35;
+    m.tri([px,y+2,z],[lx-side*2.6,ly+1,lz],[lx,ly+4,lz+.6],t.treeMid,1,32);
+    m.tri([px,y+2,z],[lx,ly+4,lz+.6],[lx+side*2.6,ly,lz],j%3?t.treeDark:t.treeLight,1,32);
+   }
+  }
+ }
+ if(ecology!=='wetland')return;
+ const floatLeaves=(x,z,rx,rz,y,seed)=>{
+  for(let j=0;j<(low?5:12);j++){
+   const a=j*2.399+seed,rad=.24+.39*((j*7%11)/11),px=x+Math.cos(a)*rx*rad,pz=z+Math.sin(a)*rz*rad,r=.8+(j%3)*.4;
+   m.tri([px-r,y,pz],[px,y+.08,pz-r*.65],[px+r,y,pz],j%3?'#657c4e':'#8a9459',1,8);
+   m.tri([px-r,y,pz],[px+r,y,pz],[px,y+.05,pz+r*.65],'#577148',1,8);
+  }
+ };
+ for(const l of map.landmarks||[])if(l.kind==='pond')floatLeaves(l.x,l.y,65,49,1.2,l.x*.1);
+ let used=0;
+ for(const p of map.pebbles||[]){if(p.r<=22)continue;floatLeaves(p.x,p.y,p.r*.9,p.r*.48,4.15,p.y*.1);if(++used>=(low?3:7))break;}
+}
+
 function sectorGroundPlant(m,g,t,low){
  const type=sectorEcology(t.id);if(type==='sealed')return;
  const seed=Math.abs(Math.floor(g.x*19+g.y*7));
+ if(type!=='wetland'&&seed%11===0&&(m.fernCount||0)<(low?12:28)){m.fernCount=(m.fernCount||0)+1;fernRosette(m,g.x,g.y,Math.max(13,Math.min(25,g.h*1.3)),t,low);return;}
  if(type!=='wetland'){
   // Dry seed stalks interrupt the uniform green carpet; their roots are world-fixed.
   if(seed%5===0){
@@ -8680,13 +8821,7 @@ function landmarkRemaster(m,map,low){
     if(!low)for(let j=0;j<3;j++)ring(x-43+j*3,24,z+5,7-j*1.2,'#a08a5b',12);
     break;
    }
-   case 'boat':{
-    // Equipment on the existing flatbed model, no new shore-side solids.
-    for(const side of [-1,1])m.branch(x-35,31,z+side*19,x+35,31,z+side*19,.65,cream,4,27);
-    m.box(x-39,30,z,22,2,28,'#7c6b4b',29);ring(x-36,33,z,9,'#aa976e',12);
-    m.box(x-6,39,z,10,1,13,'#b5ae84',8);
-    break;
-   }
+   case 'boat':break;
    case 'generator':case 'server':{
     rooftop(x,z,65,85,55);vent(x-21,66,z+1,24,31);
     for(let j=0;j<(low?5:9);j++)m.box(x+42.6,10+j*5,z,1.5,2,43,steel,27);
@@ -8857,10 +8992,88 @@ function landmarkRemaster(m,map,low){
  }
 }
 
+function anomalySurfaceSigns(m,map,low){
+ const ground=rgb(map.theme.ground),mix=(c,a)=>ground.map((v,i)=>v*(1-a)+c[i]*a);
+ for(const a of map.anomalies||[]){
+  const r=Math.max(12,Number(a.r)||30),seed=(a.x*.17+a.y*.31)%6.28;
+  if(a.type==='acid'){
+   for(let k=0;k<(low?2:4);k++){
+    const ang=k*2.399+seed,cx=a.x+Math.cos(ang)*r*.27,cz=a.y+Math.sin(ang)*r*.27,size=r*(.17+k%2*.04);
+    for(let j=0;j<7;j++){const q=j*Math.PI*2/7,p=(j+1)*Math.PI*2/7,edge=1+.19*Math.sin(j*3+k);m.tri([cx,2.58,cz],[cx+Math.cos(q)*size*edge,2.6,cz+Math.sin(q)*size*.67],[cx+Math.cos(p)*size,2.6,cz+Math.sin(p)*size*.67],mix(j%2?[.30,.35,.19]:[.23,.29,.16],.53),1,8);}
+   }
+  }else if(a.type==='electric'){
+   for(let k=0;k<(low?3:5);k++){
+    const ang=k*2.399+seed,p0=[a.x+Math.cos(ang)*r*.12,2.66,a.y+Math.sin(ang)*r*.12],p1=[a.x+Math.cos(ang+.18)*r*.36,2.66,a.y+Math.sin(ang+.18)*r*.36],p2=[a.x+Math.cos(ang-.08)*r*.60,2.66,a.y+Math.sin(ang-.08)*r*.60];
+    m.branch(...p0,...p1,.19,'#34413b',3,8);m.branch(...p1,...p2,.14,'#36463f',3,8);
+   }
+  }else{
+   for(let k=0;k<(low?4:7);k++){
+    const ang=k*2.399+seed,rr=r*(.26+(k%3)*.12),x=a.x+Math.cos(ang)*rr,z=a.y+Math.sin(ang)*rr,d=1.2+k%3*.5;
+    m.tri([x-d,2.6,z],[x+d,2.6,z],[x,4.2,z-d],mix([.38,.39,.34],.7),1,34);m.tri([x+d,2.6,z],[x,2.6,z+d],[x,4.2,z-d],mix([.29,.33,.30],.65),1,34);
+   }
+  }
+ }
+}
+
+// Render-only context beyond the unchanged playable rectangle. No doors, actors or loot.
+function distantSectorContext(m,map,low){
+ const t=map.theme,w=map.w,h=map.h,ecology=sectorEcology(t.id),sealed=ecology==='sealed';
+ const urban=/deadcity|limansk|pripyat_center|hospital/.test(t.id),industrial=/dump|wild|valley|jupiter|bar_100|agroprom_inst|military|barrier|kordon_post|radar|generators/.test(t.id);
+ const base=rgb(t.ground),soil=base.map(v=>v*.72),plant=rgb(t.treeDark).map(v=>v*.50),stone=rgb(t.building||'#596057').map(v=>v*.56);
+ const sides=[{len:w,p:(u,d)=>[u,-d]},{len:w,p:(u,d)=>[u,h+d]},{len:h,p:(u,d)=>[-d,u]},{len:h,p:(u,d)=>[w+d,u]}];
+ // Broad bands descend slightly and darken into the low fog, instead of ending in black.
+ const distances=[0,180,430,760,1060],color=(band)=>soil.map((v,i)=>v*(1-band*.11)+rgb(t.sky||'#101713')[i]*band*.014);
+ for(let b=0;b<distances.length-1;b++){
+  const a=distances[b],d=distances[b+1],ya=-4.2-b*2.1,yb=-6.3-b*2.1,c=color(b);
+  m.quad([-a,ya,-a],[w+a,ya,-a],[w+d,yb,-d],[-d,yb,-d],c,1,8);
+  m.quad([-a,ya,h+a],[-d,yb,h+d],[w+d,yb,h+d],[w+a,ya,h+a],c,1,8);
+  m.quad([-a,ya,-a],[-d,yb,-d],[-d,yb,h+d],[-a,ya,h+a],c,1,8);
+  m.quad([w+a,ya,-a],[w+a,ya,h+a],[w+d,yb,h+d],[w+d,yb,-d],c,1,8);
+ }
+ for(let side=0;side<sides.length;side++){
+  const edge=sides[side],count=Math.max(3,Math.min(low?10:18,Math.ceil(edge.len/(low?330:230))));
+  for(let j=0;j<count;j++){
+   const seed=side*37+j*19,u=(j+.35+(Math.sin(seed)*.5+.5)*.3)/count*edge.len;
+   const [x,z]=edge.p(u,135+(seed%7)*18),height=55+(seed%5)*11;
+   if(sealed){
+    // Closed service masses and pipe supports imply a larger technical complex.
+    m.box(x,-5,z,64+(seed%3)*18,22+(seed%4)*9,35,stone,8);
+    if(j%3===0){m.box(x,-5,z,7,height,7,stone,8);m.box(x,height-8,z,42,5,9,stone,8);}
+   }else if((urban||industrial)&&j%3===0){
+    const bh=42+(seed%5)*13,bw=57+(seed%4)*20;
+    m.box(x,-5,z,bw,bh,45,stone,8);m.box(x-bw*.3,bh-5,z,6,8,47,stone,8);
+    if(j%2===0)m.box(x+bw*.3,-5,z,8,bh+22,10,stone,8);
+   }else{
+    const bark=plant.map(v=>v*.75);m.branch(x,-5,z,x+Math.sin(seed)*4,height,z,2.2,bark,low?3:4,8);
+    if(ecology==='scorched'&&j%3===0){
+     for(const dir of [-1,1])m.branch(x,height*.55,z,x+dir*22,height*.72,z+dir*8,.9,bark,3,8);
+    }else if(ecology==='wetland'||ecology==='birch'||ecology==='poplar'){
+     m.ellipsoid(x,height*.72,z,ecology==='poplar'?13:23,height*.30,ecology==='wetland'?24:18,plant,2,low?5:6,8);
+     if(!low)m.ellipsoid(x-11,height*.59,z+8,14,13,13,plant,2,5,8);
+    }else{
+     for(let k=0;k<3;k++)m.cone(x,height*(.28+k*.19),z,25-k*6,height*.35,plant,low?4:5,8);
+    }
+   }
+  }
+  // Sparse physical boundary cues sit outside the old solid boundary, never on paths.
+  const segments=Math.max(3,Math.min(low?11:20,Math.ceil(edge.len/(low?380:260))));
+  for(let j=0;j<=segments;j++){
+   const [x,z]=edge.p(j/segments*edge.len,3.5);
+   if(sealed){
+    if(j<segments){const [xx,zz]=edge.p((j+.5)/segments*edge.len,8);const along=side<2;m.box(xx,-4,zz,along?edge.len/segments:5,15,along?5:edge.len/segments,stone,8)}
+   }else{
+    m.box(x,-3,z,2.2,23,2.2,stone,8);
+    if(j<segments){const [bx,bz]=edge.p((j+1)/segments*edge.len,3.5);for(const yy of [8,17])m.branch(x,yy,z,bx,yy,bz,.22,stone,3,8)}
+   }
+  }
+ }
+}
+
 function staticMesh(map,room,eco){const scene=room==null?map:map.rooms[room],t=map.theme,m=new Mesh(),low=eco;
 const alt=t.groundAlt||t.ground,ground=room==null?t.ground:t.roomGround;
 if(room==null)terrainMesh(m,map,low);else m.plane(scene.w/2,-1,scene.h/2,scene.w,scene.h,ground,2);m.plane(scene.w/2,-3,scene.h/2,scene.w+140,scene.h+140,t.groundAlt||ground,0);
 if(room==null){
+distantSectorContext(m,map,low);
 // Soil/wet patches are blended into terrainMesh, never stacked as disks.
 if(!low){for(const mud of map.pebbles||[])if(mud.r>22)m.puddle(mud.x,mud.y,mud.r*.9,mud.r*.48)}
 roadSurface(m,map,low);
@@ -9134,7 +9347,8 @@ for(const o of (room==null?map.buildings:scene.props)||[]){
  }
 }
 detailSurvivalEnvironment(m,map,scene,room,low);if(room==null)for(const p of map.dressing||[])drawDressing(m,p,low);
-if(room==null){sectorStorytelling(m,map,low);landmarkRemaster(m,map,low);}else roomAtmosphereDetails(m,map,scene,low);
+if(room==null){sectorStorytelling(m,map,low);landmarkRemaster(m,map,low);biomeEdgeDetails(m,map,low);anomalySurfaceSigns(m,map,low);}else roomAtmosphereDetails(m,map,scene,low);
+if(room!=null)serviceSurfaceDetails(m,map,scene,room,low);
 applySurfacePack(m,map,room);return new Float32Array(m.data)}
 const MOB_PROFILES={"rat":{"family":"quad","size":0.47,"width":0.87,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[11,8,16,6,1.7],"heightScale":1},"dog":{"family":"quad","size":1.035,"width":0.925,"crest":1,"gear":1,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[21,10,23,7,1.3],"heightScale":1},"flesh":{"family":"quad","size":1.09,"width":0.98,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,23,23,7,0.7],"heightScale":1},"boar":{"family":"quad","size":1.145,"width":1.035,"crest":3,"gear":3,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[18,19,24,10,0.85],"heightScale":1},"maroder":{"family":"soldier","size":1.2,"width":1.09,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudodog":{"family":"quad","size":0.98,"width":1.145,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[21,10,23,7,1.3],"heightScale":1},"zombie":{"family":"mutant","size":1.035,"width":1.2,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"snork":{"family":"crawler","size":1.09,"width":0.87,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[13,11,19,7,1.35],"heightScale":1},"fracture":{"family":"mutant","size":1.145,"width":0.925,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":true,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1.1},"mercenary":{"family":"soldier","size":1.2,"width":0.98,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"bloodsucker":{"family":"mutant","size":0.98,"width":1.035,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"poltergeist":{"family":"spirit","size":1.035,"width":1.09,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"psydog":{"family":"quad","size":1.09,"width":1.145,"crest":0,"gear":0,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[21,10,23,7,1.3],"heightScale":1},"burer":{"family":"caster","size":1.145,"width":1.2,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"monolith":{"family":"soldier","size":1.2,"width":0.87,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudogiant":{"family":"giant","size":0.98,"width":1.2,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#555a55","anatomy":[26,21,24,9,0.75],"heightScale":1},"controller":{"family":"caster","size":1.035,"width":0.98,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"exo_monolith":{"family":"soldier","size":1.09,"width":1.035,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera":{"family":"quad","size":1.145,"width":1.09,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[24,16,30,8,1.25],"heightScale":1},"phantom":{"family":"spirit","size":1.2,"width":1.145,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"tushkano":{"family":"quad","size":0.47,"width":1.2,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[11,8,16,6,1.7],"heightScale":1},"swamp_flesh":{"family":"quad","size":1.035,"width":0.87,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,23,23,7,0.7],"heightScale":1},"blind_dog_pack":{"family":"quad","size":1.09,"width":0.925,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[21,10,23,7,1.3],"heightScale":1},"bandit_sniper":{"family":"soldier","size":1.145,"width":0.98,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"bandit_chief":{"family":"soldier","size":1.2,"width":1.035,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"snork_stalker":{"family":"crawler","size":0.98,"width":1.09,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[13,11,19,7,1.35],"heightScale":1},"swamp_beast":{"family":"quad","size":1.035,"width":1.145,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[15,20,30,10,0.85],"heightScale":1},"military_spetsnaz":{"family":"soldier","size":1.09,"width":1.2,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_sniper":{"family":"soldier","size":1.145,"width":0.87,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1},"pyro_poltergeist":{"family":"spirit","size":0.98,"width":0.98,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"electric_poltergeist":{"family":"spirit","size":1.035,"width":1.035,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"bloodsucker_black":{"family":"mutant","size":1.09,"width":1.09,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"burer_elder":{"family":"caster","size":1.145,"width":1.145,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"controller_master":{"family":"caster","size":1.2,"width":1.2,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"mutant_bear":{"family":"quad","size":1.617,"width":0.87,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[29,21,28,10,0.65],"heightScale":1},"monolith_gauss_sniper":{"family":"soldier","size":1.035,"width":0.925,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"giant_titan":{"family":"giant","size":1.798,"width":0.98,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera_shadow":{"family":"quad","size":1.145,"width":1.035,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[24,16,30,8,1.25],"heightScale":1},"dark_stalker_boss":{"family":"soldier","size":1.2,"width":1.09,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"master_zone":{"family":"caster","size":0.98,"width":1.145,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"cat_bayun":{"family":"quad","size":1.035,"width":1.2,"crest":1,"gear":5,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[16,9,21,6,1.4],"heightScale":1},"zombie_civilian":{"family":"mutant","size":1.09,"width":0.87,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"zombie_soldier":{"family":"mutant","size":1.145,"width":0.925,"crest":3,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"renegade_scout":{"family":"soldier","size":1.2,"width":0.98,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"renegade_veteran":{"family":"soldier","size":0.98,"width":1.035,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"pseudodog_stalker":{"family":"quad","size":1.035,"width":1.09,"crest":2,"gear":4,"tail":true,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[21,10,23,7,1.3],"heightScale":1},"swamp_snork":{"family":"crawler","size":1.09,"width":1.145,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[13,11,19,7,1.35],"heightScale":1},"dark_stalker_novice":{"family":"soldier","size":1.145,"width":1.2,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1},"military_heavy":{"family":"soldier","size":1.2,"width":0.87,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"merc_infiltrator":{"family":"soldier","size":0.47,"width":0.925,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1],"heightScale":1},"bloodsucker_swamp":{"family":"mutant","size":1.035,"width":0.98,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":true,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"poltergeist_frost":{"family":"spirit","size":1.09,"width":1.035,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"burer_telekinesis":{"family":"caster","size":1.145,"width":1.09,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":0.74},"controller_psystorm":{"family":"caster","size":1.2,"width":1.145,"crest":2,"gear":0,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":true,"heavy":false,"color":"#665d4d","anatomy":[20,15,24,9,1.0],"heightScale":1.16},"mutant_boar_iron":{"family":"quad","size":0.98,"width":1.2,"crest":3,"gear":1,"tail":false,"tusks":true,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[18,19,24,10,0.85],"heightScale":1},"pseudogiant_fury":{"family":"giant","size":1.035,"width":1.32,"crest":0,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#726b58","anatomy":[26,21,24,9,0.75],"heightScale":1},"monolith_berserk":{"family":"soldier","size":1.09,"width":0.925,"crest":1,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"monolith_commander":{"family":"soldier","size":1.145,"width":0.98,"crest":2,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"chimera_frost":{"family":"quad","size":1.2,"width":1.035,"crest":3,"gear":5,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[24,16,30,8,1.25],"heightScale":1},"chimera_blood":{"family":"quad","size":0.98,"width":1.09,"crest":0,"gear":0,"tail":false,"tusks":false,"heads":2,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#665d4d","anatomy":[24,16,30,8,1.25],"heightScale":1},"phantom_monolith":{"family":"spirit","size":1.035,"width":1.145,"crest":1,"gear":1,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#4b5148","anatomy":[20,15,24,9,1.0],"heightScale":1},"gargoyle_mutant":{"family":"wing","size":1.09,"width":1.2,"crest":2,"gear":2,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#726b58","anatomy":[20,15,24,9,1.0],"heightScale":1},"spectral_stalker":{"family":"soldier","size":1.145,"width":0.87,"crest":3,"gear":3,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#555a55","anatomy":[20,15,24,9,1.0],"heightScale":1},"titan_juggernaut":{"family":"soldier","size":1.2,"width":0.925,"crest":0,"gear":4,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":true,"color":"#6d5550","anatomy":[20,15,24,9,1.0],"heightScale":1},"avatar_noosphere_prime":{"family":"spirit","size":0.98,"width":0.98,"crest":1,"gear":5,"tail":false,"tusks":false,"heads":1,"tentacles":false,"longarm":false,"coat":false,"heavy":false,"color":"#505c61","anatomy":[20,15,24,9,1.0],"heightScale":1}};
 function combatProfile(id){
@@ -9610,12 +9824,12 @@ vec3 reliefNormal(float tile,vec3 n,vec2 encoded){
 
 
 // v16.54: roughness-aware surfaces and thin-leaf light transmission.
-vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface){
+vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface,float coarse,float fine){
  vec3 viewDir=normalize(uEye-vWorldPos);
  vec3 sunDir=normalize(vec3(-.44,.82,.38));
  float facing=max(0.,dot(n,sunDir));
  float grazing=pow(1.-max(0.,dot(n,viewDir)),4.);
- float broad=noise21(surface*.021);
+ float broad=coarse;
  float rough=clamp(surfaceInfo.b,.24,.98);
  if(mat>2.5&&mat<3.5){
   // Polished scratches catch light between matte rust deposits.
@@ -9623,13 +9837,18 @@ vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface){
   float highlight=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(72.,12.,rough));
   base+=vec3(.19,.21,.20)*highlight*(1.-oxide)*(.32+.48*(1.-uNight));
   base=mix(base,base*vec3(1.13,.92,.76),oxide*.18);
+ }else if(mat>5.5&&mat<6.5){
+  // Muted reflected sky separates shallow water from the dark contact shore.
+  float waterFresnel=.045+.14*grazing;
+  base+=max(uSky,vec3(.032,.046,.050))*waterFresnel;
+  base*=.97+.05*broad;
  }else if(mat>4.5&&mat<5.5){
   // Backlit foliage keeps its local colour instead of becoming a black silhouette.
   float thin=max(0.,dot(-n,sunDir))*(.45+.55*max(0.,dot(viewDir,-sunDir)));
   base+=vColor*vec3(.31,.39,.16)*thin*(1.-uNight*.62);
   base+=vColor*.055*grazing;
  }else if(mat<2.5){
-  float pores=smoothstep(.63,.87,noise21(surface*.43));
+  float pores=smoothstep(.63,.87,fine);
   base*=1.-pores*.065;
   // A restrained sheen on damp mineral surfaces, never on dry dust.
   float sheen=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(48.,9.,rough));
@@ -9638,6 +9857,28 @@ vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface){
    float algae=(1.-smoothstep(3.,19.,vHeight))*smoothstep(.37,.72,broad);
    base=mix(base,base*vec3(.73,.89,.68),algae*.26);
   }
+ }
+
+ // Existing noise and packed roughness drive local wear without more texture reads.
+ if(mat>3.5&&mat<4.5){
+  float along=abs(n.y)>.55?surface.x:surface.y,across=abs(n.y)>.55?surface.y:surface.x;
+  float fibres=pow(.5+.5*sin(across*.53+fine*.8+sin(along*.012)*1.5),8.);
+  base*=.97+.045*broad-fibres*.055;
+  float silver=smoothstep(.48,.79,broad)*(1.-uWetness*.65)*(.22+.78*max(n.y,0.));
+  float luminance=dot(base,vec3(.299,.587,.114));
+  base=mix(base,luminance*vec3(1.10,1.09,.96),silver*.18);
+ }else if(mat>2.5&&mat<3.5){
+  float chip=smoothstep(.67,.84,fine)*(1.-rough*.5);
+  float luminance=dot(base,vec3(.299,.587,.114));
+  base=mix(base,luminance*vec3(.95,1.05,1.03),chip*.22);
+ }else if(mat>1.5&&mat<2.5){
+  float chalk=smoothstep(.47,.72,broad)*rough*(.25+.75*max(n.y,0.))*(.3+.7*facing)*(1.-uWetness*.6);
+  base+=vec3(.035,.032,.023)*chalk;
+ }
+ if(abs(vMaterial-55.)<.4){
+  float runnel=pow(.5+.5*sin(surface.x*.17+broad*.8),12.);
+  base*=vec3(.96,1.02,1.04)*(.95+.04*fine-runnel*.035);
+  base+=vec3(.012,.019,.021)*grazing;
  }
  return base;
 }
@@ -9715,7 +9956,7 @@ void main(){
  vec3 base=vColor;
  if(mat<7.5&&uTextureReady>.5){vec3 tex=atlasSample(tileId,normal);float strength=uDetail>.5?.78:.43;
   base=tex*mix(vec3(.94),vColor*1.6,.27);
-  if(mat>4.5&&mat<5.5){float leafDetail=dot(tex,vec3(.299,.587,.114));base=vColor*(.85+leafDetail*1.8);}
+  if(mat>4.5&&mat<5.5){float leafDetail=dot(tex,vec3(.299,.587,.114));base=vColor*(.72+leafDetail*1.05);}
   else if(mat<1.5){float soilDetail=dot(tex,vec3(.299,.587,.114));base=mix(base,vColor*(.8+soilDetail*1.9),.48);}
  }
  else if(mat<7.5){base*=.89+.13*detail+.09*macro;}
@@ -9797,13 +10038,13 @@ void main(){
  float shade=mix(.34+.66*lambert*visibility(),.30+.34*lambert*visibility(),uNight);base*=shade*ao;base=pow(max(base,vec3(.005)),vec3(.90));
  float tileGrain=mat<7.5?(.98+.035*detail):1.0;base*=tileGrain;
  float wetMask=uWetness*((mat<2.5?1.0:0.0)+(mat>5.5&&mat<6.5?1.0:0.0));
- if(mat>5.5&&mat<6.5){base*=.55;}
+ if(mat>5.5&&mat<6.5){base*=.60;}
  vec3 V=normalize(uEye-vWorldPos);vec3 H=normalize(sun+V);float spec=pow(max(0.0,dot(normal,H)),38.0)*wetMask*(.09+.19*uNight)*(0.45+0.55*macro);base+=vec3(.55,.68,.85)*spec;if(mat>5.5&&mat<6.5){base+=vec3(.015,.024,.030)*rainRipple(vWorld);}
 
  if(mat>4.5&&mat<5.5)base+=vColor*.10;
  float skyFacing=.35+.65*max(0.,normal.y);
  base+=vColor*vec3(.025,.034,.041)*skyFacing;
- base=materialFinish(base,mat,normal,surfaceInfo,surface);
+ base=materialFinish(base,mat,normal,surfaceInfo,surface,coarse,fine);
  vec3 light=vec3(0.0);
  for(int i=0;i<5;i++){
   vec2 delta=(vWorld-uLights[i].xy)/max(1.0,uLights[i].z);
@@ -9931,12 +10172,12 @@ vec3 reliefNormal(float tile,vec3 n,vec2 encoded){
 
 
 // v16.54: roughness-aware surfaces and thin-leaf light transmission.
-vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface){
+vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface,float coarse,float fine){
  vec3 viewDir=normalize(uEye-vWorldPos);
  vec3 sunDir=normalize(vec3(-.44,.82,.38));
  float facing=max(0.,dot(n,sunDir));
  float grazing=pow(1.-max(0.,dot(n,viewDir)),4.);
- float broad=noise21(surface*.021);
+ float broad=coarse;
  float rough=clamp(surfaceInfo.b,.24,.98);
  if(mat>2.5&&mat<3.5){
   // Polished scratches catch light between matte rust deposits.
@@ -9944,13 +10185,18 @@ vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface){
   float highlight=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(72.,12.,rough));
   base+=vec3(.19,.21,.20)*highlight*(1.-oxide)*(.32+.48*(1.-uNight));
   base=mix(base,base*vec3(1.13,.92,.76),oxide*.18);
+ }else if(mat>5.5&&mat<6.5){
+  // Muted reflected sky separates shallow water from the dark contact shore.
+  float waterFresnel=.045+.14*grazing;
+  base+=max(uSky,vec3(.032,.046,.050))*waterFresnel;
+  base*=.97+.05*broad;
  }else if(mat>4.5&&mat<5.5){
   // Backlit foliage keeps its local colour instead of becoming a black silhouette.
   float thin=max(0.,dot(-n,sunDir))*(.45+.55*max(0.,dot(viewDir,-sunDir)));
   base+=vColor*vec3(.31,.39,.16)*thin*(1.-uNight*.62);
   base+=vColor*.055*grazing;
  }else if(mat<2.5){
-  float pores=smoothstep(.63,.87,noise21(surface*.43));
+  float pores=smoothstep(.63,.87,fine);
   base*=1.-pores*.065;
   // A restrained sheen on damp mineral surfaces, never on dry dust.
   float sheen=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(48.,9.,rough));
@@ -9959,6 +10205,28 @@ vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface){
    float algae=(1.-smoothstep(3.,19.,vHeight))*smoothstep(.37,.72,broad);
    base=mix(base,base*vec3(.73,.89,.68),algae*.26);
   }
+ }
+
+ // Existing noise and packed roughness drive local wear without more texture reads.
+ if(mat>3.5&&mat<4.5){
+  float along=abs(n.y)>.55?surface.x:surface.y,across=abs(n.y)>.55?surface.y:surface.x;
+  float fibres=pow(.5+.5*sin(across*.53+fine*.8+sin(along*.012)*1.5),8.);
+  base*=.97+.045*broad-fibres*.055;
+  float silver=smoothstep(.48,.79,broad)*(1.-uWetness*.65)*(.22+.78*max(n.y,0.));
+  float luminance=dot(base,vec3(.299,.587,.114));
+  base=mix(base,luminance*vec3(1.10,1.09,.96),silver*.18);
+ }else if(mat>2.5&&mat<3.5){
+  float chip=smoothstep(.67,.84,fine)*(1.-rough*.5);
+  float luminance=dot(base,vec3(.299,.587,.114));
+  base=mix(base,luminance*vec3(.95,1.05,1.03),chip*.22);
+ }else if(mat>1.5&&mat<2.5){
+  float chalk=smoothstep(.47,.72,broad)*rough*(.25+.75*max(n.y,0.))*(.3+.7*facing)*(1.-uWetness*.6);
+  base+=vec3(.035,.032,.023)*chalk;
+ }
+ if(abs(vMaterial-55.)<.4){
+  float runnel=pow(.5+.5*sin(surface.x*.17+broad*.8),12.);
+  base*=vec3(.96,1.02,1.04)*(.95+.04*fine-runnel*.035);
+  base+=vec3(.012,.019,.021)*grazing;
  }
  return base;
 }
@@ -10044,7 +10312,7 @@ void main(){
    tex=mix(tex,tex*(.68+macroTex*.65),.35);
   }
   base=tex*mix(vec3(.94),vColor*1.6,.27);
-  if(mat>4.5&&mat<5.5){float leafDetail=dot(tex,vec3(.299,.587,.114));base=vColor*(.85+leafDetail*1.8);}
+  if(mat>4.5&&mat<5.5){float leafDetail=dot(tex,vec3(.299,.587,.114));base=vColor*(.72+leafDetail*1.05);}
   else if(mat<1.5){float soilDetail=dot(tex,vec3(.299,.587,.114));base=mix(base,vColor*(.8+soilDetail*1.9),.48);}
  }
 
@@ -10127,7 +10395,7 @@ void main(){
  if(mat>4.5&&mat<5.5)base+=vColor*.10;
  float skyFacing=.35+.65*max(0.,normal.y);
  base+=vColor*vec3(.025,.034,.041)*skyFacing;
- base=materialFinish(base,mat,normal,surfaceInfo,surface);
+ base=materialFinish(base,mat,normal,surfaceInfo,surface,coarse,fine);
  if(mat>5.5&&mat<6.5)base+=vec3(.015,.024,.030)*rainRipple(vWorld);
  vec3 light=vec3(0.);
  for(int i=0;i<3;i++){
@@ -10203,7 +10471,7 @@ void main(){
   vec4 o=uShadows[i];vec2 q=(vWorld-o.xy-vec2(5.,9.))/max(vec2(1.),o.zw);
   base*=1.-.36*(1.-smoothstep(.15,2.3,dot(q,q)))*step(1.,o.z);
  }
- if(mat>5.5&&mat<6.5){base*=.55;float rip=.5+.5*sin(pos.x*.18+pos.y*.23+uTime*.7);float ring=rainRipple(pos);base+=vec3(.008,.014,.022)*(rip+max(0.,ring)*.4)+light*.07;}
+ if(mat>5.5&&mat<6.5){base*=.60;float rip=.5+.5*sin(pos.x*.18+pos.y*.23+uTime*.7);float ring=rainRipple(pos);base+=vec3(.008,.014,.022)*(rip+max(0.,ring)*.4)+light*.07;}
  base+=uStorm*(base*.85+vec3(.10,.14,.20))*max(.25,normal.y);
  gl_FragColor=vec4(mat>8.5?vColor:gradeScene(atmosphericScene(base)),1.);
 }`;
@@ -10278,7 +10546,7 @@ surfaceImage.onerror=()=>{surfaceReady=false};surfaceImage.src=SURVIVAL_SURFACE_
 let yaw=.35,zoom=300,pitch=.95,focus=null,currentMVP=null;
 function phoneCameraZoom(){
  const w=Math.max(1,canvas.clientWidth||canvas.width),h=Math.max(1,canvas.clientHeight||canvas.height);
- return Math.max(120,Math.min(395,h*(w>h?.52:.43)))*1.2;
+ return Math.max(120,Math.min(395,h*(w>h?.52:.43)))*1.44;
 }
 const animation={player:{angle:0,phase:0,speed:0},actors:new Map(),recoil:0,capturePlayer:false,playerMesh:null};
 let previousVisual=null;const actorHistory=new Map();let cutBuilding=null,cutFade=0;
@@ -10468,7 +10736,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,sectorAtmosphere,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.57'};
+window.ZonaSurvival3D={init,combatProfile,npcRecord,npcRole,sectorLook,sectorAtmosphere,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.59'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -10479,7 +10747,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
 panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><p id="sv-atmosphere-note" class="sv-atmosphere-note"></p><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
-const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.57</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div id="sv-route-readout" class="sv-route-readout" aria-label="Расстояние до выхода"></div><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.57 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span title="Радиация">РАД.</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
+const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.59</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div id="sv-route-readout" class="sv-route-readout" aria-label="Расстояние до выхода"></div><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.59 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span title="Радиация">РАД.</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
 // Follow the actually visible Telegram viewport, including sheet resizing.
 function syncSurvivalViewport(){
@@ -11442,6 +11710,44 @@ function drawSiteMotion(c,project,map,r,time,low){
  c.restore();
 }
 
+// Readable field signatures use fixed world positions and never alter hazard state.
+function drawAnomalySignature(c,project,a,r,clock,low,still){
+ if(Math.hypot(a.x-r.x,a.y-r.y)>560)return false;
+ const q=project(a.x,8,a.y);if(!q)return false;
+ const rad=Math.max(12,Number(a.r)||30),seed=Number.isFinite(a.pulse)?a.pulse:(a.x*.013+a.y*.017),frac=x=>x-Math.floor(x);
+ const trace=(points,color,alpha,width=.8)=>{
+  c.strokeStyle='rgba('+color+','+alpha+')';c.lineWidth=width;c.beginPath();let first=true;
+  for(const p of points){const v=project(...p);if(!v){first=true;continue}if(first){c.moveTo(v.x,v.y);first=false}else c.lineTo(v.x,v.y)}c.stroke();
+ };
+ c.save();c.lineCap='round';
+ if(a.type==='electric'){
+  const phase=frac(clock*.31+seed*.13),pulse=still?.25:phase<.22?Math.sin(phase/.22*Math.PI):0;
+  if(pulse>.025)for(let k=0;k<(low?1:2);k++){
+   const angle=seed+k*2.4,points=[];
+   for(let j=0;j<6;j++){
+    const u=j/5,along=(u-.5)*rad*1.05,side=Math.sin(j*2.7+seed)*rad*.07;
+    points.push([a.x+Math.cos(angle)*along-Math.sin(angle)*side,4+Math.sin(u*Math.PI)*(5+3*pulse),a.y+Math.sin(angle)*along+Math.cos(angle)*side]);
+   }
+   trace(points,'132,184,199',.16+.24*pulse,low?.65:.85);
+  }
+ }else if(a.type==='acid'){
+  for(let k=0;k<(low?2:4);k++){
+   const age=frac(clock*.22+seed*.11+k*.227),ang=seed+k*2.399,x=a.x+Math.cos(ang)*rad*.34,z=a.y+Math.sin(ang)*rad*.27;
+   const p=project(x,3.3+age*2,z),e=project(x+1.1+age*1.7,3.3+age*2,z);if(!p||!e)continue;
+   const radius=Math.max(.55,Math.min(2,Math.hypot(e.x-p.x,e.y-p.y))),alpha=still?.16:Math.sin(age*Math.PI)*.27;
+   c.strokeStyle='rgba(165,181,116,'+alpha+')';c.lineWidth=.65;c.beginPath();c.ellipse(p.x,p.y,radius,radius*.64,0,0,Math.PI*2);c.stroke();
+  }
+ }else{
+  for(let k=0;k<(low?3:6);k++){
+   const ang=seed+k*2.399+clock*.1,rr=rad*(.16+k%3*.08),x=a.x+Math.cos(ang)*rr,z=a.y+Math.sin(ang)*rr,y=8+(Math.sin(clock*.47+k*1.7+seed)*.5+.5)*16;
+   const p=project(x,y,z),shadow=project(x,3,z);if(!p)continue;
+   if(shadow){c.fillStyle='rgba(35,42,37,.13)';c.beginPath();c.ellipse(shadow.x,shadow.y,1.4,.65,0,0,Math.PI*2);c.fill()}
+   c.fillStyle='rgba(166,165,182,.39)';c.fillRect(p.x-.65,p.y-.6,1.3,1.2);
+  }
+ }
+ c.restore();return true;
+}
+
 function draw3DWeather(t){const fx=$('sv-3d-fx'),r=run();if(!fx||fx.hidden||!r)return;const c=fx.getContext('2d');if(!c)return;const w=fx.width,h=fx.height;c.clearRect(0,0,w,h);const mode=map?.theme?.weather||'fog',eco=phoneEco();
 const weatherStill=!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,weatherClock=weatherStill?0:t;
 const lights=[];
@@ -11472,8 +11778,10 @@ c.globalCompositeOperation='source-over';
 const projected=(x,y,z)=>{const q=renderer3d?.project(x,y,z);return q?.visible?{x:q.x*w/Math.max(1,canvas.width),y:q.y*h/Math.max(1,canvas.height)}:null};
 drawSiteMotion(c,projected,map,r,t,eco);
 // Soft translucent anomaly haze replaces the opaque animated cones.
+let anomalyVisualBudget=eco?1:3;
 if(r.room===null)for(const a of map.anomalies||[]){
  const color=a.type==='acid'?'142,167,102':a.type==='electric'?'120,166,184':'150,143,171';
+ if(anomalyVisualBudget>0&&drawAnomalySignature(c,projected,a,r,weatherClock,eco,weatherStill))anomalyVisualBudget--;
  const flash=r.anomalyState?.[String(map.anomalies.indexOf(a))]?.flashUntil||0;
  if(flash>(r.worldTime||0)){
   const q=projected(a.x,8,a.y),edge=projected(a.x+a.r,8,a.y);if(q&&edge){
