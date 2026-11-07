@@ -7011,6 +7011,117 @@ function tentClothWind(weather,inside,eco,reduced){
  return reach*(eco?.6:1);
 }
 
+// Pure render geometry; water footprint and height stay identical to the old 14-sided disk.
+function pondSurface(m,x,z,low){
+ if(m.colliderCount)return;
+ const n=14,seed=x*.017+z*.023,deep=[.145,.235,.245],shallow=[.215,.295,.255],wet=[.178,.205,.158],dry=[.300,.290,.220];
+ const point=(j,r,y)=>{const a=j*Math.PI*2/n;return[x+Math.cos(a)*r,y,z+Math.sin(a)*r]};
+ const water=j=>point(j,77,1),inner=j=>point(j,51+3*Math.sin(j*2.1+seed),1);
+ const edge=j=>point(j,77,1.02),outer=j=>point(j,91+4*Math.sin(j*2.7+seed)+2*Math.cos(j*1.3),-.94);
+ const blend=(a,b,t)=>a.map((v,k)=>v+(b[k]-v)*t);
+ const face=(pts,colors,material)=>{const start=m.data.length;m.tri(...pts,colors[0],1,material);for(let v=0;v<3;v++)for(let c=0;c<3;c++)m.data[start+v*10+3+c]=colors[v][c]};
+ for(let j=0;j<n;j++){
+  const k=j+1,a=inner(j),b=inner(k),c=water(j),d=water(k),shore=j=>blend(shallow,wet,.18+.12*Math.sin(j*1.7+seed));
+  face([[x,1,z],a,b],[deep,shallow,shallow],6);
+  face([a,c,d],[shallow,shore(j),shore(k)],6);face([a,d,b],[shallow,shore(k),shallow],6);
+  // A dark wet contact fades over an uneven, sloping shoulder into the soil.
+  if(low){face([edge(j),outer(j),outer(k)],[wet,dry,dry],15);face([edge(j),outer(k),edge(k)],[wet,dry,wet],15);}
+  else{
+   const mid=j=>point(j,82+2*Math.sin(j*2.3+seed),.15),damp=blend(wet,dry,.55);
+   face([edge(j),mid(j),mid(k)],[wet,damp,damp],15);face([edge(j),mid(k),edge(k)],[wet,damp,wet],15);
+   face([mid(j),outer(j),outer(k)],[damp,dry,dry],15);face([mid(j),outer(k),mid(k)],[damp,dry,damp],15);
+  }
+ }
+ // A few broken reed blades interrupt the waterline without hiding the measuring posts.
+ for(const j of low?[9]:[1,7,9]){
+  const p=point(j,78,.9),h=8+(j%3)*2;
+  for(const side of [-1,1]){
+   m.tri([p[0]-.45,.9,p[2]],[p[0]+.45,.9,p[2]],[p[0]+side*2,h,p[2]+1.4],'#77764e',1,8);
+   if(!low)m.tri([p[0]+side*1.1,h*.58,p[2]+.8],[p[0]+side*4,h*.72,p[2]+2],[p[0]+side*2,h*.81,p[2]+1.3],'#606b45',1,8);
+  }
+ }
+}
+
+// Render-only concrete vessel. Original ten-sided radius, height and collision probe are retained.
+function reactorConcreteVessel(m,x,z,low){
+ if(m.colliderCount)return;
+ const n=10,seed=x*.017+z*.031,base=rgb('#6b6e64');
+ const levels=low?[[0,45],[4,48],[74,48],[75.3,48],[104,48],[110,45.5]]:[[0,45],[4,48],[33,48],[34.3,48],[74,48],[75.3,48],[104,48],[110,45.5]];
+ const p=(j,y,r)=>[x+Math.cos(j*Math.PI*2/n)*r,y,z+Math.sin(j*Math.PI*2/n)*r];
+ for(let j=0;j<n;j++){
+  const shade=.97+.035*Math.sin(seed+j*2.1);
+  for(let k=0;k<levels.length-1;k++){
+   const [y,r]=levels[k],[yy,rr]=levels[k+1],joint=(y===33||y===74),start=m.data.length;
+   m.quad(p(j,y,r),p(j,yy,rr),p(j+1,yy,rr),p(j+1,y,r),joint?'#444d43':base,1,joint?8:2);
+   // Smooth radial normals preserve the old cylindrical lighting across the shallow bevels.
+   for(let v=start;v<m.data.length;v+=10){
+    const dx=m.data[v]-x,dz=m.data[v+2]-z,rad=Math.hypot(dx,dz)||1,nn=norm([dx/rad,(r-rr)/(yy-y),dz/rad]);
+    for(let q=0;q<3;q++)m.data[v+6+q]=nn[q];
+   }
+   if(!joint){
+    // Capillary darkening belongs to the plinth, not the entire concrete wall.
+    const c=h=>base.map((v,i)=>v*shade*(h<4?[.72,.78,.72][i]:h<12?.90:1));
+    const a=c(y),b=c(yy);
+    [a,b,b,a,b,a].forEach((color,v)=>{for(let q=0;q<3;q++)m.data[start+v*10+3+q]=color[q]});
+   }
+  }
+  // The bevel has a real silhouette; the old upper service neck remains separate.
+  m.tri([x,110,z],p(j,110,45.5),p(j+1,110,45.5),'#777b6d',1,34);
+ }
+ // Sparse branching fractures lie on the exposed shoulder, clear of the central neck.
+ for(let j=0;j<(low?2:4);j++){
+  const a=seed+j*1.71,ca=Math.cos(a),sa=Math.sin(a);
+  const pt=(r,o=0)=>[x+ca*r-sa*o,110.035,z+sa*r+ca*o];
+  m.quad(pt(27,-.25),pt(37,-.35),pt(37,.35),pt(27,.25),'#424a40',1,8);
+  m.quad(pt(37,-.35),pt(43,1.6),pt(43,2.2),pt(37,.35),'#424a40',1,8);
+  if(!low)m.tri(pt(34,.2),pt(38,-3.8),pt(38,-3.1),'#515647',1,8);
+ }
+}
+
+// Render-only open well collar; the original collision cylinders remain in their probes.
+function stoneWellCollar(m,x,z,r,top,segments,low){
+ if(m.colliderCount)return;
+ const n=segments,inner=r*.62,seed=Math.abs(Math.round(x*13+z*7)),chip=seed%n;
+ const levels=low?[[0,r],[top-1.3,r],[top,r*.94]]:[[0,r],[top*.42,r],[top*.42+.8,r],[top-1.3,r],[top,r*.94]];
+ const point=(j,y,rad)=>[x+Math.cos(j*Math.PI*2/n)*rad,y,z+Math.sin(j*Math.PI*2/n)*rad];
+ const outer=j=>point(j,j%n===chip?top-.55:top,r*(j%n===chip?.91:.94));
+ for(let j=0;j<n;j++){
+  for(let k=0;k<levels.length-1;k++){
+   const [y,rad]=levels[k],[yy,rr]=levels[k+1],last=k===levels.length-2,joint=!low&&k===1,start=m.data.length;
+   const a=point(j,y,rad),b=last?outer(j):point(j,yy,rr),c=last?outer(j+1):point(j+1,yy,rr),d=point(j+1,y,rad);
+   m.quad(a,b,c,d,joint?'#454d40':(j+seed)%3?'#777668':'#697060',1,joint?8:34);
+   for(let v=start;v<m.data.length;v+=10){
+    const dx=m.data[v]-x,dz=m.data[v+2]-z,len=Math.hypot(dx,dz)||1,nn=norm([dx/len,(rad-rr)/(yy-y),dz/len]);
+    for(let q=0;q<3;q++)m.data[v+6+q]=nn[q];
+    if(m.data[v+1]<1)for(let q=0;q<3;q++)m.data[v+3+q]*=.81;
+   }
+  }
+  const a=outer(j),b=point(j,top,inner),c=point(j+1,top,inner),d=outer(j+1);
+  m.tri(a,b,c,'#96917b',1,34);m.tri(a,c,d,j%3?'#8b8b76':'#7c806c',1,34);
+  m.quad(point(j,3,inner),point(j+1,3,inner),c,b,'#3d493b',1,34);
+ }
+ m.disk(x,3,z,inner,'#16251f',n,8);
+}
+
+function oldWellWindlass(m,x,z,height,top,low,scale=1,rope=true){
+ if(m.colliderCount)return;
+ const n=low?6:8,half=3.3*scale,r=2.45*scale;
+ const point=(j,xx,rad)=>[x+xx,height+Math.sin(j*Math.PI*2/n)*rad,z+Math.cos(j*Math.PI*2/n)*rad];
+ const band=(a,b,rad,col)=>{
+  for(let j=0;j<n;j++){
+   const start=m.data.length;m.quad(point(j,a,rad),point(j,b,rad),point(j+1,b,rad),point(j+1,a,rad),col,1,29);
+   for(let v=start;v<m.data.length;v+=10){const nn=norm([0,m.data[v+1]-height,m.data[v+2]-z]);for(let q=0;q<3;q++)m.data[v+6+q]=nn[q];}
+  }
+ };
+ band(-half,half,r,'#88754f');
+ for(const side of [-1,1])for(let j=0;j<n;j++){
+  const a=[x+side*half,height,z],b=point(j,side*half,3.1*scale),c=point(j+1,side*half,3.1*scale);
+  if(side<0)m.tri(a,b,c,'#685b42',1,29);else m.tri(a,c,b,'#766549',1,29);
+ }
+ if(!low)band(-.45,.45,r+.12*scale,'#a18c61');
+ if(rope)m.branch(x,height,z,x,top*.45,z,.35,'#887b56',4,29);
+}
+
 function decorateLandmark(m,l,hi){const x=l.x,z=l.y,s=l.size||55,kind=l.kind,metal='#62655c',rust='#79563d',concrete='#6b6e64',dark='#303933',glow='#95cbb4',canvas='#5e6553',wood='#66543d',amber='#d8a45c';
 const building=(w,d,h)=>m.box(x,0,z,w,h,d,concrete);
 const tent=(dx,dz,w=56,d=42,h=26,col=canvas)=>{
@@ -7138,7 +7249,7 @@ case 'safebase':{
  for(let q=0;q<14;q++){const wx=x-133+q*19;m.box(wx,18+(q%4)*7,z-100,9+(q%3)*4,2,1.1,q%3?'#4b4942':'#8f7256',2)}
  break;}
 
-case 'well':m.cylinder(x,0,z,25,22,concrete,9);m.box(x,63,z,70,6,70,rust);for(const dx of [-29,29])m.box(x+dx,0,z,5,65,5,metal);m.box(x-42,0,z+36,18,14,18,wood);lamp(x+44,z-28,24);break;
+case 'well':if(m.colliderCount)m.cylinder(x,0,z,25,22,concrete,9);else{stoneWellCollar(m,x,z,25,22,10,!hi);oldWellWindlass(m,x,z,48,22,!hi,1.25,false);}m.box(x,63,z,70,6,70,rust);for(const dx of [-29,29])m.box(x+dx,0,z,5,65,5,metal);m.box(x-42,0,z+36,18,14,18,wood);lamp(x+44,z-28,24);break;
 case 'shack':building(88,73,55);m.box(x,55,z,95,11,80,rust);m.box(x,0,z+42,54,7,14,wood);m.box(x-50,0,z-26,16,22,16,rust);tent(54,30,38,26,18,'#5f6652');break;
 case 'tower':case 'watch':m.box(x,87,z,67,13,67,rust);for(const dx of [-27,27])for(const dz of [-27,27])m.box(x+dx,0,z+dz,7,90,7,metal);m.box(x,101,z,78,7,78,metal);m.box(x,108,z+22,26,12,10,'#bba774');m.box(x+36,92,z,18,6,18,'#524833');lamp(x+20,z-24,36);break;
 case 'truck':case 'ambulance':case 'wreck':vehicle(s,kind==='ambulance'?'#a2a39c':rust);m.box(x-36,0,z+44,26,16,24,wood);m.box(x+44,0,z-38,22,12,18,'#565f52');break;
@@ -7159,8 +7270,8 @@ case 'laboratory':case 'factory':case 'facade':case 'med':building(kind==='facto
 case 'shaft':m.cylinder(x,0,z,44,23,concrete);m.cylinder(x,22,z,35,8,dark);m.box(x+42,0,z+18,16,18,16,wood);break;
 case 'pipes':pipe(175);m.box(x-44,0,z+24,18,14,18,'#565f59');break;
 case 'generator':case 'server':m.box(x,0,z,85,65,55,metal);for(let k=-2;k<=2;k++)m.box(x-30+k*13,25,z+28,7,20,2,k%2?glow:rust);m.box(x+50,0,z-20,18,26,18,'#4c5351');lamp(x-46,z+18,24);break;
-case 'reactor':m.cylinder(x,0,z,48,110,concrete,10);m.cylinder(x,110,z,24,37,rust,10);m.box(x-56,0,z+22,18,26,18,metal);break;
-case 'pond':m.disk(x,1,z,77,'#345450',14,6);for(let i=0;i<6;i++)m.box(x-64+i*22,0,z+58,6,18,6,'#524732');break;
+case 'reactor':if(m.colliderCount)m.cylinder(x,0,z,48,110,concrete,10);else reactorConcreteVessel(m,x,z,!hi);m.cylinder(x,110,z,24,37,rust,10);m.box(x-56,0,z+22,18,26,18,metal);break;
+case 'pond':if(!m.colliderCount)pondSurface(m,x,z,!hi);for(let i=0;i<6;i++)m.box(x-64+i*22,0,z+58,6,18,6,'#524732');break;
 case 'fountain':m.cylinder(x,0,z,59,14,concrete,10);m.cylinder(x,14,z,27,30,rust);for(let i=0;i<4;i++){const a=i*Math.PI/2;m.box(x+Math.cos(a)*76,0,z+Math.sin(a)*76,14,18,14,wood)}break;
 case 'barricade':for(let k=-2;k<=2;k++)m.box(x+k*30,0,z,31,15,17,'#786b4d');m.box(x,14,z,120,8,22,metal);m.box(x-40,0,z+34,20,14,20,'#5b4b39');break;
 case 'deadtrees':for(let k=-2;k<=2;k++){const a=k*19;m.cylinder(x+a,0,z+a/2,6,65,metal);m.cone(x+a,39,z+a/2,13,22,rust)}m.box(x+58,0,z-24,16,12,16,'#554a3e');break;
@@ -7208,6 +7319,291 @@ function abandonedCase(m,x,y,z,w,h,d,seed,low){
  m.branch(x+w*.13,handleY+2,z,x+w*.13,handleY,z,.45,'#333b30',4,8);
  if(!low){m.box(x+w*.20,y+h*.3,z+d*.5+.35,3,2,.25,'#aaa184',8);m.box(x,y+h*.65,z+d*.5+.35,2,1.8,.4,'#8b8770',27);}
 }
+// Aged sheet-metal roof, entirely inside the former roof envelope; decorative only.
+function agedShedRoof(m,p,low){
+ if(m.colliderCount)return;
+ const {x,y,w,h}=p,cx=x+w/2,peak=51+Math.min(34,Math.max(17,w*.15)),rise=peak-51;
+ const seed=Math.abs(Math.round(x*13+y*7)),damaged=seed%3!==0,sideBroken=seed%2?1:-1,bayBroken=1+seed%2,bays=4;
+ const point=(side,u,v,offset=-.6)=>[cx+side*w*.5*u,peak-rise*u+offset,y+h*v];
+ const colors=['#646a56','#6b6c59','#5c6655'];
+ const sheet=(side,a,b,c,d,col,mat)=>side>0?m.quad(d,c,b,a,col,1,mat):m.quad(a,b,c,d,col,1,mat);
+ // A dark attic floor gives the missing sheet real depth without adding an accessible room.
+ m.quad([x+4,49.8,y+4],[x+w-4,49.8,y+4],[x+w-4,49.8,y+h-4],[x+4,49.8,y+h-4],'#293127',1,8);
+ for(const side of [-1,1])for(let j=0;j<bays;j++)for(let row=0;row<2;row++){
+  if(damaged&&side===sideBroken&&j===bayBroken&&row===1)continue;
+  const a=row===0?0:.52,b=row===0?.52:1,v=j/bays,vv=(j+1)/bays;
+  sheet(side,point(side,a,v),point(side,b,v),point(side,b,vv),point(side,a,vv),colors[(j+row+seed)%3],17);
+ }
+ // Timber gables replace the old concrete-coloured end triangles.
+ for(const v of [0,1]){const a=[x,50.4,y+h*v],b=[cx,peak-.6,y+h*v],c=[x+w,50.4,y+h*v];if(v===0)m.tri(a,b,c,'#675a42',1,29);else m.tri(c,b,a,'#675a42',1,29); }
+ // Folded ridge cap and thin drip edges stay below the old ridge and inside its eaves.
+ for(const side of [-1,1]){
+  sheet(side,point(side,0,.01,0),point(side,.07,.01,-.1),point(side,.07,.99,-.1),point(side,0,.99,0),'#797761',27);
+  sheet(side,point(side,.96,.01,-.2),point(side,1,.01,-.2),point(side,1,.99,-.2),point(side,.96,.99,-.2),'#525e4b',27);
+  if(!low)for(let j=1;j<bays;j++){
+   const v=j/bays,half=Math.min(.007,.65/h);
+   sheet(side,point(side,.08,v-half),point(side,.97,v-half),point(side,.97,v,-.12),point(side,.08,v,-.12),'#7b7961',27);
+   sheet(side,point(side,.08,v,-.12),point(side,.97,v,-.12),point(side,.97,v+half),point(side,.08,v+half),'#555e4c',27);
+  }
+ }
+ if(damaged){
+  const a=bayBroken/bays,b=(bayBroken+1)/bays,side=sideBroken;
+  // The remaining edge curls down into the attic, exposing the darker back of the sheet.
+  sheet(side,point(side,.52,a+.012),point(side,.62,a+.012,-2.4),point(side,.62,b-.012,-2.4),point(side,.52,b-.012),'#755f45',17);
+  for(const v of low?[(a+b)/2]:[a+.025,b-.025]){
+   m.branch(...point(side,.49,v,-2),...point(side,.96,v,-2),.7,'#94805a',4,29);
+  }
+ }
+}
+
+// Pinned hanging cloth reuses the existing weighted tent material and weather wind.
+// The rope, poles, collision data and shared wind shader remain untouched.
+function hangingLaundryCloth(m,p,low){
+ if(m.colliderCount)return;
+ const {x,y,w,h}=p,cx=x+w/2,cz=y+h/2,width=Math.min(12,(w-4)*.18),cols=low?2:4,rows=low?2:3;
+ const ropeY=xx=>38+Math.abs(xx-cx)*4/Math.max(1,w/2-2),seed=x*.13+y*.17;
+ for(let k=1;k<4;k++){
+  const center=x+w*k/4,phase=seed+k*1.7,col=k===2?'#696b55':'#858375';
+  const point=(u,v)=>{
+   const px=center+(u-.5)*width,drop=(16+(k===2?.7:0))*v;
+   return[px,ropeY(px)-drop+.5*Math.sin(u*Math.PI*2+phase)*v*v,cz+Math.sin(u*Math.PI*3+phase)*.66*v];
+  };
+  const panel=(a,b,c,d,weights)=>{
+   const start=m.data.length;m.quad(a,d,c,b,col,1,72);
+   const free=[weights[0],weights[3],weights[2],weights[0],weights[2],weights[1]];
+   for(let j=0;j<6;j++){
+    const at=start+j*10,weight=free[j];m.data[at+9]=72+weight;
+    // Slightly darker hems use vertex colour rather than another strip of geometry.
+    if(weight>.95)for(let q=0;q<3;q++)m.data[at+3+q]*=.90;
+   }
+  };
+  for(let row=0;row<rows;row++)for(let j=0;j<cols;j++){
+   const u=j/cols,uu=(j+1)/cols,v=row/rows,vv=(row+1)/rows;
+   panel(point(u,v),point(uu,v),point(uu,vv),point(u,vv),[v*v,v*v,vv*vv,vv*vv]);
+  }
+  for(const u of [.2,.8]){
+   const px=center+(u-.5)*width,yy=ropeY(px);
+   m.quad([px-.4,yy-1.1,cz+.11],[px+.4,yy-1.1,cz+.11],[px+.4,yy+.55,cz+.11],[px-.4,yy+.55,cz+.11],'#7c7358',1,29);
+  }
+ }
+}
+
+// Decorative cloth stays inside the former tarp polygon and clears all existing crate tops.
+function drapedStockpileTarp(m,p,low){
+ if(m.colliderCount)return;
+ const {x,y,w,h}=p,cols=low?3:4,rows=low?2:3,seed=Math.abs(Math.round(x*13+y*7)),points=[],boxes=[];
+ for(let row=0;row<3;row++)for(let col=0;col<3;col++){
+  const cx=x+8+col*(w-16)/2,cz=y+7+row*(h-14)/2;
+  boxes.push({left:cx-w*.125,right:cx+w*.125,back:cz-h*.12,front:cz+h*.12,top:12+(row+col)%3*3});
+ }
+ for(let j=0;j<=rows;j++)for(let i=0;i<=cols;i++){
+  const u=i/cols,v=j/rows,left=x+8+4*v,right=x+w-8-4*v;
+  const crease=.55*Math.sin(Math.PI*v)*Math.sin(Math.PI*u*3+seed*.11);
+  points.push([left+(right-left)*u,Math.min(20,20-2*u-4*v+crease),y+8+(h-14)*v]);
+ }
+ for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+  const indices=[j*(cols+1)+i,j*(cols+1)+i+1,(j+1)*(cols+1)+i+1,(j+1)*(cols+1)+i];
+  const cell=indices.map(k=>points[k]),left=Math.min(...cell.map(q=>q[0])),right=Math.max(...cell.map(q=>q[0])),back=cell[0][2],front=cell[2][2];
+  let support=0;
+  // Give every vertex of a cell the highest intersecting support. A linear triangle
+  // then clears the whole crate/cell intersection, including crossings between vertices.
+  for(const box of boxes)if(box.left<=right+1e-8&&box.right>=left-1e-8&&box.back<=front+1e-8&&box.front>=back-1e-8)support=Math.max(support,box.top+.22);
+  for(const k of indices)points[k][1]=Math.max(points[k][1],support);
+ }
+ const colors=['#4d5840','#505b44','#48553f'];
+ for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+  const a=points[j*(cols+1)+i],b=points[j*(cols+1)+i+1],c=points[(j+1)*(cols+1)+i+1],d=points[(j+1)*(cols+1)+i],col=colors[(i+j+seed)%3];
+  m.tri(a,c,b,col,1,57);m.tri(a,d,c,col,1,57);
+ }
+}
+
+// Decorative abandoned instrument cabinet; no interaction or collision changes.
+function fieldInstrumentConsole(m,p,low){
+ if(m.colliderCount)return;
+ const {x,y,w,h}=p,cx=x+w/2,cz=y+h/2,left=x+w*.03,right=x+w*.97,back=y+h*.08,front=y+h*.94;
+ const seed=Math.abs(Math.round(x*7+y*13)),paint=seed%2?'#606d5f':'#59675d',metal='#7d8377';
+ const n=norm([0,h*.86,12]),along=norm([0,-12,h*.86]);
+ const point=(u,v,lift=0)=>[left+(right-left)*u,31.5-12*v+n[1]*lift,back+(front-back)*v+n[2]*lift];
+ const panel=(u,v,uu,vv,col,mat,lift=0)=>m.quad(point(u,v,lift),point(u,vv,lift),point(uu,vv,lift),point(uu,v,lift),col,1,mat);
+ m.box(cx,0,cz,w,3,h,'#596154',34);
+ m.box(cx,3,cz,w*.94,14.5,h*.94,paint,20);
+ // Closed wedge housing has a real angled silhouette instead of a solid rectangular lid.
+ panel(0,0,1,1,metal,27);
+ for(const side of [-1,1]){
+  const xx=side<0?left:right,a=[xx,17.5,back],b=[xx,31.5,back],c=[xx,19.5,front],d=[xx,17.5,front];
+  if(side<0)m.quad(d,c,b,a,paint,1,20);else m.quad(a,b,c,d,paint,1,20);
+ }
+ m.quad([left,17.5,back],[left,31.5,back],[right,31.5,back],[right,17.5,back],paint,1,20);
+ m.quad([left,17.5,front],[right,17.5,front],[right,19.5,front],[left,19.5,front],paint,1,20);
+ // Dull glazing sits below the frame; occasional fragments expose the dark recess.
+ panel(.15,.17,.85,.61,'#25372f',8,.09);
+ if(seed%3===1){
+  m.tri(point(.18,.20,.14),point(.18,.57,.14),point(.34,.53,.14),'#38514a',1,55);
+  m.tri(point(.81,.21,.14),point(.63,.20,.14),point(.81,.38,.14),'#304a43',1,55);
+ }else panel(.18,.20,.82,.58,'#2d4742',55,.14);
+ for(const [u,v,uu,vv] of [[.14,.15,.86,.18],[.14,.60,.86,.63],[.14,.18,.17,.60],[.83,.18,.86,.60]])panel(u,v,uu,vv,'#687666',27,.25);
+ // Short hexagonal controls follow the face normal and stay inside the old cabinet volume.
+ const count=low?2:3,r=Math.min(1.05,w*.025,h*.035),length=1.35;
+ for(let k=0;k<count;k++){
+  const u=(k+1)/(count+1),center=point(u,.80,.18),at=(a,rad,lift)=>[center[0]+Math.cos(a)*rad,center[1]+Math.sin(a)*along[1]*rad+n[1]*lift,center[2]+Math.sin(a)*along[2]*rad+n[2]*lift];
+  for(let j=0;j<6;j++){
+   const a=j*Math.PI/3,b=(j+1)*Math.PI/3;
+   m.quad(at(a,r,0),at(a,r*.78,length),at(b,r*.78,length),at(b,r,0),'#465347',1,27);
+   m.tri(at(0,0,length),at(b,r*.78,length),at(a,r*.78,length),'#858675',1,27);
+  }
+  if(!low){
+   const a=at(0,r*.55,length+.015),b=at(Math.PI,r*.55,length+.015),off=.14;
+   m.quad([a[0],a[1]-along[1]*off,a[2]-along[2]*off],[b[0],b[1]-along[1]*off,b[2]-along[2]*off],[b[0],b[1]+along[1]*off,b[2]+along[2]*off],[a[0],a[1]+along[1]*off,a[2]+along[2]*off],'#b6af8d',1,8);
+  }
+ }
+ const z=y+h*.97+.04;
+ for(let j=0;j<(low?2:3);j++){
+  const yy=6+j*2.8;m.quad([cx-w*.30,yy,z],[cx+w*.30,yy,z],[cx+w*.30,yy+.65,z],[cx-w*.30,yy+.65,z],'#29392f',1,8);
+ }
+}
+
+// Stationary recessed impeller, within the existing turbine base and cylinder envelope.
+function recessedTurbine(m,p,low){
+ if(m.colliderCount)return;
+ const {x,y,w,h}=p,cx=x+w/2,cz=y+h/2,r=Math.min(w,h)*.42,n=12,inner=r*.8;
+ const point=(j,yy,rr)=>[cx+Math.cos(j*Math.PI*2/n)*rr,yy,cz+Math.sin(j*Math.PI*2/n)*rr];
+ const metal='#535c54';
+ m.box(cx,0,cz,w,8,h,'#606559',2);
+ const profile=low?[[8,r],[41,r]]:[[8,r*.96],[38,r],[41,r*.96]];
+ for(let j=0;j<n;j++){
+  for(let k=0;k<profile.length-1;k++){
+   const [yy,rr]=profile[k],[top,upper]=profile[k+1],start=m.data.length;
+   m.quad(point(j,yy,rr),point(j,top,upper),point(j+1,top,upper),point(j+1,yy,rr),metal,1,27);
+   for(let v=start;v<m.data.length;v+=10){
+    const dx=m.data[v]-cx,dz=m.data[v+2]-cz,rad=Math.hypot(dx,dz)||1,nn=norm([dx/rad,(rr-upper)/(top-yy),dz/rad]);
+    for(let q=0;q<3;q++)m.data[v+6+q]=nn[q];
+   }
+  }
+  const rim=profile[profile.length-1][1];
+  m.quad(point(j,41,inner),point(j+1,41,inner),point(j+1,41,rim),point(j,41,rim),j%4?'#7d8370':'#77634d',1,27);
+  // Inward-facing wall makes a real dark well beneath the folded inlet rim.
+  m.quad(point(j,32,inner),point(j+1,32,inner),point(j+1,41,inner),point(j,41,inner),'#34433a',1,27);
+ }
+ m.disk(cx,32,cz,inner,'#1f3029',n,8);
+ const polar=(angle,rr,yy)=>[cx+Math.cos(angle)*rr,yy,cz+Math.sin(angle)*rr];
+ for(let j=0;j<6;j++){
+  const a=j*Math.PI/3,A=polar(a,r*.17,36.3),B=polar(a+.36,r*.25,35.7),C=polar(a+.70,r*.70,34.3),D=polar(a+.32,r*.73,38.3);
+  // Separate triangles retain the shallow twist instead of a flat star of rods.
+  m.tri(A,C,D,j%2?'#8c8c72':'#778475',1,27);
+  m.tri(A,B,C,'#647362',1,27);
+ }
+ m.cylinder(cx,32,cz,r*.19,8.5,'#667064',10,27);
+}
+
+// Render-only compressed burlap sacks; existing full-stack bounds and collisions are unchanged.
+function compressedSandbagStack(m,p,low){
+ if(m.colliderCount)return;
+ const {x,y,w,h}=p,cz=y+h/2,depth=h*.90,seed=Math.abs(Math.round(x*7+y*13));
+ const outline=low?[[-.42,-.5],[.42,-.5],[.5,0],[.42,.5],[-.42,.5],[-.5,0]]:[[-.40,-.5],[.40,-.5],[.5,-.32],[.5,.32],[.40,.5],[-.40,.5],[-.5,.32],[-.5,-.32]];
+ const colors=['#7a7659','#6b7053','#777258','#646c50'];
+ const sideFace=(a,b,c,d,col)=>{
+  const start=m.data.length;m.quad(a,b,c,d,col,1,57);
+  // Preserve outward/downward normals on the compressed lower shoulder too.
+  const nn=norm(cross(sub(b,a),sub(c,a)));
+  for(let v=start;v<m.data.length;v+=10)for(let q=0;q<3;q++)m.data[v+6+q]=nn[q];
+ };
+ for(let row=0;row<3;row++){
+  // The middle course interlocks, with short sacks at the two ends.
+  const cuts=row===1?[0,1/6,1/2,5/6,1]:[0,1/3,2/3,1];
+  for(let k=0;k<cuts.length-1;k++){
+   const a=x+w*cuts[k]+.30,b=x+w*cuts[k+1]-.30,cx=(a+b)/2,length=b-a,cy=4+row*6;
+   const col=colors[(seed+row+k)%colors.length],top=[],middle=[],bottom=[];
+   for(let j=0;j<outline.length;j++){
+    const [u,v]=outline[j];
+    bottom.push([cx+u*length*.82,cy-4,cz+v*depth*.82]);
+    middle.push([cx+u*length,cy,cz+v*depth]);
+    // Pinched shoulder corners stay below the softly filled centre of each sack.
+    const yy=cy+2.55+.18*Math.sin(seed*.13+row+k+j*1.7);
+    top.push([cx+u*length*.82,yy,cz+v*depth*.82]);
+   }
+   const center=[cx+length*.025*Math.sin(seed+k),cy+3.6,cz];
+   for(let j=0;j<outline.length;j++){
+    const q=(j+1)%outline.length;
+    sideFace(bottom[j],middle[j],middle[q],bottom[q],col);
+    sideFace(middle[j],top[j],top[q],middle[q],col);
+    m.tri(center,top[q],top[j],col,1,57);
+   }
+   // A raised sewn welt and short folded end seams read without extra cylinders.
+   const front=cz+depth*.5+.025;
+   m.quad([cx-length*.38,cy-.16,front],[cx+length*.38,cy-.16,front],[cx+length*.38,cy+.16,front],[cx-length*.38,cy+.16,front],'#4e583f',1,57);
+   if(!low)for(const side of [-1,1]){
+    const xx=cx+side*(length*.5+.015),back=cz-depth*.10,far=cz+depth*.10;
+    const a=[xx,cy-.35,back],b=[xx,cy+.35,back],c=[xx,cy+.35,far],d=[xx,cy-.35,far];
+    if(side>0)m.quad(a,b,c,d,'#515b42',1,57);else m.quad(d,c,b,a,'#515b42',1,57);
+   }
+  }
+ }
+}
+
+// Closed abandoned railcar; all geometry stays inside the old dressing-wagon envelope.
+function abandonedRailWagon(m,p,low){
+ if(m.colliderCount)return;
+ const {x,y,w,h}=p,cx=x+w/2,cz=y+h/2,paint='#75604a',steel='#535c54',doorHalf=Math.min(14,h*.16);
+ const face=(side,a,b,c,d,col,mat=27)=>side>0?m.quad(a,b,c,d,col,1,mat):m.quad(d,c,b,a,col,1,mat);
+ // Steel wheels turn around horizontal axles, with an outside flange and a recessed centre.
+ const steps=low?6:8,depth=3.2,r=4.5;
+ for(const zz of [y+17,y+h-17]){
+  m.box(cx,6,zz,w*.76,3,12,'#353f36',27);
+  for(const side of [-1,1]){
+   const wx=side<0?x+6:x+w-6,outer=wx+side*depth*.5,inside=wx-side*depth*.5;
+   const point=(j,xx,rad)=>{const angle=(j+(low?.5:0))*Math.PI*2/steps;return[xx,4.5+Math.sin(angle)*rad,zz+Math.cos(angle)*rad]};
+   for(let j=0;j<steps;j++){
+    const start=m.data.length;
+    m.quad(point(j,inside,r*.91),point(j,outer,r),point(j+1,outer,r),point(j+1,inside,r*.91),'#3c463a',1,27);
+    for(let v=start;v<m.data.length;v+=10){
+     const nn=norm([0,m.data[v+1]-4.5,m.data[v+2]-zz]);for(let q=0;q<3;q++)m.data[v+6+q]=nn[q];
+    }
+    const center=[outer,4.5,zz],a=point(j,outer,r),b=point(j+1,outer,r),at=m.data.length;
+    if(side<0)m.tri(center,a,b,'#596351',1,27);else m.tri(center,b,a,'#596351',1,27);
+    // The bright hub and dark flange are vertex colours, not extra discs.
+    for(let q=0;q<3;q++)m.data[at+3+q]=[.48,.49,.40][q];
+    for(let v=1;v<3;v++)for(let q=0;q<3;q++)m.data[at+v*10+3+q]=[.24,.28,.23][q];
+   }
+  }
+ }
+ m.box(cx,9,cz,w*.82,5,h,'#3e463e',27);
+ m.box(cx,14,cz,w-4,36.5,h-6,paint,27);
+ const profile=[[-.5,50.85],[-.36,53.25],[-.18,54.45],[0,54.85],[.18,54.45],[.36,53.25],[.5,50.85]],rw=w+2,back=y-1,front=y+h+1;
+ const roofPoint=(j,z,raise=0)=>[cx+profile[j][0]*rw,profile[j][1]+raise,z];
+ const roofNormal=j=>{const a=profile[Math.max(0,j-1)],b=profile[Math.min(profile.length-1,j+1)];return norm([-(b[1]-a[1])/((b[0]-a[0])*rw),1,0])};
+ const strip=(j,za,zb,col,raise=0)=>{
+  const start=m.data.length;m.quad(roofPoint(j,za,raise),roofPoint(j,zb,raise),roofPoint(j+1,zb,raise),roofPoint(j+1,za,raise),col,1,17);
+  for(let v=0;v<6;v++){const nn=roofNormal([0,1,3].includes(v)?j:j+1);for(let q=0;q<3;q++)m.data[start+v*10+6+q]=nn[q];}
+ };
+ for(let j=0;j<profile.length-1;j++)strip(j,back,front,j%3?'#555e50':'#606456');
+ for(const z of [back,front]){
+  const center=[cx,50.5,z],poly=[[cx-rw/2,50.5,z],...profile.map((_,j)=>roofPoint(j,z)),[cx+rw/2,50.5,z]];
+  for(let j=0;j<poly.length-1;j++){
+   if(z===front)m.tri(center,poly[j+1],poly[j],steel,1,27);else m.tri(center,poly[j],poly[j+1],steel,1,27);
+  }
+ }
+ for(const side of [-1,1]){
+  const edge=cx+side*rw*.5,wall=side<0?x+2:x+w-2;
+  m.quad([wall,50.5,back],[edge,50.5,back],[edge,50.5,front],[wall,50.5,front],'#454f43',1,27);
+  face(side,[edge,50.5,back],[edge,50.85,back],[edge,50.85,front],[edge,50.5,front],steel);
+  const outer=wall+side*1.15;
+  for(let z=y+9;z<y+h-4;z+=low?28:16){
+   if(Math.abs(z-cz)<doorHalf+3)continue;
+   face(side,[outer,16,z-.8],[outer,49.8,z-.8],[outer,49.8,z+.8],[outer,16,z+.8],steel);
+   face(-side,[wall,16,z-.8],[outer,16,z-.8],[outer,49.8,z-.8],[wall,49.8,z-.8],steel);
+   face(-side,[outer,16,z+.8],[wall,16,z+.8],[wall,49.8,z+.8],[outer,49.8,z+.8],steel);
+  }
+  const rect=(lo,hi,za,zb,col,lift=.16)=>{const xx=wall+side*lift;face(side,[xx,lo,za],[xx,hi,za],[xx,hi,zb],[xx,lo,zb],col)};
+  rect(17,47,cz-doorHalf,cz+doorHalf,'#27382e',.05);
+  rect(18,46,cz-doorHalf+.8,cz-.45,'#4e5b4b');rect(18,46,cz+.45,cz+doorHalf-.8,'#57614f');
+  for(const yy of [17,46])rect(yy,yy+1,cz-doorHalf-.5,cz+doorHalf+.5,'#87907b',.40);
+  for(const zz of [cz-doorHalf,cz+doorHalf])rect(17,47,zz-.5,zz+.5,steel,.40);
+  rect(18,46,cz-.35,cz+.35,'#27382e',.22);
+  for(const zz of [cz-2,cz+2])rect(27,32,zz-.35,zz+.35,'#a09b7e',.50);
+ }
+ if(!low){const seams=h<72?1:3;for(let k=1;k<=seams;k++){const z=y+h*k/(seams+1);for(let j=0;j<profile.length-1;j++)strip(j,z-.55,z+.55,'#7a7963',.12);}}
+}
+
 function drawDressing(m,p,low){
  const {x,y,w,h,kind}=p,cx=x+w/2,cz=y+h/2,metal='#535c54',rust='#75604a';
  if(kind==='shed'){
@@ -7218,7 +7614,7 @@ function drawDressing(m,p,low){
   for(let j=0;j<(low?5:9);j++)m.box(x+5+j*(w-10)/(low?4:8),6,y+h+.1,.7,44,.4,'#30392e',8);
   m.box(cx,5,y+h+.5,w*.38,36,.8,'#363d30',29);
   m.branch(cx-w*.17,8,y+h+1,cx+w*.17,38,y+h+1,1.2,'#7a684d',4,29);
-  m.roof(cx,51,cz,w,h,'#646a56');
+  agedShedRoof(m,p,low);
   if(Math.floor(x+y)%3!==0){
    const px=x+w*.79,pz=y+h+.35;
    m.quad([px-5,22,pz],[px+5,22,pz],[px+5,34,pz],[px-4,33,pz],'#a09675',1,8);
@@ -7231,7 +7627,7 @@ function drawDressing(m,p,low){
    m.box(xx,3,zz,w*.25,9+(row+col)%3*3,h*.24,'#756348',29);
    if(!low)m.box(xx,12,zz,w*.26,1,h*.25,'#8b7756',29);
   }
-  m.quad([x+8,20,y+8],[x+w-8,18,y+8],[x+w-12,14,y+h-6],[x+12,16,y+h-6],'#4d5840',1,57);
+  drapedStockpileTarp(m,p,low);
  }else if(kind==='pipepile'){
   for(const dx of [-w*.32,w*.32])m.box(cx+dx,0,cz,5,3,h-4,'#5f5741',29);
   const segments=low?6:10;
@@ -7311,7 +7707,7 @@ function drawDressing(m,p,low){
  }else if(kind==='laundry'){
   for(const px of [x+2,x+w-2])m.box(px,0,cz,4,44,4,rust,4);
   m.branch(x+2,42,cz,cx,38,cz, .45,'#5c6558',4,3);m.branch(cx,38,cz,x+w-2,42,cz,.45,'#5c6558',4,3);
-  for(let k=1;k<4;k++){const px=x+w*k/4;m.box(px,22,cz,12,17,1,k===2?'#696b55':'#858375',8)}
+  hangingLaundryCloth(m,p,low);
  }else if(kind==='rail'){
   for(let z=y+5;z<y+h;z+=low?28:14)m.box(cx,.4,z,w,1.2,4,'#4a4234',4);
   for(const px of [x+w*.22,x+w*.78]){m.box(px,1.7,cz,2,1.2,h,'#77776a',3);m.box(px,1,cz,4,.7,h,'#494b40',3)}
@@ -7319,15 +7715,12 @@ function drawDressing(m,p,low){
   m.box(cx,.6,cz,w,1,h,'#202b29',8);for(const px of [x+2,x+w-2])m.box(px,1.6,cz,4,1.2,h,'#88816a',2);
   for(let z=y+8;z<y+h;z+=18)m.box(cx,1.7,z,w-6,.8,2,'#494e43',3);
  }else if(kind==='wagon'){
-  for(const z of [y+17,y+h-17])for(const px of [x+6,x+w-6])m.cylinder(px,0,z,6,9,'#242d29',8,3);
-  m.box(cx,9,cz,w,5,h,'#3e463e',3);m.box(cx,14,cz,w-4,38,h-6,rust,3);
-  m.box(cx,52,cz,w+2,3,h+2,'#4a5148',3);
-  for(let z=y+9;z<y+h-4;z+=16)for(const px of [x,x+w])m.box(px,16,z,2,34,2,metal,3);
-  for(const px of [x-.8,x+w+.8]){m.box(px,17,cz,1,30,24,'#39423a',3);m.box(px,30,cz,1.3,1,21,'#93836a',3)}
+  abandonedRailWagon(m,p,low);
  }else if(kind==='well'){
-  m.cylinder(cx,0,cz,Math.min(w,h)/2,18,'#777668',12,2);m.cylinder(cx,18,cz,Math.min(w,h)*.32,.8,'#162420',12,8);
+  stoneWellCollar(m,cx,cz,Math.min(w,h)/2,18.8,12,low);
   for(const px of [x+3,x+w-3])m.box(px,16,cz,4,40,4,'#665940',4);
   m.branch(x,49,cz,x+w,49,cz,2,rust,6,3);m.branch(cx,49,cz,cx,22,cz,.6,'#79735d',4,3);
+  oldWellWindlass(m,cx,cz,49,18.8,low);
   m.roof(cx,55,cz,w+10,h+8,'#5e6252');
  }else if(kind==='bench'){
   const seed=Math.abs(Math.floor(x*7+y*13)),broken=seed%3!==0;
@@ -7341,13 +7734,11 @@ function drawDressing(m,p,low){
   if(seed%2===0)abandonedCase(m,cx-w*.12,15,cz,w*.38,8,Math.min(h*.52,11),seed,low);
   else{m.box(cx,15.2,cz,w*.32,.5,h*.45,'#a29a7d',8);if(!low)m.box(cx,15.8,cz,1,.1,h*.43,'#736e57',8);}
  }else if(kind==='console'){
-  m.box(cx,0,cz,w,28,h,metal,3);m.box(cx,29,cz,w,3,h,'#7d8377',3);
-  m.box(cx,19,y+h+.6,w*.6,7,1,'#263e3d',53);for(let k=0;k<4;k++)m.box(x+7+k*7,11,y+h+1,2,2,1,k%2?'#a49c6b':'#6e8b79',8);
+  fieldInstrumentConsole(m,p,low);
  }else if(kind==='turbine'){
-  m.box(cx,0,cz,w,8,h,'#606559',2);m.cylinder(cx,8,cz,Math.min(w,h)*.42,32,metal,12,3);m.cylinder(cx,40,cz,Math.min(w,h)*.35,2,'#303b36',10,3);
-  for(let i=0;i<6;i++){const a=i*Math.PI/3;m.branch(cx,43,cz,cx+Math.cos(a)*w*.32,43,cz+Math.sin(a)*h*.32,2,'#8a8973',5,3)}
+  recessedTurbine(m,p,low);
  }else if(kind==='sandbags'){
-  for(let row=0;row<3;row++)for(let k=0;k<3;k++)m.ellipsoid(x+w*(k+.5)/3,4+row*6,cz,w/6,4,h*.48,row%2?'#67684d':'#7a7659',4,7,8);
+  compressedSandbagStack(m,p,low);
  }else if(kind==='mosaic'){
   m.plane(cx,.2,cz,w,h,'#6c7166',2);for(let i=0;i<4;i++)m.plane(x+w*(i+.5)/4,.3,cz,w/4-2,h-4,i%2?'#686450':'#354e4d',2);
  }else if(kind==='memorial'){
@@ -8196,17 +8587,49 @@ function sectorLook(id){
  const a=SECTOR_LOOKS[id]||SECTOR_LOOKS.loc_kordon_village;
  return {identity:a[0],ground:a[1],groundAlt:a[1],treeDark:a[2],treeMid:a[2],treeLight:a[3],bushColors:[a[2],a[3],a[3]],building:a[4],accent:a[4]};
 }
+// Pure roof geometry; every vertex stays inside the original sawtooth prism.
+function industrialRooflight(m,px,cz,top,ww,dd,accent,seed,low){
+ if(m.colliderCount)return;
+ const left=px-ww/2,right=px+ww/2,back=cz-dd/2,front=cz+dd/2;
+ const bottom=top+2,high=top+23,bays=low?2:4;
+ const frame=seed%3===0?'#8a7b65':'#7c897b',dark='#26372f';
+ // Existing sloped covering is now closed by triangular, folded-metal end walls.
+ m.quad([left,bottom,back],[left,bottom,front],[right,high,front],[right,high,back],accent,1,17);
+ for(const z of [back,front]){
+  const a=[left,bottom,z],b=[right,bottom,z],c=[right,high,z];
+  if(z===back)m.tri(a,c,b,accent,1,17);else m.tri(a,b,c,accent,1,17);
+ }
+ // A real, shallow recess remains visible through a few surviving shards.
+ const recess=Math.min(.35,ww*.02),inner=right-recess,innerTop=high-21*recess/ww-.16;
+ m.quad([inner,bottom+.25,back+.6],[inner,innerTop,back+.6],[inner,innerTop,front-.6],[inner,bottom+.25,front-.6],dark,1,8);
+ const glass=right-Math.min(.13,ww*.01),glassLow=bottom+1.25,glassHigh=high-1.25;
+ const broken=!low&&seed%3===1?Math.abs(seed)%bays:-1;
+ for(let j=0;j<bays;j++){
+  const a=back+(j+.035)*dd/bays,b=back+(j+.965)*dd/bays;
+  if(j===broken){
+   m.tri([glass,glassHigh,a],[glass,glassHigh,b],[glass,glassHigh-6,b],'#55766e',1,55);
+   m.tri([glass,glassLow,a],[glass,glassLow+4,a],[glass,glassLow,a+(b-a)*.38],'#466a60',1,55);
+  }else m.quad([glass,glassLow,a],[glass,glassHigh,a],[glass,glassHigh,b],[glass,glassLow,b],'#618786',1,55);
+ }
+ // Face strips form frames without extra boxes, bevels or draw calls.
+ for(const y of [bottom,high-1.2])m.quad([right,y,back],[right,y+1.2,back],[right,y+1.2,front],[right,y,front],frame,1,27);
+ for(let j=0;j<=bays;j++){
+  const z=back+j*dd/bays,a=Math.max(back,z-.55),b=Math.min(front,z+.55);
+  m.quad([right,bottom,a],[right,high,a],[right,high,b],[right,bottom,b],frame,1,27);
+ }
+}
+
 function sectorRoof(m,b,id,low){
  const kind=sectorLook(id).identity,cx=b.x+b.w/2,cz=b.y+b.h/2;
  const flat=!['residential','shop'].includes(b.style),top=b.style==='institute'?161:98;
  if(!flat)return;
  const accent=sectorLook(id).accent;
  if(['depot','railworks','works','factory','ruins'].includes(kind)){
-  // Sawtooth industrial roof lights, entirely above the existing roof.
+  // Closed, framed sawtooth lights retain their existing positions and prism bounds.
   for(let i=0;i<(low?2:3);i++){
    const px=b.x+b.w*(i+1)/(low?3:4),ww=Math.min(52,b.w*.16),dd=b.h*.50;
-   m.quad([px-ww/2,top+2,cz-dd/2],[px+ww/2,top+23,cz-dd/2],[px+ww/2,top+23,cz+dd/2],[px-ww/2,top+2,cz+dd/2],accent,1,17);
-   m.quad([px+ww/2,top+2,cz-dd/2],[px+ww/2,top+23,cz-dd/2],[px+ww/2,top+23,cz+dd/2],[px+ww/2,top+2,cz+dd/2],'#618786',1,55);
+   const seed=Math.abs(Math.floor(b.x*.13+b.y*.17+(Number(b.id)||0)*11+i*7));
+   industrialRooflight(m,px,cz,top,ww,dd,accent,seed,low);
   }
  }else if(['biolab','neuro','bunker','power','reactor','containment'].includes(kind)){
   const count=kind==='power'?4:2;
@@ -8244,14 +8667,37 @@ function sectorTint(id,inside=false){
  const tint=sectorAtmosphere(id).lightTint;
  return inside?tint.map((v,i)=>v*.45+[1.02,.99,.94][i]*.55):tint;
 }
+// A closed metal hood, frosted bowl and bent guards at the unchanged street-light anchor.
+function weatheredStreetLampHead(m,x,z,col,low){
+ if(m.colliderCount)return;
+ const n=low?6:8,point=(j,y,rx,rz)=>[x+Math.cos(j*Math.PI*2/n)*rx,y,z+Math.sin(j*Math.PI*2/n)*rz];
+ const hood=[[43,7.5,5.5],[44.7,6.7,4.9],[46,4.2,3.1]];
+ for(let j=0;j<n;j++){
+  for(let k=0;k<hood.length-1;k++){
+   const [y,rx,rz]=hood[k],[yy,xx,zz]=hood[k+1];
+   m.quad(point(j,y,rx,rz),point(j,yy,xx,zz),point(j+1,yy,xx,zz),point(j+1,y,rx,rz),k?'#566052':'#424e45',1,27);
+  }
+  m.tri([x,46,z],point(j+1,46,4.2,3.1),point(j,46,4.2,3.1),'#596354',1,27);
+  // The bowl's sloping sides retain the original lamp colour and the same lower luminous surface.
+  m.quad(point(j,38.6,3.7,2.8),point(j,42.9,5.5,4),point(j+1,42.9,5.5,4),point(j+1,38.6,3.7,2.8),col,1,8);
+  m.tri([x,38.6,z],point(j+1,38.6,3.7,2.8),point(j,38.6,3.7,2.8),col,1,9);
+ }
+ // Thin bent steel straps wrap beneath the glass instead of the old solid rectangular bars.
+ for(const dx of [-3.5,3.5]){
+  const path=[[-4.2,43.4],[-3.2,38.2],[3.2,38.2],[4.2,43.4]];
+  for(let j=0;j<path.length-1;j++){
+   const [zz,yy]=path[j],[nextZ,nextY]=path[j+1];
+   m.quad([x+dx-.35,yy,z+zz],[x+dx+.35,yy,z+zz],[x+dx+.35,nextY,z+nextZ],[x+dx-.35,nextY,z+nextZ],'#455145',1,27);
+  }
+ }
+}
+
 function streetFixture(m,l,low){
  const x=l.x,z=l.y,col=/120,210,255/.test(l.c)?'#a6c9d0':/255,120,120/.test(l.c)?'#c58a65':'#dbc093';
  m.cylinder(x-12,0,z,3,42,'#4c554b',low?5:7,27);
  m.box(x-12,0,z,8,3,8,'#6e7265',34);
  m.branch(x-12,41,z,x,43,z,1.5,'#6b7265',5,27);
- m.box(x,43,z,15,3,11,'#4a5149',27);
- m.box(x,39,z,11,4,8,col,8);m.box(x,38.6,z,9,.35,6,col,9);
- for(const dx of [-5,5])m.box(x+dx,38,z,1,6,9,'#465046',27);
+ weatheredStreetLampHead(m,x,z,col,low);
  if(!low){m.box(x-11.8,17,z+3,4,8,1,'#707667',27);m.box(x-11.8,20,z+3.6,1,2,.4,'#242e27',8);}
 }
 function masonryWear(m,b,low){
@@ -9062,7 +9508,12 @@ function landmarkRemaster(m,map,low){
      const xx=x-64+j*22;m.box(xx,4,z+61.2,4,12,1,cream,8);
      for(let q=0;q<3;q++)m.box(xx,6+q*3,z+62,3,.7,.4,dark,8);
     }
-    if(!low)for(let j=0;j<4;j++)ring(x-21+j*13,2,z-23,7+j,'#527463',12);
+    // Flat, interrupted reflection arcs replace the old raised metal-like rings.
+    if(!low)for(let j=0;j<2;j++)for(let q=0;q<7;q++){
+     const a=.3+q*.27+j*2.2,b=a+.19,r=8+j*5,cx=x-16+j*27,cz=z-21+j*9;
+     const p=(angle,rr)=>[cx+Math.cos(angle)*rr,1.06,cz+Math.sin(angle)*rr];
+     m.quad(p(a,r),p(b,r),p(b,r+.32),p(a,r+.32),'#52695b',1,8);
+    }
     break;
    }
    case 'safebase':case 'camp':{
@@ -10207,10 +10658,14 @@ vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface,flo
  float broad=coarse;
  float rough=clamp(surfaceInfo.b,.24,.98);
  if(mat>2.5&&mat<3.5){
-  // Polished scratches catch light between matte rust deposits.
+  // Rain soaks porous oxide while surviving paint keeps a narrow, subdued highlight.
+  // Existing roughness and corrosion masks are reused; enclosed rooms retain dry materials.
   float oxide=smoothstep(.48,.78,broad);
-  float highlight=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(72.,12.,rough));
-  base+=vec3(.19,.21,.20)*highlight*(1.-oxide)*(.32+.48*(1.-uNight));
+  float wetMetal=uWetness*(1.-uAir.w);
+  float paintRough=clamp(rough-wetMetal*(1.-oxide)*.24,.18,.98);
+  float highlight=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(72.,12.,paintRough));
+  base*=1.-wetMetal*(.07+.19*oxide);
+  base+=vec3(.19,.21,.20)*highlight*(1.-oxide)*(.32+.48*(1.-uNight))*(1.+wetMetal*.3);
   base=mix(base,base*vec3(1.13,.92,.76),oxide*.18);
  }else if(mat>5.5&&mat<6.5){
   // Muted reflected sky separates shallow water from the dark contact shore.
@@ -10487,9 +10942,19 @@ void main(){
  }
 
  if(tileId==55.){
+  // Opaque weathered glass catches the sector's light, with ground reflected in steep facade views.
+  // Reuse existing grime noise; no screen-space samples or additional texture reads.
   vec3 viewGlass=normalize(uEye-vWorldPos);
   float fresnelGlass=pow(1.-abs(dot(normal,viewGlass)),4.);
-  base+=vec3(.022,.038,.045)*(.18+.82*fresnelGlass);
+  vec3 reflectionGlass=reflect(-viewGlass,normal);
+  float skyGlass=smoothstep(-.72,.18,reflectionGlass.y);
+  float grimeGlass=smoothstep(.28,.79,coarse);
+  vec3 groundGlass=mix(vec3(.041,.049,.039),vec3(.068,.074,.061),coarse);
+  vec3 skyToneGlass=uSky*1.65+vec3(.027,.035,.038)*(1.-uNight*.8);
+  vec3 reflectedGlass=mix(groundGlass,skyToneGlass,skyGlass);
+  float reflectivityGlass=(.12+.36*fresnelGlass)*(1.-grimeGlass*.65)*(1.-uNight*.72)*(1.-uAir.w);
+  base=mix(base,reflectedGlass,reflectivityGlass);
+  base+=vec3(.016,.024,.026)*fresnelGlass*(1.-grimeGlass*.7)*(1.-uNight*.75);
  }
  vec2 torchDelta=vWorld-uTorch.xy;float torchDist=length(torchDelta);
  float torchReach=max(1.,length(uTorch.zw));
@@ -10583,10 +11048,14 @@ vec3 materialFinish(vec3 base,float mat,vec3 n,vec3 surfaceInfo,vec2 surface,flo
  float broad=coarse;
  float rough=clamp(surfaceInfo.b,.24,.98);
  if(mat>2.5&&mat<3.5){
-  // Polished scratches catch light between matte rust deposits.
+  // Rain soaks porous oxide while surviving paint keeps a narrow, subdued highlight.
+  // Existing roughness and corrosion masks are reused; enclosed rooms retain dry materials.
   float oxide=smoothstep(.48,.78,broad);
-  float highlight=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(72.,12.,rough));
-  base+=vec3(.19,.21,.20)*highlight*(1.-oxide)*(.32+.48*(1.-uNight));
+  float wetMetal=uWetness*(1.-uAir.w);
+  float paintRough=clamp(rough-wetMetal*(1.-oxide)*.24,.18,.98);
+  float highlight=pow(max(0.,dot(n,normalize(sunDir+viewDir))),mix(72.,12.,paintRough));
+  base*=1.-wetMetal*(.07+.19*oxide);
+  base+=vec3(.19,.21,.20)*highlight*(1.-oxide)*(.32+.48*(1.-uNight))*(1.+wetMetal*.3);
   base=mix(base,base*vec3(1.13,.92,.76),oxide*.18);
  }else if(mat>5.5&&mat<6.5){
   // Muted reflected sky separates shallow water from the dark contact shore.
@@ -10868,9 +11337,19 @@ vec3 base=vColor;
  }
 
  if(tileId==55.){
+  // Opaque weathered glass catches the sector's light, with ground reflected in steep facade views.
+  // Reuse existing grime noise; no screen-space samples or additional texture reads.
   vec3 viewGlass=normalize(uEye-vWorldPos);
   float fresnelGlass=pow(1.-abs(dot(normal,viewGlass)),4.);
-  base+=vec3(.022,.038,.045)*(.18+.82*fresnelGlass);
+  vec3 reflectionGlass=reflect(-viewGlass,normal);
+  float skyGlass=smoothstep(-.72,.18,reflectionGlass.y);
+  float grimeGlass=smoothstep(.28,.79,coarse);
+  vec3 groundGlass=mix(vec3(.041,.049,.039),vec3(.068,.074,.061),coarse);
+  vec3 skyToneGlass=uSky*1.65+vec3(.027,.035,.038)*(1.-uNight*.8);
+  vec3 reflectedGlass=mix(groundGlass,skyToneGlass,skyGlass);
+  float reflectivityGlass=(.12+.36*fresnelGlass)*(1.-grimeGlass*.65)*(1.-uNight*.72)*(1.-uAir.w);
+  base=mix(base,reflectedGlass,reflectivityGlass);
+  base+=vec3(.016,.024,.026)*fresnelGlass*(1.-grimeGlass*.7)*(1.-uNight*.75);
  }
  vec2 torchDelta=vWorld-uTorch.xy;float torchDist=length(torchDelta);
  float torchReach=max(1.,length(uTorch.zw));
