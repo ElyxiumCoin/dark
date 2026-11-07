@@ -12521,7 +12521,7 @@ function stepAnomalies(dt){
 function step(dt){if(!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x,dy=stick.y;const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];move(r,v[0]*155*dt,v[1]*155*dt);stepPeople(dt,w);if(!stepEnemies(dt,w))return;
 
 if(!stepAnomalies(dt))return;saveTimer+=dt;hudTimer+=dt;if(saveTimer>=5){saveTimer=0;save()}if(hudTimer>.2){hudTimer=0;hud()}}
-function hud(){const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=Math.max(.18,Math.min(.94,(map?.theme?.nightBias??.34)+(.5-.5*Math.cos(phase))*.21)),tod=night>.68?'НОЧЬ':night>.43?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / '+(world().zones?.find(z=>r.x>=z.x&&r.x<=z.x+z.w&&r.y>=z.y&&r.y<=z.y+z.h)?.name||world().name||('Здание '+(r.room+1))):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(phoneEco()?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action-label').textContent=verb;$('sv-action').setAttribute('aria-label',verb);const prompt=$('sv-3d-prompt');prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb+' · кнопка справа';$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,g.state.maxEnergy||100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit));const routeReadout=$('sv-route-readout');if(routeReadout){routeReadout.textContent=(r.room===null?'Выход':'Наружу')+' · '+exitDist+' м';routeReadout.title=r.room===null?'Расстояние до выхода в убежище':'Расстояние до выхода из здания';}const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}}
+function hud(){const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=Math.max(.18,Math.min(.94,(map?.theme?.nightBias??.34)+(.5-.5*Math.cos(phase))*.21)),tod=night>.68?'НОЧЬ':night>.43?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / '+(world().zones?.find(z=>r.x>=z.x&&r.x<=z.x+z.w&&r.y>=z.y&&r.y<=z.y+z.h)?.name||world().name||('Здание '+(r.room+1))):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(phoneEco()?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action-label').textContent=verb;$('sv-action').setAttribute('aria-label',verb);const prompt=$('sv-3d-prompt');if(window.ZonaSurvivalInterface){window.ZonaSurvivalInterface.syncAction(t?.kind,mode3d)}else{prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb;}$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,g.state.maxEnergy||100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit));const routeReadout=$('sv-route-readout');if(routeReadout){routeReadout.textContent=(r.room===null?'Выход':'Наружу')+' · '+exitDist+' м';routeReadout.title=r.room===null?'Расстояние до выхода в убежище':'Расстояние до выхода из здания';}const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}window.ZonaSurvivalHUD?.update()}
 function resize(){
  const b=canvas.parentElement.getBoundingClientRect(),dpr=window.devicePixelRatio||1,budget=phoneEco()?300000:520000;
  const ratio=Math.max(.65,Math.min(dpr,phoneEco()?1.15:1.5,Math.sqrt(budget/Math.max(1,b.width*b.height)))*mobileRender.scale);
@@ -13174,5 +13174,240 @@ html.proportion-v2 body #app #kpk-survival .sv-detail-fold summary{min-height:44
 #sv-screen .sv-route-readout{position:absolute;z-index:8;top:96px;right:max(8px,env(safe-area-inset-right,0px),var(--sv-safe-right,0px));max-width:110px;padding:3px 5px;border-radius:3px;background:#0b1712db;border:1px solid #867a4e55;color:#c6d6b3;font:600 10px/1.2 Arial,sans-serif;white-space:nowrap;pointer-events:none;}
 @media(max-height:430px){#sv-screen .sv-route-readout{top:86px;font-size:9px;}}
 </style>
+<style id="survival-interface-actions">
+#sv-screen.sv-interface header{border-bottom:0!important;box-shadow:inset 0 -1px 0 #7e73544d!important;}
+#sv-screen.sv-interface header .sv-head-copy small{display:none!important;}
+#sv-screen.sv-interface header .sv-head-copy{gap:0!important;align-self:center!important;}
+#sv-screen.sv-interface #sv-title{font-size:13px!important;line-height:1.2!important;white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden!important;}
+#sv-screen.sv-interface #sv-pause{flex:0 0 68px!important;width:68px!important;min-width:68px!important;gap:4px!important;font-size:11px!important;}
+#sv-screen.sv-interface #sv-sound{font-size:10px!important;}
+#sv-screen.sv-interface #sv-action{transition:border-color .12s,background-color .12s;}
+#sv-screen.sv-interface #sv-action[data-sv-kind]:not([data-sv-kind="none"]){border-color:#c3ac70!important;color:#ead9ab!important;}
+#sv-screen.sv-interface #sv-action[data-sv-kind="none"]{color:#aeb4a3!important;}
+#sv-screen.sv-interface #sv-action-label{font-size:10px!important;line-height:1.15!important;}
+#sv-screen.sv-interface #sv-3d-prompt{font:11px/1.35 var(--st-body,Arial,sans-serif)!important;border-radius:4px!important;max-width:190px!important;padding:6px 9px!important;text-align:center;}
+#sv-screen.sv-interface #sv-3d-prompt[hidden]{display:none!important;}
+@media(prefers-reduced-motion:reduce){#sv-screen.sv-interface #sv-action{transition:none;}}
+</style>
+<script id="survival-interface-actions-script">
+window.addEventListener('zona:ready',()=>{
+ 'use strict';
+ const screen=document.getElementById('sv-screen'),button=document.getElementById('sv-action');
+ if(!screen||!button)return;
+ screen.classList.add('sv-interface');
+ const pause=document.getElementById('sv-pause');
+ pause.querySelector('span').textContent='Пауза';
+ pause.setAttribute('aria-label','Пауза и меню вылазки');
+ const prompt=document.getElementById('sv-3d-prompt');
+ prompt.setAttribute('role','note');
+ const icon=button.querySelector('svg');
+ icon.setAttribute('viewBox','0 0 24 24');
+ const paths={
+  none:'<path d="M8 11V5a1.5 1.5 0 0 1 3 0v6m0-5a1.5 1.5 0 0 1 3 0v5m0-4a1.5 1.5 0 0 1 3 0v5m0-2a1.5 1.5 0 0 1 3 0v5c0 4-2.5 6-6 6h-1c-2 0-3.3-1.2-4.5-3L5 13a1.6 1.6 0 0 1 2.5-2L9 13"/>',
+  person:'<path d="M20 11a7.6 7.6 0 0 1-8 7H9l-5 3 1-6a6.4 6.4 0 0 1-1-4 7.6 7.6 0 0 1 8-7 7.6 7.6 0 0 1 8 7Z"/><path d="M8 10h8M8 13h5"/>',
+  crate:'<path d="M4 8h16v12H4ZM3 5h18v3H3ZM10 8v5h4V8"/>',
+  door:'<path d="M13 4h7v17h-7M4 12h11m-4-4 4 4-4 4M16 6h1"/>',
+  outside:'<path d="M11 4H4v17h7m9-9H9m4-4-4 4 4 4M7 6H6"/>',
+  exit:'<path d="m3 11 9-8 9 8M5 10v11h14V10M10 21v-7h4v7"/>'
+ };
+ const hints={person:'Нажмите «Говорить», чтобы начать разговор.',crate:'Нажмите «Обыскать», чтобы забрать хабар.',door:'Нажмите «Войти», чтобы открыть здание.',outside:'Нажмите «Выйти», чтобы вернуться наружу.',exit:'Нажмите «Выход», чтобы вернуться в убежище.'};
+ const storageKey='zona-survival-interaction-tips-v1';
+ let seen={};try{const saved=JSON.parse(localStorage.getItem(storageKey)||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))seen=saved;}catch(_){}
+ const has=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
+ let lastKind=null,hintKind=null,hintUntil=0;
+ function syncAction(kind,is3d){
+  kind=has(paths,kind)?kind:'none';
+  if(lastKind!==kind){
+   icon.innerHTML=paths[kind];button.dataset.svKind=kind;lastKind=kind;
+   if(kind!=='none'&&!has(seen,kind)){
+    seen[kind]=true;hintKind=kind;hintUntil=performance.now()+6500;
+    try{localStorage.setItem(storageKey,JSON.stringify(seen));}catch(_){}
+   }
+  }
+  if(kind==='exit'){document.getElementById('sv-action-label').textContent='Выход';button.setAttribute('aria-label','Вернуться в убежище');}
+  const show=!!is3d&&kind===hintKind&&performance.now()<hintUntil;
+  prompt.hidden=!show;
+  if(show&&prompt.textContent!==hints[kind])prompt.textContent=hints[kind];
+ }
+ window.ZonaSurvivalInterface={syncAction};
+ syncAction('none',false);
+});
+</script>
+<style id="survival-control-preferences">
+#sv-screen{--sv-control-scale:1;--sv-control-lift:0px;--sv-control-opacity:1;--sv-stick-base:118px;--sv-action-base:64px;--sv-attack-base:72px;--sv-pad-bottom:20px;--sv-side-pad:16px;--sv-stick-size:calc(var(--sv-stick-base) * var(--sv-control-scale));--sv-action-size:calc(var(--sv-action-base) * var(--sv-control-scale));--sv-attack-size:calc(var(--sv-attack-base) * var(--sv-control-scale));--sv-controls-bottom:calc(var(--sv-pad-bottom) + var(--sv-touch-bottom) + var(--sv-control-lift));}
+#sv-screen .sv-controls{left:max(var(--sv-side-pad),max(env(safe-area-inset-left,0px),var(--sv-safe-left,0px)))!important;right:max(var(--sv-side-pad),max(env(safe-area-inset-right,0px),var(--sv-safe-right,0px)))!important;bottom:var(--sv-controls-bottom)!important;opacity:var(--sv-control-opacity)!important;}
+#sv-screen #sv-stick{flex-basis:var(--sv-stick-size)!important;width:var(--sv-stick-size)!important;height:var(--sv-stick-size)!important;min-width:var(--sv-stick-size)!important;min-height:var(--sv-stick-size)!important;}
+#sv-screen #sv-stick span{width:calc(var(--sv-stick-size) * .407)!important;height:calc(var(--sv-stick-size) * .407)!important;}
+#sv-screen .sv-actions button{flex-basis:var(--sv-action-size)!important;width:var(--sv-action-size)!important;height:var(--sv-action-size)!important;min-width:var(--sv-action-size)!important;min-height:var(--sv-action-size)!important;}
+#sv-screen #sv-attack{flex-basis:var(--sv-attack-size)!important;width:var(--sv-attack-size)!important;height:var(--sv-attack-size)!important;min-width:var(--sv-attack-size)!important;min-height:var(--sv-attack-size)!important;}
+#sv-screen.sv-left-handed .sv-controls,#sv-screen.sv-left-handed .sv-actions{flex-direction:row-reverse!important;}
+#sv-screen .sv-hud-right{left:auto!important;right:max(var(--sv-side-pad),max(env(safe-area-inset-right,0px),var(--sv-safe-right,0px)))!important;bottom:calc(var(--sv-controls-bottom) + var(--sv-attack-size) + 10px)!important;}
+#sv-screen.sv-left-handed .sv-hud-right{left:max(var(--sv-side-pad),max(env(safe-area-inset-left,0px),var(--sv-safe-left,0px)))!important;right:auto!important;}
+#sv-screen #sv-3d-prompt{bottom:calc(var(--sv-controls-bottom) + var(--sv-stick-size) + 58px)!important;max-width:180px!important;font-size:11px!important;line-height:1.35!important;}
+@media(max-width:350px){#sv-screen{--sv-stick-base:110px;--sv-action-base:60px;--sv-attack-base:68px;--sv-side-pad:12px;}}
+@media(max-height:430px){#sv-screen{--sv-stick-base:94px;--sv-action-base:60px;--sv-attack-base:64px;--sv-pad-bottom:12px;}}
+#sv-field-menu[hidden],#sv-field-menu [hidden]{display:none!important;}
+#sv-field-menu{position:fixed;inset:0 0 auto;z-index:18000;display:flex;align-items:center;justify-content:center;height:var(--sv-visible-height,100dvh);max-height:100dvh;padding:calc(12px + max(env(safe-area-inset-top,0px),var(--sv-safe-top,0px))) calc(12px + max(env(safe-area-inset-right,0px),var(--sv-safe-right,0px))) calc(12px + max(env(safe-area-inset-bottom,0px),var(--sv-safe-bottom,0px))) calc(12px + max(env(safe-area-inset-left,0px),var(--sv-safe-left,0px)));box-sizing:border-box;background:#050b08d9;backdrop-filter:blur(3px);color:#e3dcc5;font:13px/1.4 var(--st-body,Arial,sans-serif);touch-action:pan-y;overscroll-behavior:contain;}
+#sv-field-menu *{box-sizing:border-box;}
+#sv-field-menu .sv-menu-card{display:flex;flex-direction:column;width:min(100%,380px);max-height:100%;overflow:hidden;border:1px solid #88764d;border-radius:7px;background:linear-gradient(145deg,#20291e,#101a13 60%);box-shadow:0 12px 50px #0009,inset 0 1px #d7c28d1a;}
+#sv-field-menu .sv-menu-header{flex:0 0 auto;padding:13px 16px 11px;border-bottom:1px solid #85764b55;}
+#sv-field-menu .sv-menu-eyebrow{font-size:11px;letter-spacing:1px;color:#a9af95;}
+#sv-field-menu h2{margin:4px 0 0;font:600 22px/1.15 var(--st-head,Arial,sans-serif);color:#e6d4a3;}
+#sv-field-menu .sv-menu-body{padding:12px 16px;overflow-y:auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+#sv-field-menu button{min-height:44px;border:1px solid #716b4c;border-radius:4px;background:#273021;color:#ded8be;font:600 13px/1.25 var(--st-body,Arial,sans-serif);padding:10px 12px;touch-action:manipulation;}
+#sv-field-menu button:active{filter:brightness(1.2);}
+#sv-field-menu button:focus-visible,#sv-field-menu input:focus-visible{outline:2px solid #d8c58d;outline-offset:2px;}
+#sv-field-menu .sv-menu-wide{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;margin-top:10px;}
+#sv-field-menu .sv-menu-wide span{color:#b9b99e;font-size:12px;}
+#sv-field-menu .sv-menu-sector{margin:0 0 10px;font-size:14px;color:#e3dfcb;}
+#sv-field-menu .sv-menu-summary{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;}
+#sv-field-menu .sv-menu-summary div{padding:7px 9px;border:1px solid #59604466;background:#0b140f66;}
+#sv-field-menu .sv-menu-summary small{display:block;font-size:11px;color:#9ba68c;}
+#sv-field-menu .sv-menu-summary strong{display:block;margin-top:2px;font-size:13px;font-weight:600;}
+#sv-field-menu .sv-menu-note{font-size:11px;line-height:1.4;color:#aab59b;margin:10px 0 0;}
+#sv-field-menu .sv-menu-footer{display:flex;gap:8px;flex:0 0 auto;padding:11px 16px;border-top:1px solid #85764b55;background:#101a13;}
+#sv-field-menu .sv-menu-footer button{flex:1;}
+#sv-field-menu #sv-menu-resume{flex:1.45;border-color:#a48d53;background:linear-gradient(#625b37,#3c452a);color:#f0dfb2;}
+#sv-field-menu #sv-menu-error{color:#edbb94;margin:8px 0 0;font-size:12px;}
+#sv-field-menu .sv-setting{display:block;margin:13px 0 0;}
+#sv-field-menu .sv-setting:first-of-type{margin-top:9px;}
+#sv-field-menu .sv-setting-title{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;}
+#sv-field-menu output{color:#d7c48f;font-variant-numeric:tabular-nums;}
+#sv-field-menu input[type=range]{display:block;width:100%;height:44px;margin:0;accent-color:#c4ae71;touch-action:pan-y;}
+#sv-field-menu .sv-setting-check{display:flex;align-items:center;gap:10px;min-height:48px;margin-top:6px;font-size:13px;}
+#sv-field-menu input[type=checkbox]{width:22px;height:22px;margin:0;accent-color:#c4ae71;}
+#sv-field-menu #sv-control-reset{width:100%;margin-top:8px;font-weight:500;color:#c4c8ad;background:#182216;}
+#sv-field-menu .sv-control-preview{position:relative;height:92px;margin-top:9px;overflow:hidden;border:1px solid #67714d77;border-radius:4px;background:radial-gradient(ellipse at 40% 10%,#3b4730,#101c14);}
+#sv-field-menu .sv-control-preview:before{content:"Вид управления";position:absolute;top:7px;left:9px;font-size:11px;color:#9fa98d;}
+#sv-field-menu .sv-preview-stick{position:absolute;left:12px;bottom:calc(8px + var(--preview-lift,0px));width:calc(40px * var(--preview-scale,1));height:calc(40px * var(--preview-scale,1));border:1px solid #b4a36d;border-radius:50%;opacity:var(--preview-opacity,1);background:radial-gradient(circle,#b7a87555 0 27%,#15271a33 29%);}
+#sv-field-menu .sv-preview-actions{position:absolute;right:12px;bottom:calc(8px + var(--preview-lift,0px));display:flex;gap:5px;align-items:flex-end;opacity:var(--preview-opacity,1);}
+#sv-field-menu .sv-preview-actions i{display:flex;align-items:center;justify-content:center;width:calc(22px * var(--preview-scale,1));height:calc(22px * var(--preview-scale,1));border:1px solid #a79a70;border-radius:4px;background:#68704d44;font-size:13px;font-style:normal;}
+#sv-field-menu .sv-preview-actions i:last-child{width:calc(27px * var(--preview-scale,1));height:calc(27px * var(--preview-scale,1));border-color:#9b775d;color:#d0ac86;}
+#sv-field-menu .sv-control-preview.is-left .sv-preview-stick{left:auto;right:12px;}
+#sv-field-menu .sv-control-preview.is-left .sv-preview-actions{right:auto;left:12px;flex-direction:row-reverse;}
+#sv-field-menu .sv-menu-weapon-name{margin:0 0 8px;font-size:16px;line-height:1.3;color:#e4d2a3;}
+#sv-field-menu #sv-menu-weapon-detail{font-size:13px;line-height:1.55;color:#c9ceb9;white-space:pre-line;}
+@media(max-height:430px){#sv-field-menu{padding-top:calc(8px + max(env(safe-area-inset-top,0px),var(--sv-safe-top,0px)));padding-bottom:calc(8px + max(env(safe-area-inset-bottom,0px),var(--sv-safe-bottom,0px)));}#sv-field-menu .sv-menu-header{padding-top:9px;padding-bottom:8px;}#sv-field-menu .sv-menu-body{padding-top:9px;padding-bottom:9px;}#sv-field-menu .sv-menu-footer{padding-top:8px;padding-bottom:8px;}#sv-field-menu h2{font-size:20px;}}
+</style>
+<script id="survival-control-preferences-script">
+window.addEventListener('zona:ready',()=>{
+'use strict';
+const survival=window.game?.survival,screen=document.getElementById('sv-screen');
+if(!survival||!screen||window.ZonaSurvivalControls)return;
+const key='zona_survival_controls_v1',defaults={scale:100,lift:0,opacity:100,leftHand:false};
+const normalize=v=>{v=v&&typeof v==='object'?v:{};const number=(k,min,max,step)=>{const n=Number(v[k]);return Number.isFinite(n)?Math.min(max,Math.max(min,Math.round(n/step)*step)):defaults[k]};return{scale:number('scale',85,110,5),lift:number('lift',0,40,4),opacity:number('opacity',55,100,5),leftHand:v.leftHand===true}};
+let prefs={...defaults};try{prefs=normalize(JSON.parse(localStorage.getItem(key)||'null'))}catch(_){}
+const menu=document.createElement('section');menu.id='sv-field-menu';menu.hidden=true;menu.setAttribute('role','dialog');menu.setAttribute('aria-modal','true');menu.setAttribute('aria-labelledby','sv-menu-title');
+menu.innerHTML='<div class="sv-menu-card"><div class="sv-menu-header"><div class="sv-menu-eyebrow">ПОЛЕВОЙ КПК · ПАУЗА</div><h2 id="sv-menu-title">Пауза</h2></div><div class="sv-menu-body"><section id="sv-menu-pause"><p class="sv-menu-sector" id="sv-menu-sector"></p><div class="sv-menu-summary"><div><small>Уровень</small><strong id="sv-menu-level"></strong></div><div><small>Деньги в вылазке</small><strong id="sv-menu-money"></strong></div><div><small>Полевой рюкзак</small><strong id="sv-menu-bag"></strong></div><div><small>Версия</small><strong id="sv-menu-version"></strong></div></div><button id="sv-menu-weapon" class="sv-menu-wide" type="button"><b id="sv-menu-weapon-label">Оружие</b><span>›</span></button><button id="sv-menu-controls" class="sv-menu-wide" type="button"><b>Управление</b><span>Настроить ›</span></button><p class="sv-menu-note">Вылазка сохранена. Продолжите с того же места или откройте КПК.</p></section><section id="sv-menu-controls-page" hidden><p class="sv-menu-note" style="margin-top:0">Подстройте кнопки под руку. Изменения сохраняются на этом телефоне.</p><div class="sv-control-preview" id="sv-control-preview" aria-hidden="true"><div class="sv-preview-stick"></div><div class="sv-preview-actions"><i>◇</i><i>⊕</i></div></div><label class="sv-setting" for="sv-control-scale"><span class="sv-setting-title"><span>Размер управления</span><output id="sv-control-scale-value" for="sv-control-scale">100%</output></span><input id="sv-control-scale" type="range" min="85" max="110" step="5" value="100"></label><label class="sv-setting" for="sv-control-lift"><span class="sv-setting-title"><span>Поднять кнопки</span><output id="sv-control-lift-value" for="sv-control-lift">0</output></span><input id="sv-control-lift" type="range" min="0" max="40" step="4" value="0"></label><label class="sv-setting" for="sv-control-opacity"><span class="sv-setting-title"><span>Видимость кнопок</span><output id="sv-control-opacity-value" for="sv-control-opacity">100%</output></span><input id="sv-control-opacity" type="range" min="55" max="100" step="5" value="100"></label><label class="sv-setting-check" for="sv-control-left-hand"><input id="sv-control-left-hand" type="checkbox"><span>Джойстик справа · для левшей</span></label><button type="button" id="sv-control-reset">Сбросить настройки управления</button></section><section id="sv-menu-weapon-page" hidden><h3 class="sv-menu-weapon-name" id="sv-menu-weapon-name"></h3><div id="sv-menu-weapon-detail"></div></section><p id="sv-menu-error" role="status" hidden></p></div><div class="sv-menu-footer"><button type="button" id="sv-menu-back">В КПК</button><button type="button" id="sv-menu-resume">Продолжить</button></div></div>';
+document.body.append(menu);
+const $=id=>document.getElementById(id),app=$('app');let page='pause',previousFocus=null,oldInert=false;
+function syncMenuViewport(){for(const name of ['--sv-visible-height','--sv-safe-top','--sv-safe-bottom','--sv-safe-left','--sv-safe-right']){const value=screen.style.getPropertyValue(name);if(value)menu.style.setProperty(name,value)}}
+window.addEventListener('resize',syncMenuViewport);window.visualViewport?.addEventListener('resize',syncMenuViewport);for(const event of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged'])window.Telegram?.WebApp?.onEvent?.(event,syncMenuViewport);
+function apply(){
+ screen.style.setProperty('--sv-control-scale',String(prefs.scale/100));screen.style.setProperty('--sv-control-lift',prefs.lift+'px');screen.style.setProperty('--sv-control-opacity',String(prefs.opacity/100));screen.classList.toggle('sv-left-handed',prefs.leftHand);
+ for(const name of ['scale','lift','opacity']){const input=$('sv-control-'+name);input.value=String(prefs[name]);$('sv-control-'+name+'-value').textContent=prefs[name]+(name==='lift'?' px':'%');}
+ $('sv-control-left-hand').checked=prefs.leftHand;const preview=$('sv-control-preview');preview.classList.toggle('is-left',prefs.leftHand);preview.style.setProperty('--preview-scale',String(prefs.scale/100));preview.style.setProperty('--preview-lift',(prefs.lift*.4)+'px');preview.style.setProperty('--preview-opacity',String(prefs.opacity/100));
+}
+function setPreferences(value){prefs=normalize({...prefs,...value});apply();try{localStorage.setItem(key,JSON.stringify(prefs))}catch(_){}return{...prefs}}
+function update(){
+ const summary=window.ZonaSurvivalHUD?.summary?.(),text=id=>$(id)?.textContent||'';
+ $('sv-menu-sector').textContent=text('sv-title');$('sv-menu-level').textContent=summary?.level??text('sv-level');$('sv-menu-money').textContent=summary?summary.money+' ₽':text('sv-money');$('sv-menu-bag').textContent=summary?summary.bag+' предм.':text('sv-bag');$('sv-menu-version').textContent=summary?.version||screen.querySelector('.sv-head-version')?.textContent||'16.62';
+ const weapon=window.ZonaSurvivalHUD?.weaponDetails?.();$('sv-menu-weapon-label').textContent=weapon?.name||text('sv-weapon-name')||'Оружие';$('sv-menu-weapon-name').textContent=weapon?.name||text('sv-weapon-name');$('sv-menu-weapon-detail').textContent=weapon?.detail||'Подробности доступны в карточке оружия в рюкзаке.';
+}
+function showPage(next){page=['pause','controls','weapon'].includes(next)?next:'pause';$('sv-menu-pause').hidden=page!=='pause';$('sv-menu-controls-page').hidden=page!=='controls';$('sv-menu-weapon-page').hidden=page!=='weapon';$('sv-menu-title').textContent={pause:'Пауза',controls:'Управление',weapon:'Оружие'}[page];$('sv-menu-back').textContent=page==='pause'?'В КПК':'Назад';menu.querySelector('.sv-menu-body').scrollTop=0;}
+function open(next='pause'){
+ if(!survival.state().run)return false;
+ if(survival.visible)survival.pause();
+ if(menu.hidden){previousFocus=document.activeElement;oldInert=!!app?.inert;if(app)app.inert=true;}
+ syncMenuViewport();menu.hidden=false;update();showPage(next);$('sv-menu-error').hidden=true;
+ (page==='controls'?$('sv-control-scale'):$('sv-menu-resume')).focus({preventScroll:true});return true;
+}
+function close(){if(menu.hidden)return;menu.hidden=true;if(app)app.inert=oldInert;if(previousFocus?.isConnected&&!previousFocus.closest('[hidden]'))previousFocus.focus({preventScroll:true});}
+function resume(){const id=survival.state().run?.locId;if(!id){close();return false}const ok=survival.enter(id);if(ok){close();return true}$('sv-menu-error').textContent='Не удалось продолжить вылазку. Попробуйте ещё раз или вернитесь в КПК.';$('sv-menu-error').hidden=false;return false;}
+for(const name of ['scale','lift','opacity'])$('sv-control-'+name).addEventListener('input',e=>setPreferences({[name]:Number(e.target.value)}));
+$('sv-control-left-hand').addEventListener('change',e=>setPreferences({leftHand:e.target.checked}));$('sv-control-reset').addEventListener('click',()=>setPreferences(defaults));
+$('sv-menu-controls').addEventListener('click',()=>{showPage('controls');$('sv-control-scale').focus({preventScroll:true})});$('sv-menu-weapon').addEventListener('click',()=>{update();showPage('weapon');$('sv-menu-back').focus({preventScroll:true})});
+$('sv-menu-back').addEventListener('click',()=>{if(page==='pause')close();else{showPage('pause');$('sv-menu-resume').focus({preventScroll:true})}});$('sv-menu-resume').addEventListener('click',resume);
+menu.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(page==='pause')resume();else showPage('pause');return}if(e.key!=='Tab')return;const visible=[...menu.querySelectorAll('button,input,[tabindex]')].filter(el=>!el.disabled&&el.getClientRects().length&&el.tabIndex>=0),first=visible[0],last=visible[visible.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}});
+$('sv-pause').addEventListener('click',e=>{if(!survival.visible)return;e.preventDefault();e.stopImmediatePropagation();open('pause')},true);
+window.ZonaSurvivalControls={open,openPause:()=>open('pause'),openWeapon:()=>open('weapon'),close,resume,update,setPreferences,get preferences(){return{...prefs}},get isOpen(){return!menu.hidden},get page(){return page}};apply();
+});
+</script>
+<style id="survival-interface-hud">
+#sv-screen .sv-hud-left{width:168px!important;max-width:calc(100% - 112px)!important;padding:6px!important;border-radius:5px!important;box-shadow:0 2px 7px #0007!important;}
+#sv-screen .sv-hud-left .sv-brand,#sv-screen .sv-hud-left .sv-money{display:none!important;}
+#sv-screen .sv-hud-left .sv-interface-primary{display:grid!important;grid-template-columns:45px minmax(0,1fr) 42px!important;gap:4px!important;line-height:17px!important;margin:0 0 3px!important;min-height:17px!important;}
+#sv-screen .sv-hud-left .sv-interface-primary>span{font:600 10px/17px Arial,sans-serif!important;text-transform:none!important;color:#e0d4b8!important;}
+#sv-screen .sv-hud-left .sv-interface-primary>em{font:700 11px/17px Arial,sans-serif!important;color:#f0e5c9!important;font-variant-numeric:tabular-nums;}
+#sv-screen .sv-interface-primary .sv-bar{height:6px!important;border-radius:3px!important;}
+#sv-screen #sv-interface-secondary{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:4px;padding-top:4px;border-top:1px solid #b7a57333;}
+#sv-screen .sv-hud-left .sv-interface-secondary-stat{display:flex!important;justify-content:center;align-items:center;gap:3px!important;min-width:0;min-height:23px;box-sizing:border-box;margin:0!important;padding:2px!important;border:1px solid #65704d66;border-radius:3px;background:#27352255;line-height:16px!important;}
+#sv-screen .sv-interface-secondary-stat>span{display:flex;align-items:center;justify-content:center;flex:0 0 12px;font-size:0!important;line-height:0!important;}
+#sv-screen .sv-interface-secondary-stat svg{display:block;width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+#sv-screen .sv-interface-secondary-stat[data-stat=hunger]>span{color:#d5b77f!important;}
+#sv-screen .sv-interface-secondary-stat[data-stat=thirst]>span{color:#a7c6cc!important;}
+#sv-screen .sv-interface-secondary-stat[data-stat=radiation]>span{color:#c4ce92!important;}
+#sv-screen .sv-interface-secondary-stat>.sv-bar{display:none!important;}
+#sv-screen .sv-hud-left .sv-interface-secondary-stat>em{font:700 11px/16px Arial,sans-serif!important;color:#e9e0c7!important;white-space:nowrap;font-variant-numeric:tabular-nums;}
+#sv-screen .sv-hud-left .sv-interface-critical{border-color:#d38b64!important;background:#602c21d9!important;box-shadow:inset 2px 0 #e3a476;}
+#sv-screen .sv-interface-secondary-stat.sv-interface-critical{position:relative;}
+#sv-screen .sv-interface-secondary-stat.sv-interface-critical:after{content:"!";position:absolute;right:-3px;top:-4px;display:flex;align-items:center;justify-content:center;width:10px;height:10px;border:1px solid #dfac7f;border-radius:50%;background:#693527;color:#ffe0bf;font:700 8px/1 Arial,sans-serif;}
+#sv-screen .sv-hud-left .sv-interface-primary.sv-interface-critical{padding-left:3px!important;margin-left:-3px!important;border-radius:2px;}
+#sv-screen .sv-hud-left .sv-interface-critical>span,#sv-screen .sv-hud-left .sv-interface-critical>em{color:#ffe0bf!important;}
+#sv-screen #sv-interface-weapon{display:block!important;width:100%!important;min-height:48px!important;box-sizing:border-box!important;padding:6px!important;border:0!important;border-radius:3px!important;background:transparent!important;color:#e5d5b1!important;box-shadow:none!important;text-align:left;cursor:pointer;pointer-events:auto!important;touch-action:manipulation!important;}
+#sv-screen #sv-interface-weapon>small{display:none!important;}
+#sv-screen #sv-interface-weapon #sv-weapon-name{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;font:700 11px/14px Arial,sans-serif!important;white-space:normal!important;max-height:28px!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+#sv-screen #sv-interface-weapon #sv-weapon-ammo{font:10px/14px Arial,sans-serif!important;color:#babca5!important;margin-top:3px!important;}
+#sv-screen #sv-interface-weapon:active{background:#85805b33!important;}
+#sv-screen #sv-interface-weapon:focus-visible{outline:2px solid #d8c58d!important;outline-offset:2px!important;}
+@media(max-height:430px){#sv-screen .sv-hud-left{padding:5px!important;}#sv-screen .sv-hud-left .sv-interface-primary{line-height:15px!important;min-height:15px!important;margin-bottom:2px!important;}#sv-screen .sv-hud-left .sv-interface-primary>span,#sv-screen .sv-hud-left .sv-interface-primary>em{line-height:15px!important;}}
+</style>
+<script id="survival-interface-hud-script">
+(()=>{
+'use strict';
+function init(){
+ const g=window.game,screen=document.getElementById('sv-screen');
+ if(!g?.survival||!screen||window.ZonaSurvivalHUD)return;
+ const $=id=>document.getElementById(id),left=screen.querySelector('.sv-hud-left');
+ const icons={hunger:'<path d="M4 3v6c0 3 6 3 6 0V3M7 3v18M19 3c-5 2-5 10 0 10V3Zm0 10v8"/>',thirst:'<path d="M12 2C9 7 5 11 5 15a7 7 0 0 0 14 0c0-4-4-8-7-13Z"/>',radiation:'<circle cx="12" cy="12" r="2"/><path d="m9 8-3-5a10 10 0 0 0-4 9h6m7-4 3-5a10 10 0 0 1 4 9h-6m-6 4-3 5a10 10 0 0 0 10 0l-3-5"/>'};
+ const secondary=document.createElement('div');secondary.id='sv-interface-secondary';secondary.setAttribute('role','group');secondary.setAttribute('aria-label','Сытость, вода и радиация');
+ left.append(secondary);
+ const rows={};
+ for(const key of ['hp','energy','hunger','thirst','radiation']){
+  const row=$('sv-text-'+key).closest('.sv-stat');rows[key]=row;row.dataset.stat=key;row.setAttribute('role','img');
+  if(key==='hp'||key==='energy'){
+   row.classList.add('sv-interface-primary');row.querySelector('span').textContent=key==='hp'?'Жизнь':'Энергия';
+  }else{
+   row.classList.add('sv-interface-secondary-stat');row.querySelector('span').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+icons[key]+'</svg>';row.setAttribute('role','img');secondary.append(row);
+  }
+ }
+ const oldWeapon=screen.querySelector('.sv-weapon-box'),weaponButton=document.createElement('button');weaponButton.id='sv-interface-weapon';weaponButton.className=oldWeapon.className;weaponButton.type='button';
+ while(oldWeapon.firstChild)weaponButton.append(oldWeapon.firstChild);oldWeapon.replaceWith(weaponButton);
+ weaponButton.addEventListener('click',()=>{if(g.survival.visible)window.ZonaSurvivalControls?.openWeapon()});
+ function weaponDetails(){
+  const wid=g.state.equipment?.weapon,weapon=wid&&DB.items[wid],power=g.getAttackPower(),damage=Math.max(2,(Number(power[0])+Number(power[1]))/2),type=wid&&!wid.startsWith('knife_')&&weapon?.dmg?'Дальний бой':'Ближний бой',name=weapon?.name||'Без оружия',description=weapon?.desc||'Атака без экипированного оружия.';
+  return{name,damage:Number(damage.toFixed(1)),type,description,detail:'Урон за атаку: '+Number(damage.toFixed(1))+'\n'+type+'\n'+description};
+ }
+ function summary(){
+  const r=g.survival.state().run,bag=Object.values(r?.bag||{}).reduce((a,b)=>a+(Number(b)||0),0);
+  return{version:'16.62',level:Math.max(1,Math.floor(Number(g.state.level)||1)),money:Number(r?.rubles)||0,bag,weapon:weaponDetails()};
+ }
+ function update(){
+  const s=g.state,hp=Number(s.hp)||0,maxHp=Math.max(1,Number(s.maxHp)||1),energy=Number(s.energy)||0;
+  rows.hp.classList.toggle('sv-interface-critical',hp/maxHp<=.25);rows.energy.classList.toggle('sv-interface-critical',energy<=20);
+  rows.hp.setAttribute('aria-label','Здоровье: '+Math.ceil(hp)+' из '+Math.ceil(maxHp)+(hp/maxHp<=.25?', критическое состояние':''));
+  rows.energy.setAttribute('aria-label','Энергия: '+Math.ceil(energy)+' из '+Math.ceil(Number(s.maxEnergy)||100)+(energy<=20?', низкая энергия':''));
+  for(const [key,label,bad]of [['hunger','Сытость',Number(s.hunger)<=20],['thirst','Вода',Number(s.thirst)<=20],['radiation','Радиация',Number(s.radiation)>=75]]){
+   const value=Math.max(0,Math.ceil(Number(s[key])||0)),text=label+': '+value+'%'+(bad?', опасное значение':'');
+   $('sv-text-'+key).textContent=value+'%';rows[key].classList.toggle('sv-interface-critical',bad);rows[key].setAttribute('aria-label',text);rows[key].title=text;
+  }
+  if(!DB.items[g.state.equipment?.weapon])$('sv-weapon-name').textContent='Без оружия';
+  $('sv-weapon-ammo').textContent='Характеристики ›';weaponButton.setAttribute('aria-label','Характеристики: '+$('sv-weapon-name').textContent);
+ }
+ window.ZonaSurvivalHUD={update,summary,weaponDetails};update();
+}
+window.addEventListener('zona:ready',init);if(window.game?.survival)init();
+})();
+</script>
 </body>
 </html>
