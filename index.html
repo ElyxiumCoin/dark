@@ -6757,6 +6757,80 @@ html.proportion-v2 body #app #refuge-workshop .workshop-filters .btn{padding:6px
 #sv-screen #sv-camera-tools{top:140px!important;}
 #sv-screen .sv-actions button{width:56px!important;min-width:56px!important;height:56px!important;min-height:56px!important;font-size:10px!important;}
 #sv-screen #sv-stick{width:85px!important;height:85px!important;}}</style>
+<script id="survival-world-catalog">
+(() => {
+ 'use strict';
+ const CELL_W=4860,CELL_H=3975,COLS=4,ROWS=7;
+ const IDS=Object.freeze(['loc_kordon_village','loc_kordon_post','loc_swamp_base','loc_dump_depo','loc_dump_graveyard','loc_agroprom_inst','loc_agroprom_under','loc_valley_bandit','loc_lab18','loc_bar_100','loc_wild_territory','loc_yantar_bunker','loc_lab16','loc_military_base','loc_barrier','loc_deadcity','loc_redforest','loc_skadovsk','loc_jupiter_janov','loc_limansk','loc_hospital','loc_radar','loc_tunnel_pripyat','loc_pripyat_center','loc_lab8','loc_chaes_roof','loc_sarcophagus','loc_generators']);
+ const DIRECTIONS=Object.freeze([
+  Object.freeze({name:'north',side:'n',dx:0,dy:-1,opposite:'south',oppositeSide:'s'}),
+  Object.freeze({name:'east',side:'e',dx:1,dy:0,opposite:'west',oppositeSide:'w'}),
+  Object.freeze({name:'south',side:'s',dx:0,dy:1,opposite:'north',oppositeSide:'n'}),
+  Object.freeze({name:'west',side:'w',dx:-1,dy:0,opposite:'east',oppositeSide:'e'})
+ ]);
+ const slots=IDS.map((id,index)=>{const southRow=Math.floor(index/COLS),row=ROWS-1-southRow,col=southRow%2?COLS-1-index%COLS:index%COLS;return Object.freeze({id,index,col,row,x:col*CELL_W,y:row*CELL_H,w:CELL_W,h:CELL_H})});
+ const slotsById=new Map(slots.map(r=>[r.id,r])),slotsByCell=new Map(slots.map(r=>[r.col+','+r.row,r]));
+ let records=Object.freeze(slots.map(r=>Object.freeze({...r,name:r.id,minLevel:1,region:''}))),byID=new Map(records.map(r=>[r.id,r]));
+ const idOf=value=>typeof value==='string'?value:value?.id;
+ function byId(id){return byID.get(idOf(id))||null}
+ function sectors(locations){
+  if(!locations)return records;
+  const metadata=new Map(Array.from(locations,l=>[l.id,l]));
+  records=Object.freeze(slots.map(slot=>{
+   const location=metadata.get(slot.id),name=String(location?.name||slot.id),minLevel=Math.max(1,Number(location?.minLevel)||1);
+   return Object.freeze({...slot,name,minLevel,region:String(location?.region||name.split(':')[0]||'Зона')});
+  }));byID=new Map(records.map(r=>[r.id,r]));return records;
+ }
+ function neighbors(id){
+  const from=slotsById.get(idOf(id));if(!from)return Object.freeze([]);
+  return Object.freeze(DIRECTIONS.map(d=>slotsByCell.get((from.col+d.dx)+','+(from.row+d.dy))?.id).filter(Boolean));
+ }
+ function at(x,y){
+  if(x&&typeof x==='object'){y=x.y;x=x.x}
+  if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>=COLS*CELL_W||y>=ROWS*CELL_H)return null;
+  const slot=slotsByCell.get(Math.floor(x/CELL_W)+','+Math.floor(y/CELL_H));return slot?byId(slot.id):null;
+ }
+ function global(id,x,y){
+  const sector=byId(id);if(!sector)return null;
+  if(x&&typeof x==='object'){y=x.y;x=x.x}
+  if(!Number.isFinite(x)||!Number.isFinite(y))return null;
+  return {x:sector.x+x,y:sector.y+y,sectorId:sector.id};
+ }
+ function local(id,x,y){
+  let sector;
+  if(typeof id==='string'||id&&typeof id==='object'&&typeof id.id==='string'){
+   sector=byId(id);if(x&&typeof x==='object'){y=x.y;x=x.x}
+  }else{if(id&&typeof id==='object'){y=id.y;x=id.x}else{y=x;x=id}sector=at(x,y)}
+  if(!sector||!Number.isFinite(x)||!Number.isFinite(y))return null;
+  return {x:x-sector.x,y:y-sector.y,sectorId:sector.id};
+ }
+ function portal(a,b){
+  const from=byId(a),to=byId(b);if(!from||!to)return null;
+  const d=DIRECTIONS.find(d=>from.col+d.dx===to.col&&from.row+d.dy===to.row);if(!d)return null;
+  const x=d.dx<0?0:d.dx>0?CELL_W:CELL_W/2,y=d.dy<0?0:d.dy>0?CELL_H:2730;
+  const entryX=d.dx<0?CELL_W:d.dx>0?0:CELL_W/2,entryY=d.dy<0?CELL_H:d.dy>0?0:2730;
+  return Object.freeze({from:from.id,to:to.id,direction:d.name,side:d.side,dx:d.dx,dy:d.dy,opposite:d.opposite,oppositeSide:d.oppositeSide,x,y,entryX,entryY,worldX:from.x+x,worldY:from.y+y,fromPoint:Object.freeze({x,y}),toPoint:Object.freeze({x:entryX,y:entryY})});
+ }
+ function route(fromId,toId,predicate){
+  const from=byId(fromId),to=byId(toId);if(!from||!to)return [];
+  if(from.id===to.id)return [from.id];
+  const allowed=typeof predicate==='function'?predicate:typeof predicate==='number'?(sector=>sector.minLevel<=predicate):predicate&&Number.isFinite(predicate.maxLevel)?(sector=>sector.minLevel<=predicate.maxLevel):(()=>true);
+  if(!allowed(to))return [];
+  const queue=[from.id],previous=new Map([[from.id,null]]);
+  for(let i=0;i<queue.length;i++){
+   const id=queue[i];
+   for(const next of neighbors(id)){
+    if(previous.has(next)||!allowed(byId(next)))continue;
+    previous.set(next,id);
+    if(next===to.id){const path=[];for(let key=next;key!==null;key=previous.get(key))path.push(key);return path.reverse()}
+    queue.push(next);
+   }
+  }
+  return [];
+ }
+ window.ZonaSurvivalWorld=Object.freeze({version:1,cellWidth:CELL_W,cellHeight:CELL_H,columns:COLS,rows:ROWS,width:COLS*CELL_W,height:ROWS*CELL_H,ids:IDS,directions:DIRECTIONS,sectors,byId,neighbors,at,local,global,portal,route});
+})();
+</script>
 <script id="zona-3d-engine">
 /* ZONA Z 3D Engine, offline native WebGL1; no remote libraries. */
 (function(){
@@ -11624,7 +11698,7 @@ function phoneCameraZoom(){
  const w=Math.max(1,canvas.clientWidth||canvas.width),h=Math.max(1,canvas.clientHeight||canvas.height);
  return Math.max(120,Math.min(395,h*(w>h?.52:.43)))*1.44;
 }
-const footfallMotion=createFootfallMotion(eco),footfallGround=rgb(map.theme.ground),footfallWetness=sectorAtmosphere(map.theme.id).wetness;
+const footfallMotion=createFootfallMotion(eco);let footfallGround=rgb(map.theme.ground),footfallWetness=sectorAtmosphere(map.theme.id).wetness;
 const animation={player:{angle:0,phase:0,speed:0},actors:new Map(),recoil:0,capturePlayer:false,playerMesh:null};
 let previousVisual=null;const actorHistory=new Map();let cutBuilding=null,cutFade=0;
 function rotate(){/* Camera rotation is locked; zoom and following still work. */}
@@ -11636,7 +11710,7 @@ gl.bindBuffer(gl.ARRAY_BUFFER,buf);
 if(usage===gl.DYNAMIC_DRAW){if(vertices.byteLength>dynamicGPUBytes){dynamicGPUBytes=Math.max(16384,2**Math.ceil(Math.log2(vertices.byteLength)));gl.bufferData(gl.ARRAY_BUFFER,dynamicGPUBytes,usage);}gl.bufferSubData(gl.ARRAY_BUFFER,0,vertices);}
 else gl.bufferData(gl.ARRAY_BUFFER,vertices,usage);
 }
-const sceneContacts=createPropContacts(map,eco);
+let sceneContacts=createPropContacts(map,eco);
 let dynamicGPUBytes=0;
 const frameBuffers={mvp:new Float32Array(16),shadow:new Float32Array(16),cam:new Float32Array(3),eye:new Float32Array(3),sky:new Float32Array(3),tint:new Float32Array(3),air:new Float32Array(4),cutaway:new Float32Array(4),torch:new Float32Array(4),shadows:new Float32Array(48),lightPos:new Float32Array(20),lightColors:new Float32Array(15),lightBounds:new Float32Array(20)};
 function frameArray(key,values){frameBuffers[key].set(values);return frameBuffers[key];}
@@ -11852,6 +11926,60 @@ function rebuild(room,point=options.focus){
  useStaticScene(cached,key);startSceneBuild(key);
 }
 
+
+const worldNeighborScenes=new Map();
+let worldSectorChanges=0,worldNeighborBuilds=0;
+function clearWorldNeighbors(){
+ for(const cached of worldNeighborScenes.values())if(cached.buffer)gl.deleteBuffer(cached.buffer);
+ worldNeighborScenes.clear();
+}
+function setWorldNeighbors(items,point=null){
+ if(disposed||gl.isContextLost())return false;
+ const wanted=new Set(),origin=sceneFocusPoint(map,point||options.focus);
+ for(const item of (Array.isArray(items)?items:[]).slice(0,2)){
+  if(!item?.map||item.map===map||!Number.isFinite(item.offsetX)||!Number.isFinite(item.offsetY))continue;
+  const key=String(item.id||item.map.theme?.id||'')+':'+item.offsetX+':'+item.offsetY;
+  if(wanted.has(key))continue;wanted.add(key);
+  const local=sceneFocusPoint(item.map,item.focus||{x:origin.x-item.offsetX,y:origin.y-item.offsetY});
+  const previous=worldNeighborScenes.get(key);
+  if(previous&&previous.map===item.map&&Math.hypot(local.x-previous.focus.x,local.y-previous.focus.y)<600)continue;
+  // At most two bounded shells are resident. Full neighboring sectors stay on
+  // the CPU until they become active, avoiding 28 full GPU scenes on a phone.
+  const data=makeScenePlaceholder(item.map,null,local);
+  for(let i=0;i<data.length;i+=10){data[i]+=item.offsetX;data[i+2]+=item.offsetY;}
+  const packed=packStaticChunks(data),buffer=gl.createBuffer();
+  if(!buffer){if(!previous)wanted.delete(key);continue;}
+  try{
+   bindBuffer(buffer,packed.data,gl.STATIC_DRAW);
+   if(gl.getBufferParameter(gl.ARRAY_BUFFER,gl.BUFFER_SIZE)!==packed.data.byteLength)throw Error('World border shell unavailable');
+  }catch(error){gl.deleteBuffer(buffer);if(!previous)wanted.delete(key);continue;}
+  worldNeighborScenes.set(key,{buffer,length:packed.data.length,chunks:packed.chunks,map:item.map,focus:local});worldNeighborBuilds++;
+  if(previous?.buffer)gl.deleteBuffer(previous.buffer);
+ }
+ for(const [key,cached]of worldNeighborScenes)if(!wanted.has(key)){if(cached.buffer)gl.deleteBuffer(cached.buffer);worldNeighborScenes.delete(key);}
+ return true;
+}
+function setWorldSector(nextMap,point={}){
+ if(disposed||gl.isContextLost()||!nextMap?.theme||!Array.isArray(nextMap.rooms))return false;
+ cancelRoomPrewarm();
+ for(const job of [...backgroundScenes])cancelSceneBuild(job);
+ for(const cached of sceneCache.values())if(cached.buffer)gl.deleteBuffer(cached.buffer);
+ sceneCache.clear();clearWorldNeighbors();
+ map=nextMap;scene=map;options.focus=sceneFocusPoint(map,point);options.room=point.room??null;
+ staticBuffer=null;staticData=null;staticChunks=[];roomKey=null;
+ footfallGround=rgb(map.theme.ground);footfallWetness=sectorAtmosphere(map.theme.id).wetness;
+ sceneContacts=createPropContacts(map,eco);footfallMotion.reset(null,EMPTY_FOOTFALL_WATER);
+ previousVisual=null;actorHistory.clear();animation.actors.clear();animation.recoil=0;
+ focus=null;cutBuilding=null;cutFade=0;currentMVP=null;shadowValid=false;shadowAnchor=null;shadowTick=0;
+ lightCache=null;lightCacheRoom=null;lightCacheTime=-1;lightCacheX=lightCacheY=0;
+ for(const key of Object.keys(lightSelection))delete lightSelection[key];
+ roomWarmRun=null;roomWarmCandidate=null;roomWarmStableAt=roomWarmNextScan=roomWarmRetryAt=0;
+ worldSectorChanges++;rebuild(options.room,options.focus);return true;
+}
+function worldSceneStats(){
+ return {sector:map.theme.id,sectorChanges:worldSectorChanges,neighborBuilds:worldNeighborBuilds,neighbors:worldNeighborScenes.size,neighborBytes:[...worldNeighborScenes.values()].reduce((n,s)=>n+s.length*4,0)};
+}
+
 function drawBuffer(buffer,count,chunks=null,matrix=null){if(!count)return;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(A.position);gl.enableVertexAttribArray(A.color);gl.enableVertexAttribArray(A.normal);gl.enableVertexAttribArray(A.material);gl.vertexAttribPointer(A.position,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(A.color,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(A.normal,3,gl.FLOAT,false,40,24);gl.vertexAttribPointer(A.material,1,gl.FLOAT,false,40,36);if(chunks){for(const c of chunks)if(chunkVisible(c,matrix))gl.drawArrays(gl.TRIANGLES,c.first,c.count)}else gl.drawArrays(gl.TRIANGLES,0,count)}
 function draw(run,enemyData,time,visual={}){if(disposed||gl.isContextLost()||!run||!textureReady)return;
  const same=previousVisual&&previousVisual.room===run.room,dx=same?run.x-previousVisual.x:0,dz=same?run.y-previousVisual.y:0,dist=Math.hypot(dx,dz),dt=same?Math.max(.001,time-previousVisual.time):.016;
@@ -11891,18 +12019,19 @@ gl.uniformMatrix4fv(U.shadowMatrix,false,frameArray('shadow',shadowMatrix));gl.u
  const tx=Math.sin(pose.angle),tz=-Math.cos(pose.angle),reach=215;
  if(U.torchBands)gl.uniform3fv(U.torchBands,torchRanges(w,run.x,run.y,pose.angle,reach));
  if(U.torch)gl.uniform4fv(U.torch,frameArray('torch',[run.x,run.y,tx*reach,tz*reach]));gl.uniform1f(U.detail,eco?0:1);const contacts=sceneContacts(run,time);if(U.contacts)gl.uniform4fv(U.contacts,contacts.pos);if(U.contactFade)gl.uniform4fv(U.contactFade,contacts.fade);if(U.shadows)gl.uniform4fv(U.shadows,compactMode?sceneShadows(run,enemyData).subarray(0,16):sceneShadows(run,enemyData));gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.uniform1i(U.atlas,0);gl.uniform1f(U.textureReady,textureReady?1:0);gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);gl.uniform1i(U.surfaceAtlas,2);gl.uniform1f(U.surfaceReady,surfaceReady?1:0);gl.activeTexture(gl.TEXTURE0);drawBuffer(staticBuffer,staticData.length/10,staticChunks,M);
+if(run.room==null)for(const neighbor of worldNeighborScenes.values())drawBuffer(neighbor.buffer,neighbor.length/10,neighbor.chunks,M);
 drawBuffer(dynamicBuffer,dyn.length/10);startSceneBuild();updateRoomPrewarm(run);
 }
 
 function project(x,y,z){if(!currentMVP||!canvas.width||!canvas.height)return null;const w=1;const cx=currentMVP[0]*x+currentMVP[4]*y+currentMVP[8]*z+currentMVP[12]*w;const cy=currentMVP[1]*x+currentMVP[5]*y+currentMVP[9]*z+currentMVP[13]*w;const cz=currentMVP[2]*x+currentMVP[6]*y+currentMVP[10]*z+currentMVP[14]*w;const cw=currentMVP[3]*x+currentMVP[7]*y+currentMVP[11]*z+currentMVP[15]*w||1;if(cw===0)return null;const nx=cx/cw,ny=cy/cw,nz=cz/cw;return {x:(nx*0.5+0.5)*canvas.width,y:(1-(ny*0.5+0.5))*canvas.height,z:nz,visible:nz>=-1.1&&nz<=1.1&&nx>=-1.25&&nx<=1.25&&ny>=-1.25&&ny<=1.25}}
 function dispose(){
- if(disposed)return;disposed=true;animation.dynamicMesh=animation.dynamicStorage=animation.dynamicView=null;dynamicGPUBytes=0;for(const job of [...backgroundScenes])cancelSceneBuild(job);atlasImage.onload=null;atlasImage.onerror=null;surfaceImage.onload=null;surfaceImage.onerror=null;
+ if(disposed)return;disposed=true;clearWorldNeighbors();animation.dynamicMesh=animation.dynamicStorage=animation.dynamicView=null;dynamicGPUBytes=0;for(const job of [...backgroundScenes])cancelSceneBuild(job);atlasImage.onload=null;atlasImage.onerror=null;surfaceImage.onload=null;surfaceImage.onerror=null;
  for(const cached of sceneCache.values())try{gl.deleteBuffer(cached.buffer)}catch(e){}
  sceneCache.clear();staticBuffer=null;staticData=null;staticChunks=[];footfallMotion.reset(null,EMPTY_FOOTFALL_WATER);
  try{gl.deleteBuffer(dynamicBuffer);gl.deleteTexture(atlasTexture);gl.deleteTexture(surfaceTexture);gl.deleteProgram(program);if(shadowProgram)gl.deleteProgram(shadowProgram);if(shadowTexture)gl.deleteTexture(shadowTexture);if(shadowFBO)gl.deleteFramebuffer(shadowFBO);if(shadowDepth)gl.deleteRenderbuffer(shadowDepth)}catch(e){}
 }
 try{rebuild(options.room??null,options.focus)}catch(err){console.warn('Survival mesh init failed:',err);dispose();return null}
-return {draw,rotate,changeZoom,resetCamera,movement,project,dispose,get yaw(){return yaw},get pitch(){return pitch},get zoom(){return zoom},get overhead(){return true},get triangles(){return staticData?.length/30||0},get webgl(){return true},get ready(){return textureReady},get compact(){return compactMode},get heading(){return animation.player.angle},get frameStorageStats(){return {dynamicBytes:animation.dynamicStorage?.byteLength||0,dynamicGPUBytes,dynamicGrowths:animation.dynamicGrowths||0,uniformBuffers:13}},get cpuStaticBytes(){let bytes=0;for(const job of backgroundScenes)bytes+=(job.data?.byteLength||0)+(job.queuedPacket?.data?.byteLength||0);return bytes},get loadingStats(){return sceneLoadingStats()},get roomPrewarmStats(){return roomPrewarmStats()},get valid(){return !disposed&&!gl.isContextLost()},get sceneCacheStats(){return {cachedRooms:[...sceneCache.keys()],cacheHits:sceneCacheHits,sceneBuilds,staticBytes:[...sceneCache.values()].reduce((n,s)=>n+s.length*4,0),waterIndexBytes:[...sceneCache.values()].reduce((n,s)=>n+(s.waterIndex.dataBytes||0),0)}}};
+return {draw,rotate,changeZoom,resetCamera,movement,project,dispose,setWorldSector,setWorldNeighbors,get worldSceneStats(){return worldSceneStats()},get yaw(){return yaw},get pitch(){return pitch},get zoom(){return zoom},get overhead(){return true},get triangles(){return staticData?.length/30||0},get webgl(){return true},get ready(){return textureReady},get compact(){return compactMode},get heading(){return animation.player.angle},get frameStorageStats(){return {dynamicBytes:animation.dynamicStorage?.byteLength||0,dynamicGPUBytes,dynamicGrowths:animation.dynamicGrowths||0,uniformBuffers:13}},get cpuStaticBytes(){let bytes=0;for(const job of backgroundScenes)bytes+=(job.data?.byteLength||0)+(job.queuedPacket?.data?.byteLength||0);return bytes},get loadingStats(){return sceneLoadingStats()},get roomPrewarmStats(){return roomPrewarmStats()},get valid(){return !disposed&&!gl.isContextLost()},get sceneCacheStats(){return {cachedRooms:[...sceneCache.keys()],cacheHits:sceneCacheHits,sceneBuilds,staticBytes:[...sceneCache.values()].reduce((n,s)=>n+s.length*4,0),waterIndexBytes:[...sceneCache.values()].reduce((n,s)=>n+(s.waterIndex.dataBytes||0),0)}}};
 }
 // Emergency Telegram/iOS compatibility path. Used only when no WebGL pipeline can run.
 // Draws the same world coordinates/actors, keeping saves and the Survival mechanics intact.
@@ -12038,7 +12167,7 @@ window.addEventListener('zona:ready',()=>{
 const g=window.game;if(!g||document.getElementById('kpk-survival'))return;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
-panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ВИД СВЕРХУ · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите сектор. Лут хранится в полевом рюкзаке до эвакуации; при гибели добыча теряется.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ВЫБОР ЛОКАЦИИ</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><p id="sv-atmosphere-note" class="sv-atmosphere-note"></p><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
+panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ОБЩАЯ КАРТА · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите точку входа в общую Зону. Между секторами можно идти пешком. Коснитесь миникарты, чтобы открыть карту и поставить цель. Добыча хранится в рюкзаке до эвакуации.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ТОЧКА ВХОДА</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><p id="sv-atmosphere-note" class="sv-atmosphere-note"></p><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
 document.getElementById('tab-locations').append(panel);
 const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.62</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div id="sv-route-readout" class="sv-route-readout" aria-label="Расстояние до выхода"></div><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.62 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span title="Радиация">РАД.</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
@@ -12066,7 +12195,7 @@ const state=()=>{const s=g.state.survival||(g.state.survival={version:2,quality:
 const phoneEco=()=>state().quality==='eco'||(state().quality!=='high'&&phoneHardwareSlow);
 function random(seed){let a=seed|0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function seedOf(s){let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0}
-function save(){g.saveState()}
+function save(){storeWorldSector();g.saveState()}
 function note(s){const el=$('sv-message');el.textContent=s;el.hidden=false;noteUntil=performance.now()+3600}
 function loc(){return DB.locations.find(l=>l.id===run()?.locId)}
 function currentLocChoice(){const select=$('sv-location'),st=state(),active=run();const unlocked=DB.locations.filter(l=>g.state.level>=(l.minLevel||1));if(active)return active.locId;if(st.selectedLoc&&DB.locations.some(l=>l.id===st.selectedLoc&&g.state.level>=(l.minLevel||1)))return st.selectedLoc;if(select?.value&&DB.locations.some(l=>l.id===select.value&&g.state.level>=(l.minLevel||1)))return select.value;return unlocked[0]?.id||DB.locations[0]?.id||''}
@@ -12153,7 +12282,7 @@ function createWorldWorker(task){
   const seedHelpers=controller.slice(controller.indexOf('function random('),controller.indexOf('function save(){'));
   const start=controller.indexOf('function '+'rectHit('),end=controller.indexOf('function '+'enter(id){',start);
   if(start<0||end<start)throw Error('World generator source unavailable');
-  const code='self.window=self;\n'+engine+'\nself.onmessage=function(e){const payload=e.data;let map=null,rand=null;const run=()=>payload.run,loc=()=>payload.location;const DB={enemies:payload.enemies};\n'+seedHelpers+'\n'+controller.slice(start,end)+'\ntry{self.postMessage({map:build(payload.run.seed)})}catch(error){self.postMessage({error:String(error&&error.message||error)})}};';
+  const code='self.window=self;\n'+engine+'\nself.onmessage=function(e){const payload=e.data;let map=null,rand=null;const run=()=>payload.run,loc=()=>payload.location;const DB={enemies:payload.enemies};\n'+seedHelpers+'\n'+controller.slice(start,end)+'\ntry{self.postMessage({map:connectWorldSector(build(payload.run.seed),payload.portals||[])})}catch(error){self.postMessage({error:String(error&&error.message||error)})}};';
   url=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
   return {worker:new Worker(url),url};
  }catch(error){if(url)URL.revokeObjectURL(url);return null}
@@ -12174,7 +12303,7 @@ function finishEntry(task,worldMap){
   $('sv-minimap-3d').hidden=false;$('sv-3d-fx').hidden=false;$('sv-3d-prompt').hidden=true;
   canvas.style.touchAction='none';resetInput();shot=0;hitLine=null;saveTimer=0;hudTimer=0;mobileRender.fxAt=-1;mobileRender.mapAt=-1;resize();last=0;
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(e.currentTarget!==canvas||!renderer3d)return;const warn=visible||suspended;pause();if(warn)g.toast('Графика была прервана. Вылазка сохранена — нажмите «Продолжить».','gold')},{once:true});
-  entryTask=null;entryBusy(false);
+  attachWorldStream(st.run,map);entryTask=null;entryBusy(false);
   $('sv-message').hidden=true;noteUntil=0;$('sv-sound').textContent=st.sound===false?'ТИХО':'ЗВУК';$('sv-sound').setAttribute('aria-pressed',String(st.sound!==false));hud();
   if(!task.snapshot.run){
    if(g.state.tracker)g.state.tracker.searches=(g.state.tracker.searches||0)+1;
@@ -12192,13 +12321,206 @@ function startEntry(task){
  task.timer=0;const prepared=createWorldWorker(task);
  const fallback=()=>{
   if(!entryCurrent(task))return;releaseEntryWorker(task);
-  task.timer=setTimeout(()=>{task.timer=0;if(!entryCurrent(task))return;try{finishEntry(task,build(task.run.seed))}catch(error){console.warn('Survival map failed:',error);rollbackEntry(task,true)}},0);
+  task.timer=setTimeout(()=>{task.timer=0;if(!entryCurrent(task))return;try{finishEntry(task,connectWorldSector(build(task.run.seed),worldPortalsFor(task.run.locId)))}catch(error){console.warn('Survival map failed:',error);rollbackEntry(task,true)}},0);
  };
  if(!prepared){fallback();return}
  task.worker=prepared.worker;task.url=prepared.url;
  task.worker.onmessage=e=>{if(!entryCurrent(task))return;if(e.data.error){fallback();return}finishEntry(task,e.data.map)};
  task.worker.onerror=e=>{e.preventDefault();fallback()};
- try{task.worker.postMessage({run:task.run,location:task.location,enemies:DB.enemies})}catch(error){fallback()}
+ try{task.worker.postMessage({run:task.run,location:task.location,enemies:DB.enemies,portals:worldPortalsFor(task.run.locId)})}catch(error){fallback()}
+}
+
+
+const worldCatalog=window.ZonaSurvivalWorld;
+worldCatalog.sectors(DB.locations);
+const WORLD_LOCAL_FIELDS=['opened','talked','defeated','enemyState','npcState','anomalyState','defeatedAt','enemyProjectiles'];
+let worldStreamRun=null,worldStreamTask=null,worldStreamQueue=[],worldMaps=new Map(),worldStreamSerial=0,worldStreamAt=-1,worldNeighborSignature='',worldEdgeNoteAt=0,worldWorkersUnavailable=false;
+const worldMapLinks=worldCatalog.sectors().flatMap(a=>worldCatalog.neighbors(a.id).filter(b=>a.id<b).map(b=>{const target=worldCatalog.byId(b),p=worldCatalog.portal(a.id,b);return {a:a.id,b,points:[{x:a.x+a.w/2,y:a.y+a.h/2},{x:p.worldX,y:p.worldY},{x:target.x+target.w/2,y:target.y+target.h/2}]}}));
+function storeWorldSector(r=run()){
+ if(!r?.world)return;
+ const records=r.world.sectors||(r.world.sectors={}),record=records[r.locId]||(records[r.locId]={});
+ record.seed=r.seed;record.layoutVersion=r.layoutVersion;record.room=r.room;record.x=r.x;record.y=r.y;record.visited=true;
+ for(const key of WORLD_LOCAL_FIELDS)if(r[key]!==undefined)record[key]=r[key];else delete record[key];
+}
+function ensureWorldRun(r){
+ if(!r)return null;
+ if(!r.world||r.world.version!==1)r.world={version:1,startId:r.locId,sectors:{},waypoint:null};
+ if(!r.world.sectors||typeof r.world.sectors!=='object')r.world.sectors={};
+ const point=r.world.waypoint;
+ if(point&&(!Number.isFinite(point.x)||!Number.isFinite(point.y)||!worldCatalog.at(point.x,point.y)))r.world.waypoint=null;
+ storeWorldSector(r);return r.world;
+}
+function worldRecord(id,r=run()){
+ const w=ensureWorldRun(r);if(!w||!worldCatalog.byId(id))return null;
+ if(!w.sectors[id]){
+  const visit=(Number(state().visits[id])||0)+1;
+  w.sectors[id]={seed:seedOf(id+':'+visit),layoutVersion:10,room:null,x:id==='loc_kordon_village'?535:140,y:id==='loc_kordon_village'?1110:1260,opened:[],talked:[],defeated:[],enemyState:{},visited:false,visit};
+ }
+ return w.sectors[id];
+}
+function worldPortalsFor(id){return worldCatalog.neighbors(id).map(next=>worldCatalog.portal(id,next)).filter(Boolean)}
+function releaseWorldStream(){
+ worldStreamSerial++;worldStreamQueue.length=0;
+ if(worldStreamTask){releaseEntryWorker(worldStreamTask);worldStreamTask=null}
+ worldMaps.clear();worldStreamRun=null;worldStreamAt=-1;worldNeighborSignature='';worldWorkersUnavailable=false;
+}
+function attachWorldStream(r,worldMap){
+ ensureWorldRun(r);worldStreamRun=r;worldMaps.set(r.locId,{map:worldMap,seed:r.seed,at:performance.now()});worldStreamAt=-1;worldNeighborSignature='';
+}
+function worldStreamCurrent(task){return worldStreamTask===task&&worldStreamRun===task.owner&&run()===task.owner&&!task.canceled}
+function trimWorldMaps(){
+ if(worldMaps.size<=5)return;
+ const active=run()?.locId,near=new Set(worldCatalog.neighbors(active));
+ const victims=[...worldMaps].filter(([id])=>id!==active).sort((a,b)=>(near.has(a[0])?1:0)-(near.has(b[0])?1:0)||a[1].at-b[1].at);
+ while(worldMaps.size>5&&victims.length)worldMaps.delete(victims.shift()[0]);
+}
+function finishWorldPrefetch(task,nextMap){
+ if(!worldStreamCurrent(task))return;
+ releaseEntryWorker(task);worldStreamTask=null;
+ if(task.owner.world?.sectors?.[task.id]?.seed===task.record.seed){worldMaps.set(task.id,{map:nextMap,seed:task.record.seed,at:performance.now()});trimWorldMaps()}
+ worldStreamAt=-1;processWorldQueue();
+}
+function processWorldQueue(){
+ if(worldWorkersUnavailable||worldStreamTask||!worldStreamRun||run()!==worldStreamRun||!renderer3d?.valid)return;
+ let id;while(worldStreamQueue.length){const next=worldStreamQueue.shift();if(!worldMaps.has(next)){id=next;break}}
+ if(!id)return;
+ const record=worldRecord(id,worldStreamRun),location=DB.locations.find(l=>l.id===id);if(!record||!location)return;
+ const task={id,owner:worldStreamRun,serial:worldStreamSerial,record,canceled:false,worker:null,url:'',timer:0};worldStreamTask=task;
+ const prepared=createWorldWorker(task);
+ // A browser that disallows workers defers compatibility work to the boundary;
+ // it never starts a large optional build while the player is moving elsewhere.
+ if(!prepared){worldWorkersUnavailable=true;worldStreamTask=null;return}
+ task.worker=prepared.worker;task.url=prepared.url;
+ task.worker.onmessage=e=>{
+  if(!worldStreamCurrent(task))return;
+  if(e.data.error){worldWorkersUnavailable=true;releaseEntryWorker(task);worldStreamTask=null;return}
+  finishWorldPrefetch(task,e.data.map);
+ };
+ task.worker.onerror=e=>{e.preventDefault();if(!worldStreamCurrent(task))return;worldWorkersUnavailable=true;releaseEntryWorker(task);worldStreamTask=null};
+ try{task.worker.postMessage({run:{...record,locId:id},location,enemies:DB.enemies,portals:worldPortalsFor(id)})}catch(error){worldWorkersUnavailable=true;releaseEntryWorker(task);worldStreamTask=null}
+}
+function requestWorldSector(id,urgent=false){
+ if(!id||id===run()?.locId||worldMaps.has(id)||worldStreamTask?.id===id)return;
+ const record=worldRecord(id);if(!record)return;
+ worldStreamQueue=worldStreamQueue.filter(key=>key!==id);
+ if(urgent)worldStreamQueue.unshift(id);else worldStreamQueue.push(id);
+ processWorldQueue();
+}
+function worldPosition(r=run()){
+ if(!r)return null;
+ let p=r;
+ if(r.room!==null&&map?.buildings?.[r.room]?.door)p=map.buildings[r.room].door;
+ return worldCatalog.global(r.locId,p.x,p.y);
+}
+function worldNavigation(r=run()){
+ const point=r?.world?.waypoint;if(!r||!point)return null;
+ const player=worldPosition(r),destination=worldCatalog.at(point.x,point.y);if(!player||!destination)return null;
+ const allowed=worldCatalog.route(r.locId,destination.id,sector=>sector.minLevel<=g.state.level),ids=allowed.length?allowed:worldCatalog.route(r.locId,destination.id),points=[{x:player.x,y:player.y}];
+ for(let i=0;i<ids.length-1;i++){const p=worldCatalog.portal(ids[i],ids[i+1]);if(p)points.push({x:p.worldX,y:p.worldY})}
+ points.push({x:point.x,y:point.y});
+ let distance=0;for(let i=1;i<points.length;i++)distance+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);
+ let target;
+ if(r.room!==null)target={...world().exit};
+ else if(ids.length>1){const p=worldCatalog.portal(r.locId,ids[1]);target={x:p.x,y:p.y}}
+ else target=worldCatalog.local(r.locId,point.x,point.y);
+ return {target,ids,points,distance,destination,arrived:r.room===null&&Math.hypot(player.x-point.x,player.y-point.y)<55};
+}
+function updateWorldStream(force=false){
+ const r=run();if(!r||!r.world||worldStreamRun!==r||!renderer3d?.valid)return;
+ const now=performance.now();if(!force&&worldStreamAt>=0&&now-worldStreamAt<180)return;worldStreamAt=now;
+ const current=worldCatalog.byId(r.locId),nav=worldNavigation(r),candidates=[];
+ if(r.room===null){
+  for(const id of worldCatalog.neighbors(r.locId)){
+   const p=worldCatalog.portal(r.locId,id),other=worldCatalog.byId(id),distance=p.direction==='east'?map.w-r.x:p.direction==='west'?r.x:p.direction==='south'?map.h-r.y:r.y;
+   if(distance<1450||nav?.ids[1]===id){if(g.state.level>=other.minLevel)requestWorldSector(id,nav?.ids[1]===id)}
+   const ready=worldMaps.get(id);if(ready&&distance<1000)candidates.push({id,map:ready.map,offsetX:other.x-current.x,offsetY:other.y-current.y,distance});
+  }
+ }
+ candidates.sort((a,b)=>a.distance-b.distance);const selected=candidates.slice(0,2);
+ const signature=selected.map(s=>s.id+':'+s.map.worldConnectionVersion).join('|')+':'+(r.room===null?Math.floor(r.x/500)+','+Math.floor(r.y/500):'inside');
+ if(signature!==worldNeighborSignature){renderer3d.setWorldNeighbors?.(selected,r);worldNeighborSignature=signature}
+ if(nav?.arrived&&!r.world.waypoint.arrived){r.world.waypoint.arrived=true;note('Вы дошли до отметки на карте.');save()}
+ processWorldQueue();
+}
+function worldGateFor(x,y,w=map){
+ const id=run()?.locId;if(!id||w!==map)return null;
+ const portals=worldPortalsFor(id),direction=x<0?'west':x>=w.w?'east':y<0?'north':y>=w.h?'south':null;
+ if(direction)return portals.find(p=>p.direction===direction)||null;
+ for(const p of portals)if(p.direction==='west'&&x<24||p.direction==='east'&&x>w.w-24||p.direction==='north'&&y<24||p.direction==='south'&&y>w.h-24)return p;
+ return null;
+}
+function worldMapObstacle(w,x,y,radius=12){
+ if(w.walls.some(o=>rectHit(x,y,o,radius)))return true;
+ for(let cy=Math.floor((y-radius)/96);cy<=Math.floor((y+radius)/96);cy++)for(let cx=Math.floor((x-radius)/96);cx<=Math.floor((x+radius)/96);cx++)for(const p of w.collisionGrid?.get(cx+','+cy)||[])if(rectHit(x,y,p,radius))return true;
+ return false;
+}
+function worldWalkSolid(x,y,radius=12){
+ const gate=worldGateFor(x,y),nearBoundary=x<radius+8||y<radius+8||x>map.w-radius-8||y>map.h-radius-8;
+ if(!gate||!nearBoundary)return solid(x,y,radius,map);
+ if(g.state.level<worldCatalog.byId(gate.to).minLevel)return true;
+ return worldMapObstacle(map,x,y,radius);
+}
+function crossWorldSector(id,x,y){
+ const r=run(),record=r?.world?.sectors?.[id],ready=worldMaps.get(id);if(!r||!record||!ready||ready.seed!==record.seed)return false;
+ const nextMap=ready.map;
+ if(worldMapObstacle(nextMap,x,y))return false;
+ // Prepare the new graphics origin first; the local actor facade switches only
+ // after the renderer accepts it, keeping loot and AI on one sector context.
+ try{if(!renderer3d.setWorldSector?.(nextMap,{x,y,room:null}))return false}
+ catch(error){pause();g.toast('Память графики освобождена. Продолжите вылазку с сохранённого места.','gold');return false}
+ storeWorldSector(r);
+ r.locId=id;r.seed=record.seed;r.layoutVersion=record.layoutVersion;r.room=null;r.x=x;r.y=y;
+ for(const key of WORLD_LOCAL_FIELDS)if(record[key]!==undefined)r[key]=record[key];else delete r[key];
+ if(!record.visited){state().visits[id]=Math.max(Number(state().visits[id])||0,record.visit||1);record.visited=true}
+ state().selectedLoc=id;map=nextMap;ready.at=performance.now();rendererRun=r;rendererRunKey=runSceneKey(r);
+ hitLine=null;releaseTouchButtons();mobileRender.fxAt=mobileRender.mapAt=-1;worldNeighborSignature='';worldStreamAt=-1;
+ storeWorldSector(r);trimWorldMaps();save();hud();note(loc().name);updateWorldStream(true);return true;
+}
+function prepareWorldBoundary(id){
+ requestWorldSector(id,true);
+ if(typeof Worker==='function'&&!worldWorkersUnavailable)return;
+ const r=run(),record=worldRecord(id),location=DB.locations.find(l=>l.id===id);if(!r||!record||worldMaps.has(id)||worldStreamTask)return;
+ const task={id,owner:r,record,canceled:false,worker:null,url:'',timer:0};worldStreamTask=task;
+ task.timer=setTimeout(()=>{
+  task.timer=0;if(!worldStreamCurrent(task))return;
+  const saved={locId:r.locId,seed:r.seed,layoutVersion:r.layoutVersion,x:r.x,y:r.y,room:r.room};
+  try{Object.assign(r,{locId:id,seed:record.seed,layoutVersion:record.layoutVersion,x:record.x,y:record.y,room:record.room});const nextMap=connectWorldSector(build(record.seed),worldPortalsFor(id));Object.assign(r,saved);finishWorldPrefetch(task,nextMap)}
+  catch(error){Object.assign(r,saved);releaseEntryWorker(task);worldStreamTask=null;note('Не удалось подготовить соседний сектор. Попробуйте подойти ещё раз.')}
+ },0);
+}
+function moveWorldPlayer(o,dx,dy){
+ const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/6));
+ for(let i=0;i<steps;i++)for(const axis of ['x','y']){
+  if(!visible)return false;
+  const amount=(axis==='x'?dx:dy)/steps;if(!amount)continue;
+  const x=o.x+(axis==='x'?amount:0),y=o.y+(axis==='y'?amount:0),gate=worldGateFor(x,y);
+  if(gate&&g.state.level<worldCatalog.byId(gate.to).minLevel){if(performance.now()>worldEdgeNoteAt){worldEdgeNoteAt=performance.now()+3000;note('Для сектора «'+worldCatalog.byId(gate.to).name+'» нужен уровень '+worldCatalog.byId(gate.to).minLevel)}continue}
+  if(x<0||x>=map.w||y<0||y>=map.h){
+   if(!gate)continue;
+   const from=worldCatalog.byId(o.locId),to=worldCatalog.byId(gate.to),nx=x+from.x-to.x,ny=y+from.y-to.y;
+   if(worldMaps.has(gate.to)){if(crossWorldSector(gate.to,nx,ny))return true}
+   else{prepareWorldBoundary(gate.to);if(performance.now()>worldEdgeNoteAt){worldEdgeNoteAt=performance.now()+1800;note('Подготовка соседнего участка…')}}
+   continue;
+  }
+  if(!worldWalkSolid(x,y))o[axis]+=amount;
+ }
+ return false;
+}
+function setWorldWaypoint(x,y){
+ const r=run(),sector=Number.isFinite(x)&&Number.isFinite(y)?worldCatalog.at(x,y):null;if(!r||!sector)return false;
+ ensureWorldRun(r);r.world.waypoint={x,y,sectorId:sector.id,arrived:false};save();worldStreamAt=-1;if(visible&&!entryTask){updateWorldStream(true);hud()}return true;
+}
+function clearWorldWaypoint(){const r=run();if(!r?.world)return false;r.world.waypoint=null;save();if(visible&&!entryTask)hud();return true}
+function worldMapSnapshot(){
+ const r=run(),player=worldPosition(r),nav=r&&!entryTask&&map?worldNavigation(r):null;
+ return {sectors:worldCatalog.sectors(DB.locations),player:player?{...player,room:r.room}:null,waypoint:r?.world?.waypoint||null,links:worldMapLinks,route:nav?.points||[],level:Number(g.state.level)||1};
+}
+const worldMapAPI={get snapshot(){return worldMapSnapshot()},setWaypoint:setWorldWaypoint,clearWaypoint:clearWorldWaypoint};
+function drawWorldWaypoint(c,r,X,Y,range){
+ const nav=worldNavigation(r);if(!nav)return;
+ const dx=nav.target.x-r.x,dy=nav.target.y-r.y,d=Math.hypot(dx,dy),f=Math.min(1,(range-34)/(d||1)),x=X(r.x+dx*f),y=Y(r.y+dy*f);
+ c.save();c.strokeStyle='#edd097';c.fillStyle='#edd097';c.lineWidth=1.7;c.setLineDash([3,4]);c.beginPath();c.moveTo(X(r.x),Y(r.y));c.lineTo(x,y);c.stroke();c.setLineDash([]);
+ c.translate(x,y);c.beginPath();c.moveTo(0,-6);c.lineTo(5,0);c.lineTo(0,6);c.lineTo(-5,0);c.closePath();c.fill();c.strokeStyle='#17241d';c.stroke();c.restore();
 }
 
 function rectHit(x,y,o,r=12){return x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h}
@@ -12209,7 +12531,7 @@ function solid(x,y,r=12,w=world(),ignore=null){
  for(let cy=Math.floor((y-r)/96);cy<=Math.floor((y+r)/96);cy++)for(let cx=Math.floor((x-r)/96);cx<=Math.floor((x+r)/96);cx++)for(const p of w.collisionGrid.get(cx+','+cy)||[])if(p.owner!==ignore&&rectHit(x,y,p,r))return true;
  return false;
 }
-function move(o,dx,dy,w=world()){const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/6));for(let i=0;i<steps;i++){if(!solid(o.x+dx/steps,o.y,12,w))o.x+=dx/steps;if(!solid(o.x,o.y+dy/steps,12,w))o.y+=dy/steps}}
+function move(o,dx,dy,w=world()){if(o===run()&&w===map&&o.world&&o.room===null)return moveWorldPlayer(o,dx,dy);const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/6));for(let i=0;i<steps;i++){if(!solid(o.x+dx/steps,o.y,12,w))o.x+=dx/steps;if(!solid(o.x,o.y+dy/steps,12,w))o.y+=dy/steps}}
 function sight(a,b,w=world(),ignore=null){const d=Math.hypot(a.x-b.x,a.y-b.y),n=Math.ceil(d/4);for(let i=1;i<n;i++)if(solid(a.x+(b.x-a.x)*i/n,a.y+(b.y-a.y)*i/n,2,w,ignore))return false;return true}
 function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
 
@@ -12723,6 +13045,105 @@ for(let i=0;i<86;i++)w.decals.push({x:rand()*w.w,y:rand()*w.h,w:4+rand()*20,h:2+
 for(let i=0;i<6;i++)w.lights.push({...freePoint(),r:34+rand()*48,c:choose(['rgba(255,214,144,.11)','rgba(113,181,163,.10)','rgba(201,141,110,.09)'])});
 for(const room of w.rooms){if(!architectural)for(let i=0;i<14;i++)room.props.push({x:35+rand()*(room.w-70),y:35+rand()*(room.h-70),w:16+rand()*46,h:10+rand()*29,kind:choose(['table','locker','shelf','bed','box','machine','cabinet']),rot:rand()<.35});for(let i=0;i<68;i++)room.debris.push({x:25+rand()*(room.w-50),y:25+rand()*(room.h-50),size:1+rand()*7.8,rot:rand()*6.28,c:choose(['#5b584e','#8a795d','#30342e','#766447','#43483d'])});}
 expandSector(w);expandOuterDistrict(w);expandFrontierDistrict(w);expandAftermathDistrict(w);connectOuterDistricts(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}fitVehicles(w);installWorldCollisions(w);dressSector(w);dressAftermath(w);dressInfill(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
+
+function connectWorldSector(w,portals){
+ if(w.worldConnectionVersion===1)return w;
+ w.w=Math.max(4860,w.w);w.h=Math.max(3975,w.h);
+ const links=(portals||[]).filter(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y));
+ const width=88,half=width/2,step=24,cols=Math.ceil(w.w/step)+1,rows=Math.ceil(w.h/step)+1,count=cols*rows;
+ const overlap=(a,b,pad=0)=>a.x<b.x+b.w+pad&&a.x+a.w+pad>b.x&&a.y<b.y+b.h+pad&&a.y+a.h+pad>b.y;
+ const treeSet=new Set(w.trees||[]),fixed=(w.walls||[]).filter(p=>!treeSet.has(p));
+ for(const p of w.landmarks||[])fixed.push(...window.ZonaSurvival3D.collisionParts(p));
+ for(const p of w.crates||[])fixed.push({x:p.x-12,y:p.y-10,w:24,h:20});
+ const blocked=new Uint8Array(count),goals=new Uint8Array(count),coordinate=(x,y)=>({x:Math.min(w.w,x*step),y:Math.min(w.h,y*step)});
+ // Keep the route away from hard world edges; only its short gateway approach
+ // may touch a border. This also leaves walking clearance beside each track.
+ for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){const q=coordinate(x,y);if(q.x<72||q.y<72||q.x>w.w-72||q.y>w.h-72)blocked[y*cols+x]=1;}
+ // Mark permanent objects with enough clearance for the entire visible track.
+ // Trees, loose junk and fences are handled after the route is chosen.
+ for(const p of fixed){
+  const left=Math.max(0,Math.floor((p.x-half-8)/step)),right=Math.min(cols-1,Math.ceil((p.x+p.w+half+8)/step));
+  const top=Math.max(0,Math.floor((p.y-half-8)/step)),bottom=Math.min(rows-1,Math.ceil((p.y+p.h+half+8)/step));
+  for(let y=top;y<=bottom;y++)for(let x=left;x<=right;x++){const q=coordinate(x,y);if(q.x>p.x-half-8&&q.x<p.x+p.w+half+8&&q.y>p.y-half-8&&q.y<p.y+p.h+half+8)blocked[y*cols+x]=1;}
+ }
+ for(const road of w.roads||[]){
+  const left=Math.max(0,Math.floor(road.x/step)),right=Math.min(cols-1,Math.ceil((road.x+road.w)/step));
+  const top=Math.max(0,Math.floor(road.y/step)),bottom=Math.min(rows-1,Math.ceil((road.y+road.h)/step));
+  for(let y=top;y<=bottom;y++)for(let x=left;x<=right;x++){const key=y*cols+x,q=coordinate(x,y);if(!blocked[key]&&q.x>=road.x&&q.x<=road.x+road.w&&q.y>=road.y&&q.y<=road.y+road.h)goals[key]=1;}
+ }
+ const queue=new Int32Array(count),previous=new Int32Array(count),roads=[],paths=[];
+ const point=key=>coordinate(key%cols,Math.floor(key/cols));
+ for(const portal of links){
+  const px=Math.max(0,Math.min(w.w,portal.x)),py=Math.max(0,Math.min(w.h,portal.y));
+  const baseX=Math.max(3,Math.min(Math.floor((w.w-72)/step),Math.round(px/step))),baseY=Math.max(3,Math.min(Math.floor((w.h-72)/step),Math.round(py/step)));
+  const vertical=portal.direction==='north'||portal.direction==='south'||py===0||py===w.h;
+  const connectorClear=points=>points.every((b,i)=>{if(!i)return true;const a=points[i-1],box={x:Math.min(a.x,b.x)-13,y:Math.min(a.y,b.y)-13,w:Math.abs(a.x-b.x)+26,h:Math.abs(a.y-b.y)+26};return !fixed.some(p=>overlap(box,p));});
+  let start=-1,approach=null;
+  for(const shift of [0,1,-1,2,-2,3,-3]){
+   const sx=baseX+(vertical?shift:0),sy=baseY+(vertical?0:shift);if(sx<0||sy<0||sx>=cols||sy>=rows)continue;
+   const key=sy*cols+sx;if(blocked[key])continue;
+   const end=point(key),inset=vertical?{x:px,y:py===0?24:w.h-24}:{x:px===0?24:w.w-24,y:py};
+   const bend=vertical?{x:end.x,y:inset.y}:{x:inset.x,y:end.y};
+   const candidate=[{x:px,y:py},inset,bend,end].filter((p,i,a)=>!i||p.x!==a[i-1].x||p.y!==a[i-1].y);
+   if(connectorClear(candidate)){start=key;approach=candidate;break;}
+  }
+  if(start<0)continue;
+  previous.fill(-2);let head=0,tail=0,found=-1;
+  // A fixed structure at the exact common border is never cut or moved.
+  // Catalog portals use the middle of the edge, outside authored structures.
+  if(blocked[start])continue;
+  previous[start]=-1;queue[tail++]=start;
+  while(head<tail){
+   const key=queue[head++];if(goals[key]){found=key;break;}
+   const x=key%cols,y=Math.floor(key/cols);
+   for(const next of [x?key-1:-1,x+1<cols?key+1:-1,y?key-cols:-1,y+1<rows?key+cols:-1])if(next>=0&&!blocked[next]&&previous[next]===-2){previous[next]=key;queue[tail++]=next;}
+  }
+  if(found<0)continue;
+  const raw=[];for(let key=found;key!==-1;key=previous[key])raw.push(point(key));raw.reverse();
+  const points=approach.slice();
+  // Join the interior grid only after stepping straight through the shared
+  // gateway. Any bend around fixed loot stays beyond the 20px border inset.
+  const first=raw[0];
+  for(let i=1;i<raw.length;i++){const a=raw[i-1],b=raw[i],c=raw[i+1];if(!c||(a.x!==b.x||b.x!==c.x)&&(a.y!==b.y||b.y!==c.y))points.push(b);}
+  if(points.length===1)points.push(first);
+  for(let i=1;i<points.length;i++){
+   const a=points[i-1],b=points[i];
+   roads.push({kind:Math.abs(b.x-a.x)>=Math.abs(b.y-a.y)?'h':'v',x:Math.min(a.x,b.x)-half,y:Math.min(a.y,b.y)-half,w:Math.abs(b.x-a.x)+width,h:Math.abs(b.y-a.y)+width,worldLink:true});
+  }
+  if(!roads.length||points.length===1)roads.push({kind:'h',x:px-half,y:py-half,w:width,h:width,worldLink:true});
+  paths.push({to:portal.to,direction:portal.direction,width,points});
+ }
+ const touches=p=>roads.some(road=>overlap(p,road,3));
+ const removedTrees=new Set((w.trees||[]).filter(t=>touches(t)));
+ w.trees=(w.trees||[]).filter(t=>!removedTrees.has(t));w.walls=(w.walls||[]).filter(t=>!removedTrees.has(t));
+ w.scraps=(w.scraps||[]).filter(p=>!touches(p.kind==='wreck'?window.ZonaSurvival3D.vehicleBounds(p):{x:p.x-p.s,y:p.y-p.s,w:p.s*2,h:p.s*2}));
+ w.dressing=(w.dressing||[]).filter(p=>!window.ZonaSurvival3D.dressingParts(p).some(touches));
+ w.reeds=(w.reeds||[]).filter(p=>!touches({x:p.x-3,y:p.y-3,w:6,h:6}));
+ // Fence gaps are visible segments rather than collision-only openings.
+ const fences=[];
+ for(const f of w.fences||[]){
+  let pieces=[[0,f.w]];const horizontal=f.dir==='h';
+  for(const road of roads){const perp=horizontal?f.y:f.x;if(perp<(horizontal?road.y:road.x)-6||perp>(horizontal?road.y+road.h:road.x+road.w)+6)continue;
+   const lo=(horizontal?road.x-f.x:road.y-f.y)-6,hi=lo+(horizontal?road.w:road.h)+12;
+   pieces=pieces.flatMap(([start,end])=>hi<=start||lo>=end?[[start,end]]:[[start,Math.max(start,lo)],[Math.min(end,hi),end]]).filter(([start,end])=>end-start>=12);
+  }
+  for(const [start,end]of pieces)fences.push({...f,x:f.x+(horizontal?start:0),y:f.y+(horizontal?0:start),w:end-start});
+ }
+ w.fences=fences;w.roads=(w.roads||[]).concat(roads);
+ // Rebuild only the exterior broadphase. Re-running furniture placement would
+ // alter saved interiors, so rooms and all loot/actor records stay untouched.
+ const parts=[],add=(x,y,width,height,owner)=>{if(width>0&&height>0)parts.push({x,y,w:width,h:height,owner});};
+ for(const p of w.props||[])add(p.x,p.y,p.w,p.h,'furniture');
+ for(const c of w.crates||[])add(c.x-12,c.y-10,24,20,'crate:'+c.id);
+ for(const p of w.dressing||[])for(const q of window.ZonaSurvival3D.dressingParts(p))add(q.x,q.y,q.w,q.h,'dressing:'+p.kind);
+ for(const f of w.fences||[])add(f.x-(f.dir==='v'?3:0),f.y-(f.dir==='h'?3:0),f.dir==='h'?f.w:6,f.dir==='v'?f.w:6,'fence');
+ for(const p of w.scraps||[]){const d=p.s;if(p.kind==='barrel')add(p.x-d*.35,p.y-d*.35,d*.7,d*.7,'barrel');else if(p.kind==='wreck'){const q=window.ZonaSurvival3D.vehicleBounds(p);add(q.x,q.y,q.w,q.h,'wreck');}else if(p.kind==='cratejunk')add(p.x-d*.4,p.y-d*.4,d*.8,d*.8,'cratejunk');else if(p.kind==='stump')add(p.x-d*.3,p.y-d*.3,d*.6,d*.6,'stump');else if(p.kind==='rock'&&d>=20)add(p.x-d*.325,p.y-d*.31,d*.65,d*.62,'rock');}
+ for(const landmark of w.landmarks||[])for(const p of window.ZonaSurvival3D.collisionParts(landmark))parts.push({...p,owner:'landmark:'+landmark.kind});
+ const grid=new Map();for(const p of parts)for(let y=Math.floor(p.y/96);y<=Math.floor((p.y+p.h)/96);y++)for(let x=Math.floor(p.x/96);x<=Math.floor((p.x+p.w)/96);x++){const key=x+','+y;if(!grid.has(key))grid.set(key,[]);grid.get(key).push(p);}
+ w.colliders=parts;w.collisionGrid=grid;w.worldPortals=links.map(p=>({...p}));w.worldRoads=paths;w.worldConnectionVersion=1;
+ return w;
+}
+
 function enter(id){
  // Never create a second renderer over an already running Survival session.
  if(entryTask)return entryTask.run.locId===id;
@@ -12751,6 +13172,7 @@ function enter(id){
   g.state.energy-=(locItem.energyCost||locItem.energy||5);g.state.hunger=Math.max(0,g.state.hunger-3);g.state.thirst=Math.max(0,g.state.thirst-4);
 
  }
+ ensureWorldRun(st.run);
  if(!Number.isFinite(st.run.gram))st.run.gram=0;
  const task={id:++entrySerial,run:st.run,location:locItem,snapshot,canceled:false,worker:null,url:'',timer:0,resolve:null};
  entryReady=new Promise(resolve=>{task.resolve=resolve});entryTask=task;
@@ -12779,6 +13201,7 @@ function schedulePDARefresh(){
  },0)});
 }
 function releaseRenderer(){
+ releaseWorldStream();
  if(retentionTimer)clearTimeout(retentionTimer);retentionTimer=0;
  if(renderer3d){renderer3d.dispose();renderer3d=null}
  rendererRun=null;rendererRunKey='';rendererEco=null;
@@ -13061,10 +13484,10 @@ function stepAnomalies(dt){
  }
  return true;
 }
-function step(dt){if(entryTask||!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x,dy=stick.y;const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];move(r,v[0]*155*dt,v[1]*155*dt);stepPeople(dt,w);if(!stepEnemies(dt,w))return;
+function step(dt){if(entryTask||!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x,dy=stick.y;const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];updateWorldStream();if(move(r,v[0]*155*dt,v[1]*155*dt)||!visible)return;stepPeople(dt,w);if(!stepEnemies(dt,w))return;
 
 if(!stepAnomalies(dt))return;saveTimer+=dt;hudTimer+=dt;if(saveTimer>=5){saveTimer=0;save()}if(hudTimer>.2){hudTimer=0;hud()}}
-function hud(){if(entryTask)return;const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=Math.max(.18,Math.min(.94,(map?.theme?.nightBias??.34)+(.5-.5*Math.cos(phase))*.21)),tod=night>.68?'НОЧЬ':night>.43?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / '+(world().zones?.find(z=>r.x>=z.x&&r.x<=z.x+z.w&&r.y>=z.y&&r.y<=z.y+z.h)?.name||world().name||('Здание '+(r.room+1))):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(phoneEco()?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action-label').textContent=verb;$('sv-action').setAttribute('aria-label',verb);const prompt=$('sv-3d-prompt');if(window.ZonaSurvivalInterface){window.ZonaSurvivalInterface.syncAction(t?.kind,mode3d)}else{prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb;}$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,g.state.maxEnergy||100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit));const routeReadout=$('sv-route-readout');if(routeReadout){routeReadout.textContent=(r.room===null?'Выход':'Наружу')+' · '+exitDist+' м';routeReadout.title=r.room===null?'Расстояние до выхода в убежище':'Расстояние до выхода из здания';}const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}window.ZonaSurvivalHUD?.update()}
+function hud(){if(entryTask)return;const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=Math.max(.18,Math.min(.94,(map?.theme?.nightBias??.34)+(.5-.5*Math.cos(phase))*.21)),tod=night>.68?'НОЧЬ':night>.43?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / '+(world().zones?.find(z=>r.x>=z.x&&r.x<=z.x+z.w&&r.y>=z.y&&r.y<=z.y+z.h)?.name||world().name||('Здание '+(r.room+1))):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(phoneEco()?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action-label').textContent=verb;$('sv-action').setAttribute('aria-label',verb);const prompt=$('sv-3d-prompt');if(window.ZonaSurvivalInterface){window.ZonaSurvivalInterface.syncAction(t?.kind,mode3d)}else{prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb;}$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,g.state.maxEnergy||100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit)),worldNav=worldNavigation(r);const routeReadout=$('sv-route-readout');if(routeReadout){routeReadout.textContent=worldNav?(r.room!==null?'Наружу':worldNav.arrived?'Вы на месте':'Метка')+' · '+Math.round(r.room!==null?distance(r,world().exit):worldNav.distance)+' м':(r.room===null?'Выход':'Наружу')+' · '+exitDist+' м';routeReadout.title=worldNav?'Маршрут: '+worldNav.destination.name:r.room===null?'Расстояние до выхода в убежище':'Расстояние до выхода из здания';}const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}window.ZonaSurvivalHUD?.update()}
 function resize(){
  const b=canvas.parentElement.getBoundingClientRect(),dpr=window.devicePixelRatio||1,budget=phoneEco()?300000:520000;
  const ratio=Math.max(.65,Math.min(dpr,phoneEco()?1.15:1.5,Math.sqrt(budget/Math.max(1,b.width*b.height)))*mobileRender.scale);
@@ -13402,6 +13825,7 @@ function draw3DMinimap(){
  for(const e of w.enemies||[])if(!r.defeated.includes(e.id)){const d=enemyData(e);if(distance(r,d)<360)pin(d.x,d.y,'#e17c69',4.3,'diamond')}
  for(const o of w.crates||[])if(!r.opened.includes(o.id))pin(o.x,o.y,'#dcc080',3.5,'box');
  for(const o of w.people||[]){const p=npcData(o);pin(p.x,p.y,'#8dc1c6',4);}
+ drawWorldWaypoint(c,r,X,Y,range);
  const ex=w.exit.x-r.x,ey=w.exit.y-r.y,ed=Math.hypot(ex,ey),factor=Math.min(1,(range-32)/(ed||1));
  c.save();c.translate(X(r.x+ex*factor),Y(r.y+ey*factor));c.rotate(Math.atan2(ey,ex)+Math.PI/2);c.fillStyle='#b1d397';c.strokeStyle='#17271a';c.lineWidth=1.3;c.beginPath();c.moveTo(0,-6.5);c.lineTo(5,4.5);c.lineTo(0,2);c.lineTo(-5,4.5);c.closePath();c.fill();c.stroke();c.restore();
  // North stays fixed while the player arrow follows the actual world heading.
@@ -13451,7 +13875,7 @@ for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventL
 for(const ev of ['pointerup','pointercancel'])window.addEventListener(ev,e=>{if(e.pointerId===stick.id){stick.id=null;stick.x=stick.y=0;pad.classList.remove('is-active');pad.firstElementChild.style.transform='translate(-50%,-50%)'}for(const [id,pointerId] of survivalTouchButtons)if(pointerId===e.pointerId){survivalTouchButtons.delete(id);$(id).classList.remove('is-pressed')}},{passive:true});
 window.addEventListener('resize',()=>{if(visible){resetInput();resize()}});window.addEventListener('orientationchange',resetInput);window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});window.addEventListener('pagehide',pause);
 // Public interface also provides deterministic mechanics for regression tests.
-g.survival={get loading(){return !!entryTask},get entryReady(){return entryReady},get feedback(){return feedbackSnapshot()},enter,pause,suspend,leaveToPDA,action,attack,step,exit:exitRun,build,solid,sight,state,refresh,get map(){return map},get visible(){return visible},get is3d(){return mode3d},get renderer(){return renderer3d}};refresh();
+g.survival={get worldMap(){return worldMapAPI},get worldStreamStats(){return {active:run()?.locId||null,cached:[...worldMaps.keys()],pending:worldStreamTask?.id||null,queued:[...worldStreamQueue]}},get loading(){return !!entryTask},get entryReady(){return entryReady},get feedback(){return feedbackSnapshot()},enter,pause,suspend,leaveToPDA,action,attack,step,exit:exitRun,build,solid,sight,state,refresh,get map(){return map},get visible(){return visible},get is3d(){return mode3d},get renderer(){return renderer3d}};refresh();
 });
 </script><style id="zona-survival-v132">#sv-screen header:after{content:"";position:absolute;inset:5px 5px 5px 5px;border:1px solid rgba(186,157,91,.16);pointer-events:none;}
 #sv-screen header .sv-head-copy{display:flex;flex-direction:column;justify-content:center;min-width:0;z-index:1;}
@@ -13953,6 +14377,203 @@ function init(){
  window.ZonaSurvivalHUD={update,summary,weaponDetails};update();
 }
 window.addEventListener('zona:ready',init);if(window.game?.survival)init();
+})();
+</script>
+<style id="survival-world-atlas-style">
+#sv-screen #sv-minimap-3d{pointer-events:auto!important;touch-action:manipulation!important;cursor:pointer;}
+#sv-screen #sv-minimap-3d:focus-visible{outline:2px solid #ead39a;outline-offset:3px;}
+#sv-world-atlas[hidden],#sv-world-atlas [hidden]{display:none!important;}
+#sv-world-atlas{position:fixed;inset:0 0 auto;z-index:19000;display:flex;flex-direction:column;height:var(--sv-visible-height,100dvh);max-height:100dvh;box-sizing:border-box;padding:max(env(safe-area-inset-top,0px),var(--sv-safe-top,0px)) max(env(safe-area-inset-right,0px),var(--sv-safe-right,0px)) max(env(safe-area-inset-bottom,0px),var(--sv-safe-bottom,0px)) max(env(safe-area-inset-left,0px),var(--sv-safe-left,0px));background:#0b1511;color:#e2ddc6;font:13px/1.35 var(--st-body,Arial,sans-serif);overscroll-behavior:none;isolation:isolate;}
+#sv-world-atlas *{box-sizing:border-box;}
+#sv-world-atlas .sv-atlas-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #8b7c5066;background:linear-gradient(105deg,#263023,#121e17);flex:0 0 auto;}
+#sv-world-atlas .sv-atlas-heading{min-width:0;flex:1;}
+#sv-world-atlas h2{margin:0;font:600 18px/1.15 var(--st-head,Arial,sans-serif);letter-spacing:1px;color:#e4d3a7;}
+#sv-world-atlas .sv-atlas-heading p{margin:3px 0 0;font-size:10px;letter-spacing:.5px;color:#a3b097;}
+#sv-world-atlas button,#sv-world-atlas select{min-height:44px;border:1px solid #797447;border-radius:4px;background:#202c20;color:#e0d9bc;font:600 12px/1.25 var(--st-body,Arial,sans-serif);touch-action:manipulation;}
+#sv-world-atlas button{padding:8px 12px;cursor:pointer;}
+#sv-world-atlas button:active{background:#46513a;}
+#sv-world-atlas button:disabled{opacity:.45;cursor:default;}
+#sv-world-atlas button:focus-visible,#sv-world-atlas select:focus-visible,#sv-world-atlas canvas:focus-visible{outline:2px solid #e5cc8d;outline-offset:2px;}
+#sv-world-atlas #sv-atlas-close{display:flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;padding:10px;}
+#sv-world-atlas button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
+#sv-world-atlas .sv-atlas-finder{flex:0 0 100%;min-width:0;}
+#sv-world-atlas select{display:block;width:100%;max-width:100%;padding:8px 30px 8px 11px;overflow:hidden;text-overflow:ellipsis;font-weight:500;}
+#sv-world-atlas .sv-atlas-stage{position:relative;flex:1;min-height:90px;overflow:hidden;background:#102019;}
+#sv-world-atlas canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none;}
+#sv-world-atlas .sv-atlas-tools{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;}
+#sv-world-atlas .sv-atlas-tools button{display:flex;align-items:center;justify-content:center;width:44px;min-height:44px;padding:9px;background:#142219ed;border-color:#78805c;box-shadow:0 2px 9px #0006;}
+#sv-world-atlas .sv-atlas-compass{position:absolute;left:12px;top:11px;display:flex;flex-direction:column;align-items:center;color:#bdc4a4;font-size:11px;font-weight:700;pointer-events:none;text-shadow:0 1px 2px #000;}
+#sv-world-atlas .sv-atlas-compass i{display:block;width:0;height:0;margin-top:3px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:15px solid #c7c89e;}
+#sv-world-atlas .sv-atlas-scale{position:absolute;left:12px;bottom:10px;font-size:10px;line-height:1.25;color:#bcc2a7;background:#101d16c9;padding:4px 6px;border-radius:2px;pointer-events:none;}
+#sv-world-atlas .sv-atlas-scale b{display:block;width:70px;height:4px;margin-top:3px;border:1px solid #bac09f;border-top:0;}
+#sv-world-atlas .sv-atlas-legend{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:calc(100% - 120px);padding:5px 8px;background:#101d16d9;border:1px solid #7b835044;border-radius:3px;font-size:9px;white-space:nowrap;pointer-events:none;color:#b9c1a6;}
+#sv-world-atlas .sv-atlas-legend span{display:flex;align-items:center;gap:4px;}
+#sv-world-atlas .sv-atlas-legend i{display:block;width:7px;height:7px;border:1px solid #b7d6af;border-radius:50%;background:#86b99a;}
+#sv-world-atlas .sv-atlas-legend span:last-child i{background:#e8c06c;border-color:#e8c06c;border-radius:1px;transform:rotate(45deg);}
+#sv-world-atlas .sv-atlas-footer{flex:0 0 auto;padding:9px 10px 10px;border-top:1px solid #8b7c5066;background:linear-gradient(110deg,#202c20,#111d16);}
+#sv-world-atlas #sv-atlas-status{margin:0;min-height:17px;font-size:12px;color:#d9d7bd;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
+#sv-world-atlas #sv-atlas-hint{margin:3px 0 7px;font-size:10px;line-height:1.3;color:#a5b197;}
+#sv-world-atlas .sv-atlas-footer-actions{display:flex;gap:8px;}
+#sv-world-atlas .sv-atlas-footer-actions button{flex:1;}
+#sv-world-atlas #sv-atlas-continue{flex:1.5;border-color:#aa965a;color:#f0e0b2;background:linear-gradient(#565a36,#35442b);}
+@media(min-width:650px){#sv-world-atlas .sv-atlas-header{flex-wrap:nowrap;padding:7px 12px;}#sv-world-atlas .sv-atlas-finder{flex:0 1 43%;order:0;}#sv-world-atlas #sv-atlas-close{order:1;}#sv-world-atlas .sv-atlas-heading{flex:1;}#sv-world-atlas .sv-atlas-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:16px;align-items:center;padding:8px 12px;}#sv-world-atlas #sv-atlas-hint{grid-column:1;margin-bottom:0;}#sv-world-atlas .sv-atlas-footer-actions{grid-column:2;grid-row:1/3;min-width:250px;}#sv-world-atlas .sv-atlas-footer-actions button{min-width:112px;}}
+@media(max-width:350px){#sv-world-atlas h2{font-size:16px;}#sv-world-atlas .sv-atlas-legend{gap:7px;font-size:8px;padding:4px 6px;}}
+@media(max-height:430px){#sv-world-atlas .sv-atlas-heading p{display:none;}#sv-world-atlas .sv-atlas-header{padding-top:5px;padding-bottom:5px;}#sv-world-atlas .sv-atlas-footer{padding-top:5px;padding-bottom:5px;}#sv-world-atlas .sv-atlas-tools{top:8px;right:8px;gap:4px;}#sv-world-atlas .sv-atlas-legend{bottom:7px;}}
+</style>
+<script id="survival-world-atlas-script">
+(()=>{
+'use strict';
+function install(){
+ const g=window.game,s=g?.survival,mini=document.getElementById('sv-minimap-3d'),screen=document.getElementById('sv-screen');
+ if(!s||!mini||!screen||window.ZonaSurvivalWorldMap)return;
+ const dialog=document.createElement('section');dialog.id='sv-world-atlas';dialog.hidden=true;dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-labelledby','sv-atlas-title');
+ dialog.innerHTML='<header class="sv-atlas-header"><div class="sv-atlas-heading"><h2 id="sv-atlas-title">КАРТА ЗОНЫ</h2><p id="sv-atlas-subtitle">ОБЩАЯ КАРТА · 28 СЕКТОРОВ</p></div><button id="sv-atlas-close" type="button" aria-label="Закрыть карту и продолжить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><label class="sv-atlas-finder"><select id="sv-atlas-sector" aria-label="Найти локацию и поставить точку назначения"><option value="">Найти локацию…</option></select></label></header><div class="sv-atlas-stage"><canvas id="sv-atlas-canvas" tabindex="0" role="img" aria-label="Общая карта Зоны. Коснитесь карты, чтобы поставить точку назначения; двигайте двумя пальцами для масштаба."></canvas><div class="sv-atlas-compass" aria-hidden="true">С<i></i></div><div class="sv-atlas-tools"><button id="sv-atlas-plus" type="button" aria-label="Приблизить карту"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button><button id="sv-atlas-minus" type="button" aria-label="Отдалить карту"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button><button id="sv-atlas-player" type="button" aria-label="Показать моё положение"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button><button id="sv-atlas-fit" type="button" aria-label="Показать все локации"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><path d="m8 8-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/></svg></button></div><div class="sv-atlas-scale" aria-hidden="true"><span id="sv-atlas-scale-text"></span><b id="sv-atlas-scale-line"></b></div><div class="sv-atlas-legend" aria-hidden="true"><span><i></i>Вы</span><span><i></i>Цель</span></div></div><footer class="sv-atlas-footer"><p id="sv-atlas-status" role="status" aria-live="polite"></p><p id="sv-atlas-hint">Коснитесь места, чтобы поставить цель. Двигайте карту и меняйте масштаб двумя пальцами.</p><div class="sv-atlas-footer-actions"><button id="sv-atlas-clear" type="button">Убрать точку</button><button id="sv-atlas-continue" type="button">Продолжить путь</button></div></footer>';
+ document.body.append(dialog);
+ const $=id=>document.getElementById(id),canvas=$('sv-atlas-canvas'),ctx=canvas.getContext('2d'),app=$('app'),select=$('sv-atlas-sector');
+ let pausedRun=null,resumeOnClose=false,previousFocus=null,oldInert=false,oldOverflow='',poll=0,drawFrame=0,selectedId=null,knownSectors='',isFitted=true;
+ let width=1,height=1,ratio=1,camera={x:0,y:0,zoom:1,min:.001,max:1},bounds={x:0,y:0,w:1,h:1};
+ const pointers=new Map();let gesture=null;
+ let handledTap=null;
+ // A touch click can be retargeted after closing the atlas to the game button
+ // under the same finger. Consume only the follow-up click of our own tap.
+ document.addEventListener('click',e=>{
+  if(e.detail>0&&handledTap&&performance.now()-handledTap.at<400&&Math.hypot(e.clientX-handledTap.x,e.clientY-handledTap.y)<8){e.preventDefault();e.stopImmediatePropagation();handledTap=null;}
+ },true);
+ function bindTap(element,perform){
+  let pointer=null;
+  const release=()=>{const id=pointer;pointer=null;try{if(id!==null&&element.hasPointerCapture(id))element.releasePointerCapture(id)}catch(_){}};
+  element.addEventListener('pointerdown',e=>{if(element.disabled||pointer!==null||e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();pointer=e.pointerId;try{element.setPointerCapture(pointer)}catch(_){}});
+  element.addEventListener('pointerup',e=>{if(pointer!==e.pointerId)return;e.preventDefault();const b=element.getBoundingClientRect(),inside=e.clientX>=b.left-4&&e.clientX<=b.right+4&&e.clientY>=b.top-4&&e.clientY<=b.bottom+4;release();if(inside&&!element.disabled){handledTap={x:e.clientX,y:e.clientY,at:performance.now()};perform();}});
+  for(const type of ['pointercancel','lostpointercapture'])element.addEventListener(type,e=>{if(pointer===e.pointerId)release()});
+  element.addEventListener('click',e=>{e.preventDefault();if(e.detail===0&&!element.disabled)perform()});
+ }
+ const finite=(v,fallback=0)=>Number.isFinite(Number(v))?Number(v):fallback,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),center=o=>({x:o.x+o.w/2,y:o.y+o.h/2}),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ const meters=v=>v>=1000?(v/1000).toLocaleString('ru-RU',{maximumFractionDigits:1})+' км':Math.round(v)+' м';
+ function snapshot(){
+  try{
+   const api=s.worldMap,raw=typeof api?.snapshot==='function'?api.snapshot():api?.snapshot;
+   if(!raw||!Array.isArray(raw.sectors))return null;
+   const sectors=raw.sectors.filter(o=>o&&typeof o.id==='string'&&Number.isFinite(Number(o.x))&&Number.isFinite(Number(o.y))&&Number(o.w)>0&&Number(o.h)>0).map(o=>({...o,x:Number(o.x),y:Number(o.y),w:Number(o.w),h:Number(o.h),name:String(o.name||o.id)}));
+   return {...raw,sectors,player:raw.player?{...raw.player,x:finite(raw.player.x),y:finite(raw.player.y)}:null,waypoint:raw.waypoint&&Number.isFinite(Number(raw.waypoint.x))&&Number.isFinite(Number(raw.waypoint.y))?{...raw.waypoint,x:Number(raw.waypoint.x),y:Number(raw.waypoint.y)}:null};
+  }catch(_){return null}
+ }
+ function syncViewport(){for(const name of ['--sv-visible-height','--sv-safe-top','--sv-safe-bottom','--sv-safe-left','--sv-safe-right']){const value=screen.style.getPropertyValue(name);if(value)dialog.style.setProperty(name,value)}if(!dialog.hidden)resize();}
+ function worldPoint(x,y){return {x:camera.x+(x-width/2)/camera.zoom,y:camera.y+(y-height/2)/camera.zoom}}
+ function screenPoint(p){return {x:(p.x-camera.x)*camera.zoom+width/2,y:(p.y-camera.y)*camera.zoom+height/2}}
+ function mapBounds(data){const list=data.sectors;const x=Math.min(...list.map(o=>o.x)),y=Math.min(...list.map(o=>o.y));return {x,y,w:Math.max(1,Math.max(...list.map(o=>o.x+o.w))-x),h:Math.max(1,Math.max(...list.map(o=>o.y+o.h))-y)}}
+ function fitMetrics(){return {left:16,right:66,top:26,bottom:40,w:Math.max(1,width-82),h:Math.max(1,height-66)}}
+ function clampCamera(){const margin=80/camera.zoom;camera.x=clamp(camera.x,bounds.x-margin,bounds.x+bounds.w+margin);camera.y=clamp(camera.y,bounds.y-margin,bounds.y+bounds.h+margin)}
+ function fit(data=snapshot()){
+  if(!data?.sectors.length)return;bounds=mapBounds(data);const pane=fitMetrics();camera.min=Math.max(.0001,Math.min(pane.w/bounds.w,pane.h/bounds.h));camera.max=camera.min*16;
+  camera.zoom=camera.min;camera.x=bounds.x+bounds.w/2-(pane.left+pane.w/2-width/2)/camera.zoom;camera.y=bounds.y+bounds.h/2-(pane.top+pane.h/2-height/2)/camera.zoom;isFitted=true;draw();
+ }
+ function resize(){
+  const box=canvas.parentElement.getBoundingClientRect();width=Math.max(1,box.width);height=Math.max(1,box.height);
+  ratio=Math.max(.75,Math.min(2,window.devicePixelRatio||1,Math.sqrt(1400000/(width*height))));
+  const cw=Math.max(1,Math.round(width*ratio)),ch=Math.max(1,Math.round(height*ratio));if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}
+  const data=snapshot();if(!data?.sectors.length)return;
+  if(isFitted)fit(data);else{bounds=mapBounds(data);const pane=fitMetrics();camera.min=Math.max(.0001,Math.min(pane.w/bounds.w,pane.h/bounds.h));camera.max=camera.min*16;camera.zoom=clamp(camera.zoom,camera.min,camera.max);clampCamera();draw();}
+ }
+ function zoomBy(factor,px=width/2,py=height/2){const anchor=worldPoint(px,py);camera.zoom=clamp(camera.zoom*factor,camera.min,camera.max);camera.x=anchor.x-(px-width/2)/camera.zoom;camera.y=anchor.y-(py-height/2)/camera.zoom;clampCamera();isFitted=false;queueDraw();}
+ function sectorAt(data,p){return data.sectors.find(o=>p.x>=o.x&&p.x<=o.x+o.w&&p.y>=o.y&&p.y<=o.y+o.h)||null}
+ function setDestination(p){
+  const data=snapshot();if(!data)return false;
+  let ok=false;try{ok=s.worldMap.setWaypoint(p.x,p.y)!==false}catch(_){ok=false}
+  if(!ok){$('sv-atlas-status').textContent='Выберите точку в доступной части карты.';return false}
+  selectedId=sectorAt(data,p)?.id||null;update(snapshot());queueDraw();return true;
+ }
+ function chooseSector(id){const data=snapshot(),sector=data?.sectors.find(o=>o.id===id);if(!sector)return;const p=center(sector);selectedId=id;camera.x=p.x;camera.y=p.y;camera.zoom=clamp(Math.min((width-74)/sector.w,(height-48)/sector.h)*.86,camera.min,camera.max);isFitted=false;clampCamera();setDestination(p);queueDraw();}
+ function normalLink(link){return {a:typeof link.a==='object'?link.a.id:link.a??link.from,b:typeof link.b==='object'?link.b.id:link.b??link.to,points:Array.isArray(link.points)?link.points:null}}
+ function route(data){
+  if(!data.player||!data.waypoint)return [];
+  const provided=Array.isArray(data.route)?data.route:data.route?.points;
+  if(provided?.length>1)return provided.filter(o=>o&&Number.isFinite(Number(o.x))&&Number.isFinite(Number(o.y))).slice(0,256).map(o=>({x:Number(o.x),y:Number(o.y)}));
+  const byId=new Map(data.sectors.map(o=>[o.id,o])),start=data.player.sectorId||sectorAt(data,data.player)?.id,end=data.waypoint.sectorId||sectorAt(data,data.waypoint)?.id;
+  if(!start||!end||start===end)return [data.player,data.waypoint];
+  const links=(data.links||[]).map(normalLink).filter(o=>byId.has(o.a)&&byId.has(o.b)),cost=new Map([[start,0]]),previous=new Map(),pending=new Set(byId.keys());
+  while(pending.size){let id=null,best=Infinity;for(const item of pending){const c=cost.get(item)??Infinity;if(c<best){id=item;best=c}}if(id===null||id===end)break;pending.delete(id);
+   for(const link of links){const next=link.a===id?link.b:link.b===id?link.a:null;if(!next||!pending.has(next))continue;const value=best+dist(center(byId.get(id)),center(byId.get(next)));if(value<(cost.get(next)??Infinity)){cost.set(next,value);previous.set(next,{id,link});}}
+  }
+  if(!previous.has(end))return [data.player,data.waypoint];
+  const steps=[];for(let id=end;id!==start;){const step=previous.get(id);if(!step)return [data.player,data.waypoint];steps.unshift({...step,next:id});id=step.id;}
+  const out=[data.player];for(const step of steps){const points=step.link.points?.length>1?step.link.points:[center(byId.get(step.link.a)),center(byId.get(step.link.b))];out.push(...(step.link.a===step.id?points:[...points].reverse()));}out.push(data.waypoint);return out;
+ }
+ function update(data=snapshot()){
+  if(!data)return;const signature=data.sectors.map(o=>o.id+':'+o.name).join('|');
+  if(signature!==knownSectors){knownSectors=signature;select.replaceChildren();const first=document.createElement('option');first.value='';first.textContent='Найти локацию · '+data.sectors.length;select.append(first);for(const o of data.sectors){const option=document.createElement('option');option.value=o.id;option.textContent=o.name;select.append(option)}}
+  $('sv-atlas-subtitle').textContent='ОБЩАЯ КАРТА · '+data.sectors.length+' СЕКТОРОВ';
+  const current=data.sectors.find(o=>o.id===data.player?.sectorId),target=data.waypoint&&(data.sectors.find(o=>o.id===data.waypoint.sectorId)||sectorAt(data,data.waypoint));
+  if(data.waypoint){const points=route(data);let length=0;for(let i=1;i<points.length;i++)length+=dist(points[i-1],points[i]);$('sv-atlas-status').textContent=(target?.name||'Точка назначения')+(data.player?' · '+meters(length||dist(data.player,data.waypoint)):'');$('sv-atlas-hint').textContent='Точка установлена. Коснитесь другого места, чтобы изменить маршрут.';}
+  else{$('sv-atlas-status').textContent=current?'Вы здесь: '+current.name:'Выберите точку назначения';$('sv-atlas-hint').textContent='Коснитесь места, чтобы поставить цель. Двигайте карту и меняйте масштаб двумя пальцами.';}
+  $('sv-atlas-clear').disabled=!data.waypoint;select.value=selectedId&&data.sectors.some(o=>o.id===selectedId)?selectedId:'';
+ }
+ function path(points,stroke,lineWidth,dash=[]){if(points.length<2)return;ctx.beginPath();let i=0;for(const p of points){const q=screenPoint(p);if(i++===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.setLineDash(dash);ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();ctx.setLineDash([]);}
+ function sectorColor(o){const id=o.id+' '+String(o.region||'');return /lab|sarco|reactor|institute/.test(id)?'#29392f':/swamp|marsh|lake/.test(id)?'#23453d':/forest|grove/.test(id)?'#254331':/city|pripyat|dead|military|prom/.test(id)?'#394034':'#334332'}
+ function sectorLabel(o,rect,current,target){
+  const boxWidth=Math.max(24,Math.min(150,rect.w-8)),font=camera.zoom>camera.min*2.3?12:rect.w<68?9:10.5;
+  ctx.font='600 '+font+'px Arial,sans-serif';const full=o.name.replace(/^Локация\s*:\s*/i,''),clean=full.length>19&&full.includes(':')?full.slice(full.indexOf(':')+1).trim():full,words=clean.split(/\s+/),lines=[];let line='';
+  for(const word of words){const candidate=line?line+' '+word:word;if(line&&ctx.measureText(candidate).width>boxWidth){lines.push(line);line=word}else line=candidate;}if(line)lines.push(line);
+  const maxLines=rect.h>68?3:2,overflow=lines.length>maxLines;if(overflow)lines.length=maxLines;
+  for(let i=0;i<lines.length;i++){if(ctx.measureText(lines[i]).width<=boxWidth&&!(overflow&&i===lines.length-1))continue;let text=lines[i];while(text.length>1&&ctx.measureText(text+'…').width>boxWidth)text=text.slice(0,-1);lines[i]=text+'…';}
+  const cx=rect.x+rect.w/2,cy=rect.y+rect.h/2,h=lines.length*(font+2),wid=Math.min(164,Math.max(...lines.map(l=>ctx.measureText(l).width))+10);
+  ctx.fillStyle='#102017b8';ctx.fillRect(cx-wid/2,cy-h/2-4,wid,h+8);ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=2;ctx.strokeStyle='#0c170f';ctx.fillStyle=current?'#f1dfae':target?'#e7c681':'#c4ceb2';
+  for(let i=0;i<lines.length;i++){const y=cy-h/2+font/2+i*(font+2);ctx.strokeText(lines[i],cx,y);ctx.fillText(lines[i],cx,y);}
+  if(rect.h>70&&rect.w>70&&Number(o.minLevel)>1){ctx.font='9px Arial,sans-serif';ctx.fillStyle='#a4b391';ctx.fillText('ур. '+o.minLevel,cx,cy+h/2+10);}
+ }
+ function draw(){
+  if(dialog.hidden||!ctx)return;const data=snapshot();if(!data?.sectors.length)return;
+  ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,width,height);ctx.fillStyle='#102018';ctx.fillRect(0,0,width,height);
+  const gridUnit=Math.pow(10,Math.floor(Math.log10(75/camera.zoom))),gridStep=gridUnit*camera.zoom;
+  ctx.beginPath();for(let x=((width/2-camera.x*camera.zoom)%gridStep+gridStep)%gridStep;x<width;x+=gridStep){ctx.moveTo(x,0);ctx.lineTo(x,height)}for(let y=((height/2-camera.y*camera.zoom)%gridStep+gridStep)%gridStep;y<height;y+=gridStep){ctx.moveTo(0,y);ctx.lineTo(width,y)}ctx.strokeStyle='#8f9b6d13';ctx.lineWidth=1;ctx.stroke();
+  const byId=new Map(data.sectors.map(o=>[o.id,o]));for(const raw of data.links||[]){const link=normalLink(raw);if(!byId.has(link.a)||!byId.has(link.b))continue;const points=link.points?.length>1?link.points:[center(byId.get(link.a)),center(byId.get(link.b))];path(points,'#1b2d20',7);path(points,'#89916b99',2,[5,5]);}
+  const labels=[];
+  for(const o of data.sectors){const p=screenPoint(o),w=o.w*camera.zoom,h=o.h*camera.zoom;if(p.x+w<0||p.y+h<0||p.x>width||p.y>height)continue;
+   const current=o.id===data.player?.sectorId,target=o.id===data.waypoint?.sectorId,selected=o.id===selectedId,bevel=Math.min(7,w*.08,h*.08);
+   ctx.beginPath();ctx.moveTo(p.x+bevel,p.y);ctx.lineTo(p.x+w,p.y);ctx.lineTo(p.x+w,p.y+h-bevel);ctx.lineTo(p.x+w-bevel,p.y+h);ctx.lineTo(p.x,p.y+h);ctx.lineTo(p.x,p.y+bevel);ctx.closePath();ctx.fillStyle=sectorColor(o);ctx.fill();ctx.strokeStyle=current?'#c8bd7b':target||selected?'#c6a662':'#84926a99';ctx.lineWidth=current||selected?2:1;ctx.stroke();
+   ctx.save();ctx.clip();let seed=0;for(const c of o.id)seed=(seed*31+c.charCodeAt(0))>>>0;ctx.strokeStyle='#b7c08912';ctx.lineWidth=1;for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(p.x+w*(.2+((seed>>i*3)%6)/10),p.y+h*(.25+i*.24),w*(.3+i*.08),h*.25,(seed%9)*.12,0,Math.PI*2);ctx.stroke();}ctx.restore();
+   if(w>30&&h>24)labels.push({o,rect:{x:p.x,y:p.y,w,h},current,target});
+  }
+  const points=route(data);if(points.length>1){path(points,'#0e190ed9',5);path(points,'#dfc77c',2,[7,5]);}
+  for(const item of labels)sectorLabel(item.o,item.rect,item.current,item.target);
+  if(data.waypoint){const p=screenPoint(data.waypoint);ctx.strokeStyle='#111a10';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(p.x,p.y+3);ctx.lineTo(p.x,p.y-20);ctx.stroke();ctx.strokeStyle='#efcc7c';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#efcc7c';ctx.beginPath();ctx.moveTo(p.x+1,p.y-21);ctx.lineTo(p.x+15,p.y-17);ctx.lineTo(p.x+1,p.y-11);ctx.closePath();ctx.fill();ctx.strokeStyle='#f2ce7d';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(p.x,p.y+4,7,3,0,0,Math.PI*2);ctx.stroke();}
+  if(data.player){const p=screenPoint(data.player),angle=finite(data.player.angle,0);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.fillStyle='#17352b';ctx.strokeStyle='#0b150e';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(7,8);ctx.lineTo(0,4);ctx.lineTo(-7,8);ctx.closePath();ctx.stroke();ctx.fillStyle='#c9e4bb';ctx.fill();ctx.strokeStyle='#629f7e';ctx.lineWidth=1.3;ctx.stroke();ctx.restore();ctx.beginPath();ctx.arc(p.x,p.y,16,0,Math.PI*2);ctx.strokeStyle='#bddcb178';ctx.lineWidth=1;ctx.stroke();}
+  const ideal=70/camera.zoom,power=Math.pow(10,Math.floor(Math.log10(ideal))),unit=[1,2,5,10].map(n=>n*power).reduce((best,n)=>Math.abs(n-ideal)<Math.abs(best-ideal)?n:best,power);$('sv-atlas-scale-line').style.width=Math.round(unit*camera.zoom)+'px';$('sv-atlas-scale-text').textContent=meters(unit);
+  $('sv-atlas-plus').disabled=camera.zoom>=camera.max*.999;$('sv-atlas-minus').disabled=camera.zoom<=camera.min*1.001;
+ }
+ function queueDraw(){if(dialog.hidden||drawFrame)return;drawFrame=requestAnimationFrame(()=>{drawFrame=0;draw()});}
+ function open(){
+  if(!dialog.hidden)return true;if(!s.visible||s.loading||window.ZonaSurvivalControls?.isOpen)return false;
+  const data=snapshot();if(!data?.sectors.length){g.toast?.('Карта ещё подготавливается.','gold');return false}
+  pausedRun=s.state().run;resumeOnClose=!!s.visible;if(!s.suspend()){pausedRun=null;resumeOnClose=false;return false}
+  previousFocus=document.activeElement;oldInert=!!app?.inert;if(app)app.inert=true;oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';dialog.hidden=false;selectedId=data.waypoint?.sectorId||null;isFitted=true;
+  syncViewport();update(data);resize();$('sv-atlas-close').focus({preventScroll:true});poll=setInterval(()=>{if(dialog.hidden)return;if(!s.state().run||s.state().run!==pausedRun){close(false);return}update();queueDraw()},500);return true;
+ }
+ function close(resume=true){
+  if(dialog.hidden)return false;const active=pausedRun,shouldResume=resume&&resumeOnClose&&document.visibilityState!=='hidden'&&s.state().run===active;
+  dialog.hidden=true;clearInterval(poll);poll=0;if(drawFrame)cancelAnimationFrame(drawFrame);drawFrame=0;pointers.clear();gesture=null;pausedRun=null;resumeOnClose=false;
+  if(app)app.inert=oldInert;document.body.style.overflow=oldOverflow;
+  if(shouldResume)s.enter(active.locId);
+  if(previousFocus?.isConnected&&!previousFocus.closest('[hidden]'))previousFocus.focus({preventScroll:true});return true;
+ }
+ function locate(){const data=snapshot();if(!data?.player)return;camera.x=data.player.x;camera.y=data.player.y;camera.zoom=Math.max(camera.zoom,camera.min*3);isFitted=false;clampCamera();queueDraw();}
+ function position(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+ function beginPinch(){const [a,b]=[...pointers.values()];const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};gesture={pinch:true,moved:true,distance:Math.max(1,dist(a,b)),zoom:camera.zoom,anchor:worldPoint(mid.x,mid.y)};}
+ canvas.addEventListener('pointerdown',e=>{if(dialog.hidden||pointers.size>=2||e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();const p=position(e);pointers.set(e.pointerId,p);try{canvas.setPointerCapture(e.pointerId)}catch(_){}if(pointers.size===1)gesture={pinch:false,moved:false,start:p,last:p};else if(pointers.size===2)beginPinch();});
+ canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId)||!gesture)return;e.preventDefault();const p=position(e);pointers.set(e.pointerId,p);if(pointers.size>=2){if(!gesture.pinch)beginPinch();const [a,b]=[...pointers.values()],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};camera.zoom=clamp(gesture.zoom*dist(a,b)/gesture.distance,camera.min,camera.max);camera.x=gesture.anchor.x-(mid.x-width/2)/camera.zoom;camera.y=gesture.anchor.y-(mid.y-height/2)/camera.zoom;isFitted=false;clampCamera();queueDraw();return}if(gesture.pinch){gesture={pinch:false,moved:true,start:p,last:p};return}if(dist(p,gesture.start)>6)gesture.moved=true;if(gesture.moved){camera.x-=(p.x-gesture.last.x)/camera.zoom;camera.y-=(p.y-gesture.last.y)/camera.zoom;isFitted=false;clampCamera();queueDraw();}gesture.last=p;});
+ canvas.addEventListener('pointerup',e=>{if(!pointers.has(e.pointerId))return;e.preventDefault();const p=position(e),tap=pointers.size===1&&gesture&&!gesture.pinch&&!gesture.moved&&dist(p,gesture.start)<=8;pointers.delete(e.pointerId);try{if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId)}catch(_){}if(tap)setDestination(worldPoint(p.x,p.y));if(pointers.size===1){const last=[...pointers.values()][0];gesture={pinch:false,moved:true,start:last,last};}else if(!pointers.size)gesture=null;});
+ for(const type of ['pointercancel','lostpointercapture'])canvas.addEventListener(type,e=>{if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(pointers.size){const last=[...pointers.values()][0];gesture={pinch:false,moved:true,start:last,last};}else gesture=null;});
+ canvas.addEventListener('wheel',e=>{e.preventDefault();const p=position(e);zoomBy(e.deltaY<0?1.15:1/1.15,p.x,p.y)},{passive:false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
+ canvas.addEventListener('keydown',e=>{const amount=50/camera.zoom;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();camera.x+=e.key==='ArrowRight'?amount:e.key==='ArrowLeft'?-amount:0;camera.y+=e.key==='ArrowDown'?amount:e.key==='ArrowUp'?-amount:0;isFitted=false;clampCamera();queueDraw();}else if(e.key==='+'||e.key==='='){e.preventDefault();zoomBy(1.35)}else if(e.key==='-'){e.preventDefault();zoomBy(1/1.35)}else if(e.key==='Enter'||e.key===' '){e.preventDefault();setDestination({x:camera.x,y:camera.y})}});
+ bindTap($('sv-atlas-plus'),()=>zoomBy(1.5));bindTap($('sv-atlas-minus'),()=>zoomBy(1/1.5));bindTap($('sv-atlas-player'),locate);bindTap($('sv-atlas-fit'),()=>fit());select.addEventListener('change',()=>{if(select.value)chooseSector(select.value)});
+ bindTap($('sv-atlas-clear'),()=>{s.worldMap?.clearWaypoint();selectedId=null;update();queueDraw()});bindTap($('sv-atlas-close'),()=>close());bindTap($('sv-atlas-continue'),()=>close());
+ dialog.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close();return}if(e.key!=='Tab')return;const items=[...dialog.querySelectorAll('button,select,canvas[tabindex]')].filter(el=>!el.disabled&&el.getClientRects().length),first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}});
+ mini.setAttribute('role','button');mini.tabIndex=0;mini.setAttribute('aria-label','Открыть общую карту Зоны и поставить точку назначения');mini.title='Карта Зоны';bindTap(mini,open);mini.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}});
+ window.addEventListener('resize',syncViewport);window.visualViewport?.addEventListener('resize',syncViewport);for(const event of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged'])window.Telegram?.WebApp?.onEvent?.(event,syncViewport);
+ window.addEventListener('blur',()=>close(false));window.addEventListener('pagehide',()=>close(false));document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')close(false)});
+ if(typeof ResizeObserver==='function')new ResizeObserver(()=>{if(!dialog.hidden)resize()}).observe(canvas.parentElement);
+ window.ZonaSurvivalWorldMap={open,close,refresh(){if(!dialog.hidden){update();resize()}},get isOpen(){return !dialog.hidden},get view(){return {x:camera.x,y:camera.y,zoom:camera.zoom,width,height}}};
+}
+window.addEventListener('zona:ready',install);if(window.game?.survival)install();
 })();
 </script>
 </body>
