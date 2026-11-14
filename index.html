@@ -9673,25 +9673,70 @@ const LOCAL_ATMOSPHERE_PROFILES=Object.freeze({
 });
 const LOCAL_ATMOSPHERE_CACHE=new WeakMap();
 function localAtmosphereHash(value){let h=2166136261;for(const c of String(value)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function spreadLocalSources(list,limit){
+ if(list.length<=limit)return list.slice();
+ const chosen=[],used=new Set(),distance=new Float64Array(list.length);distance.fill(Infinity);let next=0;
+ while(chosen.length<limit){const p=list[next];chosen.push(p);used.add(next);let far=-1;
+  for(let i=0;i<list.length;i++){const q=list[i],d=(q.x-p.x)**2+(q.z-p.z)**2;distance[i]=Math.min(distance[i],d);if(!used.has(i)&&distance[i]>far){far=distance[i];next=i;}}
+ }
+ return chosen;
+}
 function localAtmospherePlan(map,room){
  let rooms=LOCAL_ATMOSPHERE_CACHE.get(map);if(!rooms){rooms=new Map();LOCAL_ATMOSPHERE_CACHE.set(map,rooms)}
  const key=room??null;if(rooms.has(key))return rooms.get(key);
- const scene=key===null?map:map.rooms[key],profile=LOCAL_ATMOSPHERE_PROFILES[map.theme?.id]||['paper','papers'],inside=key!==null,sources=[],traces=[];
- const add=(x,z,y,kind,id)=>{if(sources.length>=8||![x,z,y].every(Number.isFinite))return;const seed=localAtmosphereHash((map.theme?.id||'')+':'+key+':'+id+':'+Math.round(x)+':'+Math.round(z));sources.push({id:seed,x,z,y,kind,period:26+seed%17,duration:1.3+(seed%6)*.17,offset:seed%7919/17});};
+ const scene=key===null?map:map.rooms[key],profile=LOCAL_ATMOSPHERE_PROFILES[map.theme?.id]||['paper','papers'],inside=key!==null,candidates=[],traces=[];
+ const add=(x,z,y,kind,id,baseY=2)=>{if(candidates.length>=128||![x,z,y,baseY].every(Number.isFinite))return;const seed=localAtmosphereHash((map.theme?.id||'')+':'+key+':'+id+':'+Math.round(x)+':'+Math.round(z));candidates.push({id:seed,x,z,y,baseY,kind,period:26+seed%17,duration:1.3+(seed%6)*.17,offset:seed%7919/17});};
  if(inside){
-  for(const p of scene.props||[])if(['machine','sink','shelf'].includes(p.kind)){add(p.x+p.w/2,p.y+p.h/2,12,p.kind==='sink'?'drip':profile[0],p.kind+sources.length);if(sources.length>=3)break;}
-  if(scene.exit){const p=scene.exit,kind=profile[0]==='relay'?'metal':profile[0]==='water'?'drip':profile[0];add(p.x+21,p.y-14,kind==='drip'?17:3,kind,'door');traces.push({x:p.x+19,z:p.y-23});}
+  for(const p of scene.props||[])if(['machine','sink','shelf'].includes(p.kind)){
+   const sink=p.kind==='sink',kind=sink?'drip':p.kind==='machine'?'relay':'paper';
+   add(p.x+p.w*.5,p.y+p.h*(sink?.5:1)+(sink?0:2),sink?24:kind==='relay'?18:3,kind,p.kind+':'+p.x+':'+p.y,sink?13:2);
+  }
+  if(scene.exit){const p=scene.exit;add(p.x+21,p.y-14,3,profile[0]==='paper'?'paper':'metal','door');traces.push({x:p.x+19,z:p.y-23});}
  }else{
   const kinds={metal:['wagon','truck','factory','crane','wreck','pipes'],water:['pond','well','pier','boat','ship'],relay:['generator','server','reactor','laboratory','radar','antenna'],paper:['camp','safebase','shack','facade'],drip:['shack','factory','pipes','tower']}[profile[0]]||[];
-  for(const p of map.landmarks||[])if(kinds.includes(p.kind)){add(p.x+12,p.y+8,profile[0]==='relay'?22:profile[0]==='drip'?26:3,profile[0],p.kind+sources.length);if(sources.length>=4)break;}
-  for(const b of map.buildings||[]){if(!b.door)continue;const p=b.door,kind=profile[0]==='water'?'drip':profile[0]==='relay'?'metal':profile[0];add(p.x+24,p.y+15,kind==='drip'?24:3,kind,'door'+b.id);if(traces.length<4)traces.push({x:p.x+22,z:p.y+16});}
+  for(const p of map.landmarks||[])if(kinds.includes(p.kind)){
+   const id=p.kind+':'+p.x+':'+p.y;
+   if(profile[0]==='water'){
+    if(p.kind==='pond')add(p.x+12,p.y+8,2.2,'water',id,2.2);
+    else if(p.kind==='well')add(p.x+31,p.y+36,62,'drip',id);
+    else if(p.kind==='pier')add(p.x+65,p.y+20,18,'drip',id);
+    else add(p.x-50,p.y+42,3,'metal',id);
+   }else if(profile[0]==='relay'){
+    if(p.kind==='generator'||p.kind==='server')add(p.x+10,p.y+28.5,28,'relay',id);
+    else if(p.kind==='laboratory')add(p.x,p.y+49,42,'relay',id);
+    else if(p.kind==='radar'||p.kind==='antenna')add(p.x-28,p.y+44,16,'relay',id);
+    else add(p.x-56,p.y+36,3,'metal',id);
+   }else if(profile[0]==='drip')add(p.x+20,p.y+(p.kind==='pipes'?8:42),p.kind==='pipes'?26:p.kind==='factory'?96:66,'drip',id);
+   else add(p.x+(profile[0]==='paper'?36:12),p.y+(profile[0]==='paper'?30:8),3,profile[0],id);
+  }
+  for(const b of map.buildings||[]){if(!b.door)continue;const p=b.door,kind=profile[0]==='water'?'drip':profile[0]==='relay'?'metal':profile[0];
+   if(kind==='drip')add(Math.max(b.x+8,Math.min(b.x+b.w-8,p.x+24)),b.y+b.h+9,b.style==='institute'?158:b.style==='residential'?82:96,kind,'door'+b.id);
+   else add(p.x+24,p.y+15,3,kind,'door'+b.id);
+   if(traces.length<4)traces.push({x:p.x+22,z:p.y+16});
+  }
  }
- const plan={sources,traces,story:profile[1]};rooms.set(key,plan);return plan;
+ const pool=spreadLocalSources(candidates,64),plan={pool,sources:spreadLocalSources(pool,8),active:[],activeX:Infinity,activeZ:Infinity,traces,story:profile[1]};rooms.set(key,plan);return plan;
+}
+function localAtmosphereSources(map,room,point){
+ const plan=localAtmospherePlan(map,room);if(!point||!Number.isFinite(point.x)||!Number.isFinite(point.y))return plan.sources;
+ if(Math.hypot(point.x-plan.activeX,point.y-plan.activeZ)<64)return plan.active;
+ plan.activeX=point.x;plan.activeZ=point.y;const selected=[],distance=[];
+ for(const s of plan.pool){const d=(s.x-point.x)**2+(s.z-point.y)**2;let i=0;while(i<distance.length&&distance[i]<=d)i++;if(i>=8)continue;distance.splice(i,0,d);selected.splice(i,0,s);if(selected.length>8){selected.pop();distance.pop();}}
+ plan.active=selected;return selected;
 }
 function localAtmospherePhase(source,time){const age=((time+source.offset)%source.period+source.period)%source.period;return age<source.duration?age/source.duration:-1}
+function localAtmosphereDistanceFade(distance){if(!Number.isFinite(distance))return 0;const u=Math.max(0,Math.min(1,(distance-220)/100));return 1-u*u*(3-2*u);}
 function localAtmosphereOccluded(run,map,source){
  const scene=run.room==null?map:map.rooms[run.room],walls=run.room==null?(map.buildings||[]):(scene.walls||[]);
- for(let i=1;i<6;i++){const k=i/6,x=run.x+(source.x-run.x)*k,z=run.y+(source.z-run.y)*k;for(const b of walls)if(x>b.x&&x<b.x+b.w&&z>b.y&&z<b.y+b.h)return true;}return false;
+ const dx=source.x-run.x,dz=source.z-run.y,epsilon=.001;
+ for(const b of walls){let near=epsilon,far=1-epsilon;
+  if(Math.abs(dx)<1e-8){if(run.x<=b.x||run.x>=b.x+b.w)continue;}
+  else{let a=(b.x-run.x)/dx,z=(b.x+b.w-run.x)/dx;if(a>z){const v=a;a=z;z=v;}near=Math.max(near,a);far=Math.min(far,z);if(near>=far)continue;}
+  if(Math.abs(dz)<1e-8){if(run.y<=b.y||run.y>=b.y+b.h)continue;}
+  else{let a=(b.y-run.y)/dz,z=(b.y+b.h-run.y)/dz;if(a>z){const v=a;a=z;z=v;}near=Math.max(near,a);far=Math.min(far,z);if(near>=far)continue;}
+  return true;
+ }
+ return false;
 }
 function addLocalStoryTraces(m,map,room,low){
  const plan=localAtmospherePlan(map,room),limit=low?2:4;let anchors=0;
@@ -9704,12 +9749,12 @@ function addLocalStoryTraces(m,map,room,low){
  return Math.min(anchors,limit);
 }
 function drawLocalAtmosphereFX(c,width,height,run,map,renderer,canvasWidth,canvasHeight,low,still){
- if(still||!renderer?.project)return 0;const sources=localAtmospherePlan(map,run.room).sources,time=run.worldTime||0,limit=low?1:3;let drawn=0;
+ if(still||!renderer?.project)return 0;const sources=localAtmosphereSources(map,run.room,run),time=run.worldTime||0,limit=low?1:3;let drawn=0;
  const project=(x,y,z)=>{const p=renderer.project(x,y,z);return p&&p.visible?{x:p.x*width/Math.max(1,canvasWidth),y:p.y*height/Math.max(1,canvasHeight)}:null;};
- for(const s of sources){if(drawn>=limit)break;const phase=localAtmospherePhase(s,time);if(phase<0||Math.hypot(s.x-run.x,s.z-run.y)>320||localAtmosphereOccluded(run,map,s))continue;
-  const pulse=Math.sin(Math.PI*phase);c.save();c.lineWidth=.7;c.strokeStyle='rgba(177,184,155,'+(pulse*.33)+')';c.fillStyle='rgba(181,180,151,'+(pulse*.28)+')';let p;
-  if(s.kind==='water'){p=project(s.x,2.2,s.z);const edge=project(s.x+3+phase*8,2.2,s.z);if(p&&edge){const rr=Math.max(.7,Math.abs(edge.x-p.x));c.beginPath();c.ellipse(p.x,p.y,rr,rr*.4,0,0,Math.PI*2);c.stroke();}}
-  else if(s.kind==='drip'){p=project(s.x,2+(1-phase)*Math.max(10,s.y),s.z);if(p){c.beginPath();c.moveTo(p.x,p.y-1.5);c.lineTo(p.x,p.y+1);c.stroke();}}
+ for(const s of sources){if(drawn>=limit)break;const phase=localAtmospherePhase(s,time),fade=localAtmosphereDistanceFade(Math.hypot(s.x-run.x,s.z-run.y));if(phase<0||fade<=0||localAtmosphereOccluded(run,map,s))continue;
+  const pulse=Math.sin(Math.PI*phase);c.save();c.globalAlpha=(Number.isFinite(c.globalAlpha)?c.globalAlpha:1)*fade;c.lineWidth=.7;c.strokeStyle='rgba(177,184,155,'+(pulse*.33)+')';c.fillStyle='rgba(181,180,151,'+(pulse*.28)+')';let p;
+  if(s.kind==='water'){p=project(s.x,s.baseY,s.z);const edge=project(s.x+3+phase*8,s.baseY,s.z);if(p&&edge){const rr=Math.max(.7,Math.abs(edge.x-p.x));c.beginPath();c.ellipse(p.x,p.y,rr,rr*.4,0,0,Math.PI*2);c.stroke();}}
+  else if(s.kind==='drip'){p=project(s.x,s.baseY+(1-phase)*Math.max(1,s.y-s.baseY),s.z);if(p){c.beginPath();c.moveTo(p.x,p.y-1.5);c.lineTo(p.x,p.y+1);c.stroke();}}
   else if(s.kind==='paper'){p=project(s.x+Math.sin(phase*Math.PI)*9,2+pulse*9,s.z+phase*4);if(p){c.translate(p.x,p.y);c.rotate(Math.sin(phase*5+s.id)*.35);c.fillRect(-1.7,-.7,3.4,1.4);}}
   else if(s.kind==='relay'){p=project(s.x,s.y,s.z);if(p){const flicker=Math.sin(phase*25)>0?.32:.08;c.fillStyle='rgba(153,186,171,'+flicker*pulse+')';c.fillRect(p.x-.8,p.y-.8,1.6,1.6);}}
   else{p=project(s.x,2+pulse*5,s.z);if(p){for(let j=0;j<(low?1:3);j++)c.fillRect(p.x+Math.sin(s.id+j)*phase*6,p.y-j*phase, .7,.7);}}
@@ -9717,11 +9762,15 @@ function drawLocalAtmosphereFX(c,width,height,run,map,renderer,canvasWidth,canva
  }
  return drawn;
 }
-window.ZonaSurvivalLocalAtmosphere={profiles:LOCAL_ATMOSPHERE_PROFILES,sources:(map,room)=>localAtmospherePlan(map,room).sources,phase:localAtmospherePhase,addStoryTraces:addLocalStoryTraces,drawFX:drawLocalAtmosphereFX,occluded:localAtmosphereOccluded,limits:{sources:8,visibleEvents:3,ecoEvents:1},triangleBudget:{normal:192,eco:40}};
+window.ZonaSurvivalLocalAtmosphere={profiles:LOCAL_ATMOSPHERE_PROFILES,sources:localAtmosphereSources,phase:localAtmospherePhase,distanceFade:localAtmosphereDistanceFade,addStoryTraces:addLocalStoryTraces,drawFX:drawLocalAtmosphereFX,occluded:localAtmosphereOccluded,limits:{sources:8,candidates:64,visibleEvents:3,ecoEvents:1},triangleBudget:{normal:192,eco:40}};
 
 
+function sceneFocusPoint(map,point){
+ const x=point?.x,y=point?.y;
+ return {x:Number.isFinite(x)?x:Number.isFinite(map.exit?.x)?map.exit.x:140,y:Number.isFinite(y)?y:Number.isFinite(map.exit?.y)?map.exit.y:1260};
+}
 function nearbySceneMap(map,point,radius=1300){
- const x=Number(point?.x)||map.exit?.x||140,z=Number(point?.y)||map.exit?.y||1260,near={...map};
+ const origin=sceneFocusPoint(map,point),x=origin.x,z=origin.y,near={...map};
  const touches=o=>{const pad=Math.max(150,Number(o.r)||0,(Number(o.s)||0)*3),w=Number(o.w)||0,h=Number(o.h)||0;return o.x+w+pad>=x-radius&&o.x-pad<=x+radius&&o.y+h+pad>=z-radius&&o.y-pad<=z+radius;};
  for(const key of ['buildings','trees','scraps','pebbles','reeds','landmarks','lights','dressing','walls'])if(Array.isArray(map[key]))near[key]=map[key].filter(touches);
  if(map.fences)near.fences=map.fences.filter(o=>touches({...o,w:o.dir==='h'?o.w:0,h:o.dir==='v'?o.w:0}));
@@ -9732,12 +9781,45 @@ function createStaticSceneWorker(){
  let url=null;
  try{
   const source=document.getElementById('zona-3d-engine')?.textContent;if(!source)return null;
-  const tail="\nself.onmessage=e=>{try{const p=self.ZonaSurvival3D.buildWorkerScene(e.data.map,e.data.room,e.data.eco);self.postMessage({data:p.data,chunks:p.chunks,water:p.water},[p.data.buffer,p.water.data.buffer]);}catch(error){self.postMessage({error:String(error&&error.message||error)});}};";
+  const tail="\nself.onmessage=e=>{try{const q=e.data,send=(p,phase)=>self.postMessage({data:p.data,chunks:p.chunks,water:p.water,phase},[p.data.buffer,p.water.data.buffer]);if(q.room==null)send(self.ZonaSurvival3D.buildWorkerNearScene(q.map,q.eco,q.focus),'near');send(self.ZonaSurvival3D.buildWorkerScene(q.map,q.room,q.eco),'full');}catch(error){self.postMessage({error:String(error&&error.message||error)});}};";
   url=URL.createObjectURL(new Blob(['self.window=self;\n',source,tail],{type:'text/javascript'}));
   return {worker:new Worker(url),url};
  }catch(error){if(url)URL.revokeObjectURL(url);return null;}
 }
+
+function buildWorkerNearScene(map,eco,point){return buildWorkerScene(nearbySceneMap(map,point,760),null,eco);}
+
 function buildWorkerScene(map,room,eco){const mesh=staticMesh(map,room,eco),water=buildFootfallWaterIndex(mesh,4096,true),packed=packStaticChunks(mesh);return {data:packed.data,chunks:packed.chunks,water};}
+
+
+const PENDING_FOOTFALL_WATER=Object.freeze({at:()=>null,triangles:0,sourceTriangles:0,complete:false,gridCells:0,dataBytes:0});
+function makeScenePlaceholder(map,room,point){
+ const scene=room==null?map:map.rooms[room],t=map.theme,m=new Mesh(),inside=room!=null;
+ const ground=inside?t.roomGround:t.ground;
+ // These are the same floor heights and extents as the detailed generator.
+ m.plane(scene.w/2,-1,scene.h/2,scene.w,scene.h,ground,inside?2:0);
+ m.plane(scene.w/2,-3,scene.h/2,scene.w+140,scene.h+140,t.groundAlt||ground,0);
+ if(inside){
+  for(const zone of (scene.zones||[]).slice(0,16))m.plane(zone.x+zone.w/2,-.5,zone.y+zone.h/2,zone.w,zone.h,zone.color,roomPalette(zone.name).floor);
+  // A bounded shell makes the immediate doorway readable while details arrive.
+  for(const wall of (scene.walls||[]).slice(0,13))m.box(wall.x+wall.w/2,0,wall.y+wall.h/2,wall.w,58,wall.h,t.roomWall);
+  m.box(0,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w,0,scene.h/2,13,64,scene.h,'#59605a');m.box(scene.w/2,0,0,scene.w,64,13,'#59605a');
+ }else{
+  const origin=sceneFocusPoint(map,point),distance=o=>{const dx=(o.x+(o.w||0)/2)-origin.x,dz=(o.y+(o.h||0)/2)-origin.y;return dx*dx+dz*dz;};
+  const nearby=(items,limit)=>(items||[]).filter(o=>distance(o)<1100*1100).sort((a,b)=>distance(a)-distance(b)).slice(0,limit);
+  for(const b of nearby(map.buildings,8)){
+   m.box(b.x+b.w/2,0,b.y+b.h/2,b.w,b.style==='institute'?154:82,b.h,t.building,2);
+   if(b.door)m.box(b.door.x,0,b.y+b.h+1,45,53,3,'#252f2a',56);
+  }
+  for(const f of nearby(map.fences,8)){const horizontal=f.dir==='h';m.box(f.x+(horizontal?f.w/2:0),0,f.y+(horizontal?0:f.w/2),horizontal?f.w:3,25,horizontal?3:f.w,'#716148',29);}
+  for(const tr of nearby(map.trees,12)){
+   const x=tr.x+15,z=tr.y+15,h=(tr.size||28)*1.6,r=(tr.size||28)*.65;
+   m.box(x,0,z,30,h,30,t.treeDark||'#404933',31);
+   if(sectorEcology(t.id)!=='sealed')for(let i=0;i<4;i++){const a=i*Math.PI/2,b=a+Math.PI/2;m.tri([x+Math.cos(a)*r,h*.65,z+Math.sin(a)*r],[x,h*1.35,z],[x+Math.cos(b)*r,h*.65,z+Math.sin(b)*r],t.treeMid||'#566247',1,30);}
+  }
+ }
+ applySurfacePack(m,map,room);return new Float32Array(m.data);
+}
 
 function staticMesh(map,room,eco){const scene=room==null?map:map.rooms[room],t=map.theme,m=new Mesh(),low=eco;
 const alt=t.groundAlt||t.ground,ground=room==null?t.ground:t.roomGround;
@@ -10145,7 +10227,7 @@ const EMPTY_FOOTFALL_WATER={at:()=>null,triangles:0,sourceTriangles:0,complete:t
 
 function createFootfallMotion(eco){
  const events=[],limit=eco?2:4,spacing=32;let sceneKey={},water=EMPTY_FOOTFALL_WATER,lastValid=false,lastX=0,lastZ=0,lastTime=0,carry=0,side=1,sequence=0;
- const reset=(key,index=EMPTY_FOOTFALL_WATER)=>{sceneKey=key;water=index;events.length=0;lastValid=false;carry=0;side=1;};
+ const reset=(key,index=EMPTY_FOOTFALL_WATER,preserveSameScene=false)=>{const same=key===sceneKey;sceneKey=key;water=index;if(preserveSameScene&&same)return;events.length=0;lastValid=false;carry=0;side=1;};
  const radiusAt=(x,z,y)=>{
   let safe=0;
   for(const r of [2.5,5,8,12]){
@@ -11588,26 +11670,47 @@ function sceneShadows(run,enemyData){
 }
 
 const backgroundScenes=new Set();
+let roomPrewarm=null,roomWarmRun=null,roomWarmCandidate=null,roomWarmStableAt=0,roomWarmNextScan=0,roomWarmRetryAt=0,roomWarmRequests=0,roomWarmCompleted=0,roomWarmCancelled=0,roomWarmFailures=0;
+
+function requiredJobCurrent(job){
+ if(!job||disposed||gl.isContextLost()||!backgroundScenes.has(job)||job.cached?.job!==job)return false;
+ if(job.prewarm)return currentRoomPrewarm(job);
+ return sceneCache.get(job.room??null)===job.cached;
+}
+
 function releaseSceneWorker(job){if(job.worker){job.worker.onmessage=job.worker.onerror=null;job.worker.terminate();job.worker=null}if(job.url){URL.revokeObjectURL(job.url);job.url=null}}
 function cancelSceneBuild(job){
  if(job.timer)clearTimeout(job.timer);job.timer=0;releaseSceneWorker(job);
- if(job.uploadBuffer){gl.deleteBuffer(job.uploadBuffer);job.uploadBuffer=null}
- job.data=job.water=null;if(job.cached.job===job)job.cached.job=null;backgroundScenes.delete(job);
+ if(job.uploadBuffer){gl.deleteBuffer(job.uploadBuffer);job.uploadBuffer=null;}
+ job.data=job.water=job.chunks=job.queuedPacket=null;
+ if(job.cached.job===job)job.cached.job=null;backgroundScenes.delete(job);
+ if(roomPrewarm===job){if(!job.finished)roomWarmCancelled++;roomPrewarm=null;}
 }
+
 function finishSceneUpload(job){
- const cached=job.cached,old=cached.buffer;
+ if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}
+ const cached=job.cached,old=cached.buffer,phase=job.phase||'full',complete=phase==='full';
  cached.buffer=job.uploadBuffer;job.uploadBuffer=null;cached.length=job.data.length;cached.chunks=job.chunks;
  const w=job.water;cached.waterIndex=makeFootfallWaterQuery(w.data,w.grid,w.wide,w.cellSize,w.sourceTriangles,w.references);
- cached.complete=true;cached.fullTriangles=cached.length/30;cached.error=null;
- if(roomKey===null)useStaticScene(cached,null,false);
- if(old!==cached.buffer)gl.deleteBuffer(old);cancelSceneBuild(job);
+ cached.complete=complete;cached.phase=phase;cached.error=null;
+ if(complete)cached.fullTriangles=cached.length/30;
+ else{cached.nearTriangles=cached.length/30;cached.nearAt=performance.now();cached.previewBuilds++;}
+ if(complete)finishRoomPrewarm(job);
+ const key=job.room??null;if(roomKey===key)useStaticScene(cached,key,false);
+ if(old&&old!==cached.buffer)gl.deleteBuffer(old);
+ job.data=job.water=job.chunks=null;job.offset=0;
+ if(complete){cancelSceneBuild(job);return;}
+ // A worker can finish the full packet while the near packet is still uploading.
+ // Give the displayed near scene a frame, then begin the queued full upload.
+ if(job.queuedPacket){const packet=job.queuedPacket;job.queuedPacket=null;job.timer=setTimeout(()=>{job.timer=0;try{acceptScenePacket(job,packet);}catch(error){failSceneBuild(job,error);}},0);}
 }
+
 function useStaticScene(cached,key,reset=true){
  staticBuffer=cached.buffer;staticChunks=cached.chunks;staticData={length:cached.length};roomKey=key;shadowValid=false;shadowAnchor=null;
- if(reset){focus=null;cutBuilding=null;cutFade=0;}footfallMotion.reset(key,cached.waterIndex);
+ if(reset){focus=null;cutBuilding=null;cutFade=0;}footfallMotion.reset(key,cached.waterIndex,!reset);
 }
 function uploadSceneSlice(job){
- job.timer=0;if(disposed||gl.isContextLost()){cancelSceneBuild(job);return;}
+ job.timer=0;if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}
  const until=performance.now()+3;
  try{
   gl.bindBuffer(gl.ARRAY_BUFFER,job.uploadBuffer);
@@ -11616,59 +11719,137 @@ function uploadSceneSlice(job){
   finishSceneUpload(job);
  }catch(error){failSceneBuild(job,error);}
 }
+
 function acceptScenePacket(job,packet){
- if(disposed||gl.isContextLost()){cancelSceneBuild(job);return;}
- job.data=packet.data;job.chunks=packet.chunks;job.water=packet.water;job.offset=0;job.cached.fullTriangles=packet.data.length/30;
- releaseSceneWorker(job);job.uploadBuffer=gl.createBuffer();if(!job.uploadBuffer)throw Error('Scene upload buffer unavailable');
+ if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}
+ const phase=packet.phase==='near'?'near':'full';
+ if(phase==='full'){job.cached.fullTriangles=packet.data.length/30;releaseSceneWorker(job);}
+ if(job.data||job.uploadBuffer){if(phase==='full')job.queuedPacket=packet;return;}
+ job.data=packet.data;job.chunks=packet.chunks;job.water=packet.water;job.phase=phase;job.offset=0;
+ job.uploadBuffer=gl.createBuffer();if(!job.uploadBuffer)throw Error('Scene upload buffer unavailable');
  gl.bindBuffer(gl.ARRAY_BUFFER,job.uploadBuffer);gl.bufferData(gl.ARRAY_BUFFER,job.data.byteLength,gl.STATIC_DRAW);
  if(gl.getBufferParameter(gl.ARRAY_BUFFER,gl.BUFFER_SIZE)!==job.data.byteLength){
-  // A tight mobile GPU budget may not fit both preview and full stores.
-  // Reuse the preview's store instead of keeping an extra full allocation.
-  gl.getError();gl.deleteBuffer(job.uploadBuffer);job.uploadBuffer=job.cached.buffer;
-  gl.bindBuffer(gl.ARRAY_BUFFER,job.uploadBuffer);gl.bufferData(gl.ARRAY_BUFFER,job.data,gl.STATIC_DRAW);
-  if(gl.getBufferParameter(gl.ARRAY_BUFFER,gl.BUFFER_SIZE)!==job.data.byteLength){job.uploadBuffer=null;job.fallback=true;throw Error('Scene does not fit the available GPU memory');}
-  finishSceneUpload(job);return;
+  gl.getError();gl.deleteBuffer(job.uploadBuffer);job.uploadBuffer=null;
+  if(job.prewarm)throw Error('Interior preparation did not fit the GPU budget');
+  // Release the large displayed preview before retrying the existing packet.
+  // The temporary shell stays drawable; the full upload remains sliced.
+  job.fallback=true;
+  const cached=job.cached,old=cached.buffer,key=job.room??null;
+  const packed=packStaticChunks(makeScenePlaceholder(map,key,cached.nearOrigin)),shell=gl.createBuffer();
+  if(!shell)throw Error('Scene recovery buffer unavailable');
+  try{bindBuffer(shell,packed.data,gl.STATIC_DRAW);if(gl.getBufferParameter(gl.ARRAY_BUFFER,gl.BUFFER_SIZE)!==packed.data.byteLength)throw Error('Scene recovery shell unavailable');}catch(error){gl.deleteBuffer(shell);throw error;}
+  cached.buffer=shell;cached.length=packed.data.length;cached.chunks=packed.chunks;cached.waterIndex=PENDING_FOOTFALL_WATER;cached.phase='placeholder';
+  if(roomKey===key)useStaticScene(cached,key,false);
+  if(old)gl.deleteBuffer(old);
+  job.timer=setTimeout(()=>{
+   job.timer=0;if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}
+   try{
+    job.uploadBuffer=gl.createBuffer();if(!job.uploadBuffer)throw Error('Scene upload buffer unavailable');
+    gl.bindBuffer(gl.ARRAY_BUFFER,job.uploadBuffer);gl.bufferData(gl.ARRAY_BUFFER,job.data.byteLength,gl.STATIC_DRAW);
+    if(gl.getBufferParameter(gl.ARRAY_BUFFER,gl.BUFFER_SIZE)!==job.data.byteLength){gl.getError();throw Error('Scene does not fit the available GPU memory');}
+    job.timer=setTimeout(()=>uploadSceneSlice(job),0);
+   }catch(error){failSceneBuild(job,error);}
+  },0);
+  return;
  }
  job.timer=setTimeout(()=>uploadSceneSlice(job),0);
 }
+
 function failSceneBuild(job,error){
- releaseSceneWorker(job);if(disposed){cancelSceneBuild(job);return;}
+ if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}
+ if(job.prewarm){roomWarmFailures++;roomWarmRetryAt=performance.now()+8000;cancelSceneBuild(job);return;}
+ releaseSceneWorker(job);if(job.timer)clearTimeout(job.timer);job.timer=0;
  if(job.fallback){job.cached.error=String(error?.message||error);cancelSceneBuild(job);canvas.dispatchEvent(new Event('webglcontextlost',{cancelable:true}));return;}
  job.fallback=true;job.cached.worker=false;
- if(job.uploadBuffer){gl.deleteBuffer(job.uploadBuffer);job.uploadBuffer=null;}job.data=job.water=null;
- job.timer=setTimeout(()=>{job.timer=0;if(disposed){cancelSceneBuild(job);return;}try{acceptScenePacket(job,buildWorkerScene(map,null,eco));}catch(e){failSceneBuild(job,e)}},0);
+ if(job.uploadBuffer){gl.deleteBuffer(job.uploadBuffer);job.uploadBuffer=null;}job.data=job.water=job.chunks=job.queuedPacket=null;
+ // Compatibility only: browsers without usable workers keep the old generator,
+ // deferred until the immediate floor/shell has had a chance to appear.
+ job.timer=setTimeout(()=>{job.timer=0;if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}try{acceptScenePacket(job,buildWorkerScene(map,job.room??null,eco));}catch(e){failSceneBuild(job,e);}},0);
 }
-function startSceneBuild(){
- const cached=sceneCache.get(null),job=cached?.job;if(!job||job.started||disposed)return;
+
+function startSceneBuild(key=roomKey){
+ const job=sceneCache.get(key)?.job;if(!job||job.started||!requiredJobCurrent(job))return;
  job.started=true;
- try{job.worker.postMessage({map,room:null,eco});}catch(error){failSceneBuild(job,error);}
+ if(!job.worker){failSceneBuild(job,Error('Scene worker unavailable'));return;}
+ try{job.worker.postMessage({map,room:job.room??null,eco,focus:job.cached.nearOrigin});}catch(error){failSceneBuild(job,error);}
 }
+
 function refreshNearScene(cached,point){
- const origin=cached.nearOrigin,d=Math.hypot(point.x-origin.x,point.y-origin.y);
- if(d<450||(d<975&&performance.now()-cached.nearAt<1200))return;
- const mesh=staticMesh(nearbySceneMap(map,point),null,eco),waterIndex=buildFootfallWaterIndex(mesh),packed=packStaticChunks(mesh),buffer=gl.createBuffer();
- if(!buffer)return;bindBuffer(buffer,packed.data,gl.STATIC_DRAW);gl.deleteBuffer(cached.buffer);
- cached.buffer=buffer;cached.length=packed.data.length;cached.chunks=packed.chunks;cached.waterIndex=waterIndex;cached.nearOrigin={x:point.x,y:point.y};cached.nearAt=performance.now();cached.nearTriangles=cached.length/30;cached.previewBuilds++;
- useStaticScene(cached,null,false);
+ // The worker's full scene follows its local packet; movement must never build
+ // another detailed mesh on the input/render thread while either is pending.
+ if(cached.job&&!cached.job.started)startSceneBuild(null);
 }
+
+function nearestWarmDoor(run){
+ let nearest=220*220,key=null;
+ for(let i=0;i<(map.buildings||[]).length;i++){
+  const door=map.buildings[i].door;if(!door||!map.rooms?.[i])continue;
+  const dx=door.x-run.x,dz=door.y-run.y,distance=dx*dx+dz*dz;
+  if(distance<nearest){nearest=distance;key=i;}
+ }
+ return key;
+}
+function currentRoomPrewarm(job){
+ if(!job.prewarm)return true;
+ return roomPrewarm===job&&backgroundScenes.has(job)&&roomWarmRun?.room===null&&nearestWarmDoor(roomWarmRun)===job.room;
+}
+function cancelRoomPrewarm(){
+ if(roomPrewarm)cancelSceneBuild(roomPrewarm);
+ roomWarmCandidate=null;roomWarmStableAt=0;
+}
+function finishRoomPrewarm(job){
+ if(!job.prewarm)return;
+ for(const [key,old]of sceneCache)if(key!==null&&key!==job.room){if(old.job)cancelSceneBuild(old.job);if(old.buffer)gl.deleteBuffer(old.buffer);sceneCache.delete(key);}
+ sceneCache.set(job.room,job.cached);sceneBuilds++;job.finished=true;roomWarmCompleted++;
+}
+function updateRoomPrewarm(run){
+ roomWarmRun=run;
+ const outside=sceneCache.get(null);
+ if(disposed||gl.isContextLost()||!run||run.room!==null||!outside?.complete||!outside.worker||options.prefetchRooms===false){cancelRoomPrewarm();return;}
+ const now=performance.now();if(now<roomWarmNextScan)return;roomWarmNextScan=now+100;
+ const key=nearestWarmDoor(run);
+ if(roomPrewarm&&roomPrewarm.room!==key)cancelSceneBuild(roomPrewarm);
+ if(key===null){roomWarmCandidate=null;roomWarmStableAt=0;return;}
+ if(roomWarmCandidate!==key){roomWarmCandidate=key;roomWarmStableAt=now;return;}
+ if(sceneCache.has(key)||roomPrewarm||backgroundScenes.size||now-roomWarmStableAt<200||now<roomWarmRetryAt)return;
+ const prepared=createStaticSceneWorker();
+ if(!prepared){roomWarmRetryAt=now+8000;return;}
+ const cached={buffer:null,length:0,chunks:[],waterIndex:EMPTY_FOOTFALL_WATER,complete:false,worker:true,nearTriangles:0,fullTriangles:0,previewBuilds:0,error:null,job:null};
+ const job={...prepared,cached,room:key,prewarm:true,started:true,finished:false,data:null,water:null,offset:0,uploadBuffer:null,timer:0,fallback:false};
+ cached.job=job;roomPrewarm=job;backgroundScenes.add(job);roomWarmRequests++;
+ job.worker.onmessage=e=>{
+  if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}
+  if(e.data.error)failSceneBuild(job,Error(e.data.error));else try{acceptScenePacket(job,e.data)}catch(error){failSceneBuild(job,error);}
+ };
+ job.worker.onerror=e=>{e.preventDefault();failSceneBuild(job,Error(e.message||'Interior preparation interrupted'));};
+ try{job.worker.postMessage({map,room:key,eco});}catch(error){failSceneBuild(job,error);}
+}
+function roomPrewarmStats(){
+ return {pendingRoom:roomPrewarm?.room??null,candidateRoom:roomWarmCandidate,requests:roomWarmRequests,completed:roomWarmCompleted,cancelled:roomWarmCancelled,failures:roomWarmFailures};
+}
+
 function sceneLoadingStats(){
  const cached=sceneCache.get(roomKey),job=cached?.job;
- return {phase:cached?.complete===false?'near':'full',complete:cached?.complete!==false,worker:!!cached?.worker,nearTriangles:cached?.nearTriangles||0,fullTriangles:cached?.fullTriangles||0,previewBuilds:cached?.previewBuilds||0,pendingUploads:job?.data?Math.ceil((job.data.length-job.offset)/262140):0,cpuBytes:job?.data?.byteLength||0,error:cached?.error||null};
+ return {phase:cached?.phase||(cached?.complete===false?'placeholder':'full'),complete:cached?.complete!==false,worker:!!cached?.worker,nearTriangles:cached?.nearTriangles||0,fullTriangles:cached?.fullTriangles||0,previewBuilds:cached?.previewBuilds||0,pendingUploads:job?.data?Math.ceil((job.data.length-job.offset)/262140):0,cpuBytes:(job?.data?.byteLength||0)+(job?.queuedPacket?.data?.byteLength||0),error:cached?.error||null};
 }
+
 function rebuild(room,point=options.focus){
+ if(room!=null)cancelRoomPrewarm();
  const key=room??null;let cached=sceneCache.get(key);
  if(!cached){
-  const prepared=key===null&&options.progressive!==false?createStaticSceneWorker():null;
-  const origin={x:Number(point?.x)||map.exit?.x||140,y:Number(point?.y)||map.exit?.y||1260};
-  let mesh,waterIndex,packed;
-  try{mesh=staticMesh(prepared?nearbySceneMap(map,origin):map,key,eco);waterIndex=buildFootfallWaterIndex(mesh);packed=packStaticChunks(mesh);}catch(error){if(prepared){prepared.worker.terminate();URL.revokeObjectURL(prepared.url);}throw error;}
-  if(key!==null)for(const [oldKey,old] of sceneCache)if(oldKey!==null){gl.deleteBuffer(old.buffer);sceneCache.delete(oldKey)}
-  const buffer=gl.createBuffer();if(!buffer){if(prepared){prepared.worker.terminate();URL.revokeObjectURL(prepared.url);}throw Error('Survival static buffer unavailable');}
-  try{bindBuffer(buffer,packed.data,gl.STATIC_DRAW)}catch(error){gl.deleteBuffer(buffer);if(prepared){prepared.worker.terminate();URL.revokeObjectURL(prepared.url);}throw error;}
-  cached={buffer,length:packed.data.length,chunks:packed.chunks,waterIndex,complete:!prepared,worker:!!prepared,nearOrigin:origin,nearAt:performance.now(),nearTriangles:packed.data.length/30,fullTriangles:prepared?0:packed.data.length/30,previewBuilds:1,error:null,job:null};sceneCache.set(key,cached);sceneBuilds++;
-  if(prepared){const job={...prepared,cached,started:false,data:null,water:null,offset:0,uploadBuffer:null,timer:0,fallback:false};cached.job=job;backgroundScenes.add(job);job.worker.onmessage=e=>{if(e.data.error)failSceneBuild(job,Error(e.data.error));else try{acceptScenePacket(job,e.data)}catch(error){failSceneBuild(job,error)}};job.worker.onerror=e=>{e.preventDefault();failSceneBuild(job,Error(e.message||'Scene worker interrupted'));};}
+  // Cold entries upload only a bounded shell. Both room detail and exterior
+  // near/full generation run in workers rather than inside a door action.
+  const origin=sceneFocusPoint(map,point),packed=packStaticChunks(makeScenePlaceholder(map,key,origin));
+  if(key!==null)for(const [oldKey,old]of sceneCache)if(oldKey!==null){if(old.job)cancelSceneBuild(old.job);if(old.buffer)gl.deleteBuffer(old.buffer);sceneCache.delete(oldKey);}
+  const buffer=gl.createBuffer();if(!buffer)throw Error('Survival static buffer unavailable');
+  try{bindBuffer(buffer,packed.data,gl.STATIC_DRAW);}catch(error){gl.deleteBuffer(buffer);throw error;}
+  const prepared=options.progressive!==false?createStaticSceneWorker():null;
+  cached={buffer,length:packed.data.length,chunks:packed.chunks,waterIndex:PENDING_FOOTFALL_WATER,complete:false,phase:'placeholder',worker:!!prepared,nearOrigin:origin,nearAt:performance.now(),nearTriangles:0,fullTriangles:0,previewBuilds:0,error:null,job:null};sceneCache.set(key,cached);sceneBuilds++;
+  const job={worker:null,url:null,...prepared,cached,room:key,prewarm:false,started:false,finished:false,data:null,water:null,chunks:null,queuedPacket:null,phase:null,offset:0,uploadBuffer:null,timer:0,fallback:false};
+  cached.job=job;backgroundScenes.add(job);
+  if(job.worker){job.worker.onmessage=e=>{if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}if(e.data.error)failSceneBuild(job,Error(e.data.error));else try{acceptScenePacket(job,e.data);}catch(error){failSceneBuild(job,error);}};job.worker.onerror=e=>{e.preventDefault();failSceneBuild(job,Error(e.message||'Scene worker interrupted'));};}
  }else sceneCacheHits++;
- useStaticScene(cached,key);
+ useStaticScene(cached,key);startSceneBuild(key);
 }
 
 function drawBuffer(buffer,count,chunks=null,matrix=null){if(!count)return;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(A.position);gl.enableVertexAttribArray(A.color);gl.enableVertexAttribArray(A.normal);gl.enableVertexAttribArray(A.material);gl.vertexAttribPointer(A.position,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(A.color,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(A.normal,3,gl.FLOAT,false,40,24);gl.vertexAttribPointer(A.material,1,gl.FLOAT,false,40,36);if(chunks){for(const c of chunks)if(chunkVisible(c,matrix))gl.drawArrays(gl.TRIANGLES,c.first,c.count)}else gl.drawArrays(gl.TRIANGLES,0,count)}
@@ -11710,7 +11891,7 @@ gl.uniformMatrix4fv(U.shadowMatrix,false,frameArray('shadow',shadowMatrix));gl.u
  const tx=Math.sin(pose.angle),tz=-Math.cos(pose.angle),reach=215;
  if(U.torchBands)gl.uniform3fv(U.torchBands,torchRanges(w,run.x,run.y,pose.angle,reach));
  if(U.torch)gl.uniform4fv(U.torch,frameArray('torch',[run.x,run.y,tx*reach,tz*reach]));gl.uniform1f(U.detail,eco?0:1);const contacts=sceneContacts(run,time);if(U.contacts)gl.uniform4fv(U.contacts,contacts.pos);if(U.contactFade)gl.uniform4fv(U.contactFade,contacts.fade);if(U.shadows)gl.uniform4fv(U.shadows,compactMode?sceneShadows(run,enemyData).subarray(0,16):sceneShadows(run,enemyData));gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.uniform1i(U.atlas,0);gl.uniform1f(U.textureReady,textureReady?1:0);gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);gl.uniform1i(U.surfaceAtlas,2);gl.uniform1f(U.surfaceReady,surfaceReady?1:0);gl.activeTexture(gl.TEXTURE0);drawBuffer(staticBuffer,staticData.length/10,staticChunks,M);
-drawBuffer(dynamicBuffer,dyn.length/10);startSceneBuild();
+drawBuffer(dynamicBuffer,dyn.length/10);startSceneBuild();updateRoomPrewarm(run);
 }
 
 function project(x,y,z){if(!currentMVP||!canvas.width||!canvas.height)return null;const w=1;const cx=currentMVP[0]*x+currentMVP[4]*y+currentMVP[8]*z+currentMVP[12]*w;const cy=currentMVP[1]*x+currentMVP[5]*y+currentMVP[9]*z+currentMVP[13]*w;const cz=currentMVP[2]*x+currentMVP[6]*y+currentMVP[10]*z+currentMVP[14]*w;const cw=currentMVP[3]*x+currentMVP[7]*y+currentMVP[11]*z+currentMVP[15]*w||1;if(cw===0)return null;const nx=cx/cw,ny=cy/cw,nz=cz/cw;return {x:(nx*0.5+0.5)*canvas.width,y:(1-(ny*0.5+0.5))*canvas.height,z:nz,visible:nz>=-1.1&&nz<=1.1&&nx>=-1.25&&nx<=1.25&&ny>=-1.25&&ny<=1.25}}
@@ -11721,7 +11902,7 @@ function dispose(){
  try{gl.deleteBuffer(dynamicBuffer);gl.deleteTexture(atlasTexture);gl.deleteTexture(surfaceTexture);gl.deleteProgram(program);if(shadowProgram)gl.deleteProgram(shadowProgram);if(shadowTexture)gl.deleteTexture(shadowTexture);if(shadowFBO)gl.deleteFramebuffer(shadowFBO);if(shadowDepth)gl.deleteRenderbuffer(shadowDepth)}catch(e){}
 }
 try{rebuild(options.room??null,options.focus)}catch(err){console.warn('Survival mesh init failed:',err);dispose();return null}
-return {draw,rotate,changeZoom,resetCamera,movement,project,dispose,get yaw(){return yaw},get pitch(){return pitch},get zoom(){return zoom},get overhead(){return true},get triangles(){return staticData?.length/30||0},get webgl(){return true},get ready(){return textureReady},get compact(){return compactMode},get heading(){return animation.player.angle},get frameStorageStats(){return {dynamicBytes:animation.dynamicStorage?.byteLength||0,dynamicGPUBytes,dynamicGrowths:animation.dynamicGrowths||0,uniformBuffers:13}},get cpuStaticBytes(){let bytes=0;for(const job of backgroundScenes)bytes+=job.data?.byteLength||0;return bytes},get loadingStats(){return sceneLoadingStats()},get valid(){return !disposed&&!gl.isContextLost()},get sceneCacheStats(){return {cachedRooms:[...sceneCache.keys()],cacheHits:sceneCacheHits,sceneBuilds,staticBytes:[...sceneCache.values()].reduce((n,s)=>n+s.length*4,0),waterIndexBytes:[...sceneCache.values()].reduce((n,s)=>n+(s.waterIndex.dataBytes||0),0)}}};
+return {draw,rotate,changeZoom,resetCamera,movement,project,dispose,get yaw(){return yaw},get pitch(){return pitch},get zoom(){return zoom},get overhead(){return true},get triangles(){return staticData?.length/30||0},get webgl(){return true},get ready(){return textureReady},get compact(){return compactMode},get heading(){return animation.player.angle},get frameStorageStats(){return {dynamicBytes:animation.dynamicStorage?.byteLength||0,dynamicGPUBytes,dynamicGrowths:animation.dynamicGrowths||0,uniformBuffers:13}},get cpuStaticBytes(){let bytes=0;for(const job of backgroundScenes)bytes+=(job.data?.byteLength||0)+(job.queuedPacket?.data?.byteLength||0);return bytes},get loadingStats(){return sceneLoadingStats()},get roomPrewarmStats(){return roomPrewarmStats()},get valid(){return !disposed&&!gl.isContextLost()},get sceneCacheStats(){return {cachedRooms:[...sceneCache.keys()],cacheHits:sceneCacheHits,sceneBuilds,staticBytes:[...sceneCache.values()].reduce((n,s)=>n+s.length*4,0),waterIndexBytes:[...sceneCache.values()].reduce((n,s)=>n+(s.waterIndex.dataBytes||0),0)}}};
 }
 // Emergency Telegram/iOS compatibility path. Used only when no WebGL pipeline can run.
 // Draws the same world coordinates/actors, keeping saves and the Survival mechanics intact.
@@ -11822,7 +12003,7 @@ class SurvivalAudio {
   if(!this.active||!this.enabled||!this.ctx||this.ctx.state!=='running')return;
   const api=window.ZonaSurvivalLocalAtmosphere;if(!api||this.sources.size>=8)return;
   const key=map.theme.id+':'+String(run.room);if(this.localEventMap!==map||this.localEventKey!==key){this.localEventMap=map;this.localEventKey=key;this.localEventCycles=new Map();}
-  for(const s of api.sources(map,run.room)){
+  for(const s of api.sources(map,run.room,run)){
    const phase=api.phase(s,t);if(phase<0||phase>.25)continue;const cycle=Math.floor((t+s.offset)/s.period);if(this.localEventCycles.get(s.id)===cycle)continue;
    const distance=Math.hypot(s.x-run.x,s.z-run.y),range=run.room==null?220:160;if(distance>=range)continue;
    const gain=(1-distance/range)**2*(api.occluded(run,map,s)?.22:1);if(gain<.04)continue;
@@ -11848,7 +12029,7 @@ class SurvivalAudio {
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,buildWorkerScene,combatProfile,npcRecord,npcRole,sectorLook,sectorAtmosphere,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.62'};
+window.ZonaSurvival3D={init,buildWorkerScene,buildWorkerNearScene,combatProfile,npcRecord,npcRole,sectorLook,sectorAtmosphere,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.62'};
 })();
 
 </script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
@@ -11938,6 +12119,88 @@ function refresh(){
  $('sv-start').textContent=active?'ПРОДОЛЖИТЬ SURVIVAL':'ВОЙТИ В ЗОНУ';
  renderLocSummary(chosen,active)
 }
+
+let entryTask=null,entrySerial=0,entryReady=Promise.resolve(true);
+function entryCurrent(task){return entryTask===task&&!task.canceled&&state().run===task.run}
+function entryBusy(busy){
+ overlay.setAttribute('aria-busy',String(busy));
+ $('sv-action').disabled=busy;$('sv-attack').disabled=busy;$('sv-stick').inert=busy;
+ const weapon=$('sv-interface-weapon');if(weapon)weapon.disabled=busy;
+ const pauseButton=$('sv-pause');
+ if(busy){pauseButton.dataset.entryLabel=pauseButton.innerHTML;pauseButton.textContent='Отмена';pauseButton.setAttribute('aria-label','Отменить вход')}
+ else if(pauseButton.dataset.entryLabel!==undefined){pauseButton.innerHTML=pauseButton.dataset.entryLabel;delete pauseButton.dataset.entryLabel;pauseButton.setAttribute('aria-label','Пауза и КПК')}
+}
+function releaseEntryWorker(task){
+ if(task.timer){clearTimeout(task.timer);task.timer=0}
+ if(task.worker){task.worker.onmessage=task.worker.onerror=null;task.worker.terminate();task.worker=null}
+ if(task.url){URL.revokeObjectURL(task.url);task.url=''}
+}
+function rollbackEntry(task,failed=false){
+ if(!entryCurrent(task))return false;
+ task.canceled=true;releaseEntryWorker(task);entryTask=null;entryBusy(false);
+ const st=state(),snapshot=task.snapshot;releaseRenderer();
+ st.run=snapshot.run;st.selectedLoc=snapshot.selectedLoc;st.visits=snapshot.visits;
+ g.state.energy=snapshot.energy;g.state.hunger=snapshot.hunger;g.state.thirst=snapshot.thirst;map=snapshot.map;
+ stopScene();suspended=false;mode3d=false;save();schedulePDARefresh();task.resolve(false);
+ if(failed)g.toast('Не удалось запустить графику. Состояние вылазки сохранено.','red');
+ return true;
+}
+function createWorldWorker(task){
+ if(typeof Worker!=='function')return null;
+ let url='';
+ try{
+  const engine=document.getElementById('zona-3d-engine').textContent,controller=document.getElementById('survival-mode').textContent;
+  const seedHelpers=controller.slice(controller.indexOf('function random('),controller.indexOf('function save(){'));
+  const start=controller.indexOf('function '+'rectHit('),end=controller.indexOf('function '+'enter(id){',start);
+  if(start<0||end<start)throw Error('World generator source unavailable');
+  const code='self.window=self;\n'+engine+'\nself.onmessage=function(e){const payload=e.data;let map=null,rand=null;const run=()=>payload.run,loc=()=>payload.location;const DB={enemies:payload.enemies};\n'+seedHelpers+'\n'+controller.slice(start,end)+'\ntry{self.postMessage({map:build(payload.run.seed)})}catch(error){self.postMessage({error:String(error&&error.message||error)})}};';
+  url=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
+  return {worker:new Worker(url),url};
+ }catch(error){if(url)URL.revokeObjectURL(url);return null}
+}
+function finishEntry(task,worldMap){
+ if(!entryCurrent(task))return;
+ releaseEntryWorker(task);
+ const st=state();
+ try{
+  map=worldMap;
+  for(const zone of [map,...map.rooms])for(const e of zone.enemies){const actor=st.run.enemyState[e.id];if(actor)clearSpawn(actor,zone)}
+  clearSpawn(st.run,st.run.room===null?map:map.rooms[st.run.room]);
+  releaseRenderer();const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);canvas=replacement;
+  renderer3d=window.ZonaSurvival3D.init(canvas,map,{eco:phoneEco(),room:st.run.room,focus:{x:st.run.x,y:st.run.y}});
+  if(!renderer3d)throw Error('WebGL 3D недоступен');
+  rendererRun=st.run;rendererRunKey=runSceneKey(st.run);rendererEco=phoneEco();suspended=false;cancelPDARefresh();
+  mode3d=true;g.isRaidActive=true;survivalAudio.start(st.sound!==false);
+  $('sv-minimap-3d').hidden=false;$('sv-3d-fx').hidden=false;$('sv-3d-prompt').hidden=true;
+  canvas.style.touchAction='none';resetInput();shot=0;hitLine=null;saveTimer=0;hudTimer=0;mobileRender.fxAt=-1;mobileRender.mapAt=-1;resize();last=0;
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(e.currentTarget!==canvas||!renderer3d)return;const warn=visible||suspended;pause();if(warn)g.toast('Графика была прервана. Вылазка сохранена — нажмите «Продолжить».','gold')},{once:true});
+  entryTask=null;entryBusy(false);
+  $('sv-message').hidden=true;noteUntil=0;$('sv-sound').textContent=st.sound===false?'ТИХО':'ЗВУК';$('sv-sound').setAttribute('aria-pressed',String(st.sound!==false));hud();
+  if(!task.snapshot.run){
+   if(g.state.tracker)g.state.tracker.searches=(g.state.tracker.searches||0)+1;
+   for(const c of g.state.activeContracts||[])if(c.type==='searches'&&!c.completed)c.current=(c.current||0)+1;
+  }
+  save();frame=requestAnimationFrame(loop);task.resolve(true);
+ }catch(error){
+  console.warn('Survival rendering failed:',error);
+  // Keep ownership until rollback has restored the entry transaction.
+  entryTask=task;rollbackEntry(task,true);
+ }
+}
+function startEntry(task){
+ if(!entryCurrent(task))return;
+ task.timer=0;const prepared=createWorldWorker(task);
+ const fallback=()=>{
+  if(!entryCurrent(task))return;releaseEntryWorker(task);
+  task.timer=setTimeout(()=>{task.timer=0;if(!entryCurrent(task))return;try{finishEntry(task,build(task.run.seed))}catch(error){console.warn('Survival map failed:',error);rollbackEntry(task,true)}},0);
+ };
+ if(!prepared){fallback();return}
+ task.worker=prepared.worker;task.url=prepared.url;
+ task.worker.onmessage=e=>{if(!entryCurrent(task))return;if(e.data.error){fallback();return}finishEntry(task,e.data.map)};
+ task.worker.onerror=e=>{e.preventDefault();fallback()};
+ try{task.worker.postMessage({run:task.run,location:task.location,enemies:DB.enemies})}catch(error){fallback()}
+}
+
 function rectHit(x,y,o,r=12){return x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h}
 function world(){return run().room===null?map:map.rooms[run().room]}
 function solid(x,y,r=12,w=world(),ignore=null){
@@ -12462,6 +12725,7 @@ for(const room of w.rooms){if(!architectural)for(let i=0;i<14;i++)room.props.pus
 expandSector(w);expandOuterDistrict(w);expandFrontierDistrict(w);expandAftermathDistrict(w);connectOuterDistricts(w);w.people.push({x:245,y:1200,id:'guide'},{...freePoint(),id:'scout'});const pool=loc()?.enemies||[];for(const zone of [w,...w.rooms])for(const e of zone.enemies){const enemyId=pool[seedOf(e.id+seed)%Math.max(1,pool.length)]||pool[0]||'dog';const proto=DB.enemies[enemyId]||{};e.enemyId=enemyId;e.name=proto.name||'Обитатель Зоны';e.icon=proto.icon||'☢️';e.desc=proto.desc||'Опасный обитатель сектора'}fitVehicles(w);installWorldCollisions(w);dressSector(w);dressAftermath(w);dressInfill(w);for(const zone of [w,...w.rooms])for(const actor of [...zone.people,...zone.enemies])clearSpawn(actor,zone);return w}
 function enter(id){
  // Never create a second renderer over an already running Survival session.
+ if(entryTask)return entryTask.run.locId===id;
  if(visible){return true}
  // A saved Survival route can be resumed independently of a stale generic raid flag.
  const resumingOwnRoute=!!run()&&run().locId===id;
@@ -12487,39 +12751,18 @@ function enter(id){
   g.state.energy-=(locItem.energyCost||locItem.energy||5);g.state.hunger=Math.max(0,g.state.hunger-3);g.state.thirst=Math.max(0,g.state.thirst-4);
 
  }
- try{
-  if(!Number.isFinite(st.run.gram))st.run.gram=0;map=build(st.run.seed);for(const zone of [map,...map.rooms])for(const e of zone.enemies){const actor=st.run.enemyState[e.id];if(actor)clearSpawn(actor,zone)}clearSpawn(st.run,st.run.room===null?map:map.rooms[st.run.room]);
-  releaseRenderer()
-  const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);canvas=replacement;
-  let failure=null;
-  try{renderer3d=window.ZonaSurvival3D.init(canvas,map,{eco:phoneEco(),room:st.run.room,focus:{x:st.run.x,y:st.run.y}})}
-  catch(e){failure=e;console.warn('WebGL renderer unavailable:',e)}
-  if(!renderer3d)throw(failure||Error('WebGL 3D недоступен'));
-  rendererRun=st.run;rendererRunKey=runSceneKey(st.run);rendererEco=phoneEco();suspended=false;cancelPDARefresh();
-  visible=true;mode3d=true;g.isRaidActive=true;survivalAudio.start(st.sound!==false);overlay.hidden=false;
-  document.body.classList.add('sv-playing');
-  $('sv-minimap-3d').hidden=false;$('sv-3d-fx').hidden=false;
-  $('sv-3d-prompt').hidden=true;
-  canvas.style.touchAction='none';resetInput();shot=0;hitLine=null;saveTimer=0;hudTimer=0;mobileRender.fxAt=-1;mobileRender.mapAt=-1;resize();last=0;
-  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(e.currentTarget!==canvas||!renderer3d)return;const warn=visible||suspended;pause();if(warn)g.toast('Графика была прервана. Вылазка сохранена — нажмите «Продолжить».','gold')},{once:true});
-  frame=requestAnimationFrame(loop);
-  $('sv-message').hidden=true;noteUntil=0;$('sv-sound').textContent=st.sound===false?'ТИХО':'ЗВУК';$('sv-sound').setAttribute('aria-pressed',String(st.sound!==false));hud();
-  if(!oldRun){
-  if(g.state.tracker)g.state.tracker.searches=(g.state.tracker.searches||0)+1;
-  for(const c of g.state.activeContracts||[])if(c.type==='searches'&&!c.completed)c.current=(c.current||0)+1;
-  }
-  save();
-  return true;
- }catch(err){
-  console.warn('Survival rendering failed:',err);survivalAudio.stop();
-  releaseRenderer()
-  st.run=snapshot.run;st.selectedLoc=snapshot.selectedLoc;st.visits=snapshot.visits;
-  g.state.energy=snapshot.energy;g.state.hunger=snapshot.hunger;g.state.thirst=snapshot.thirst;
-  map=snapshot.map;visible=false;mode3d=false;g.isRaidActive=false;
-  overlay.hidden=true;document.body.classList.remove('sv-playing');save();refresh();
-  g.toast('Не удалось запустить графику. Состояние вылазки сохранено.','red');return false
- }
+ if(!Number.isFinite(st.run.gram))st.run.gram=0;
+ const task={id:++entrySerial,run:st.run,location:locItem,snapshot,canceled:false,worker:null,url:'',timer:0,resolve:null};
+ entryReady=new Promise(resolve=>{task.resolve=resolve});entryTask=task;
+ cancelPDARefresh();releaseRenderer();const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);canvas=replacement;
+ suspended=false;visible=true;mode3d=false;g.isRaidActive=true;
+ overlay.hidden=false;document.body.classList.add('sv-playing');resetInput();entryBusy(true);
+ $('sv-title').textContent=locItem.name;$('sv-message').textContent='Подготовка локации…';$('sv-message').hidden=false;
+ $('sv-minimap-3d').hidden=true;$('sv-3d-fx').hidden=true;$('sv-3d-prompt').hidden=true;
+ task.timer=setTimeout(()=>startEntry(task),0);
+ return true;
 }
+
 function resetInput(){stick.x=stick.y=0;stick.id=null;$('sv-stick').classList.remove('is-active');$('sv-stick').firstElementChild.style.transform='translate(-50%,-50%)';releaseTouchButtons()}
 function runSceneKey(r){return r?r.locId+':'+r.seed+':'+r.layoutVersion:''}
 function reusableRenderer(r){return !!(r&&map&&renderer3d&&renderer3d.valid&&rendererRun===r&&rendererRunKey===runSceneKey(r)&&rendererEco===phoneEco())}
@@ -12545,6 +12788,7 @@ function stopScene(){
  g.isRaidActive=false;overlay.hidden=true;document.body.classList.remove('sv-playing');resetInput();
 }
 function suspend(){
+ if(entryTask)return rollbackEntry(entryTask);
  if(!visible)return false;
  cancelPDARefresh();stopScene();suspended=true;save();return true;
 }
@@ -12556,6 +12800,7 @@ function resumeRetainedScene(){
  frame=requestAnimationFrame(loop);
 }
 function leaveToPDA(){
+ if(entryTask)return rollbackEntry(entryTask);
  if(visible)suspend();suspended=false;overlay.hidden=true;document.body.classList.remove('sv-playing');
  if(reusableRenderer(run())){
   if(retentionTimer)clearTimeout(retentionTimer);
@@ -12564,10 +12809,11 @@ function leaveToPDA(){
  schedulePDARefresh();return true;
 }
 function pause(){
+ if(entryTask){rollbackEntry(entryTask);return}
  if(!visible&&!suspended&&!renderer3d)return;
  stopScene();suspended=false;releaseRenderer();save();schedulePDARefresh();
 }
-function exitRun(){const r=run();if(!visible||!map||!r)return false;if(r.room!==null||distance(r,map.exit)>85){note('Вернитесь к зелёной отметке выхода.');return false}let arts=0;for(const[id,count]of Object.entries(r.bag))if(DB.items[id]&&count>0){g.addItem(id,count);if(DB.items[id].type==='artifact')arts+=count;}if(g.state.tracker)g.state.tracker.artsFound=(g.state.tracker.artsFound||0)+arts;for(const c of g.state.activeContracts||[])if(c.type==='arts'&&!c.completed)c.current=(c.current||0)+arts;g.state.rubles+=r.rubles;if((r.gram||0)>0)g.awardGram?.(Number(r.gram.toFixed(2)));const count=Object.values(r.bag).reduce((a,b)=>a+b,0);const gram=(r.gram||0)>0?' · '+Number(r.gram.toFixed(2))+' GRAM':'';state().run=null;pause();g.renderTrophyCabinet?.();g.updateBadges?.();g.toast('Вы вернулись: '+count+' предметов, '+r.rubles+' ₽'+gram,'gold');return true}
+function exitRun(){const r=run();if(entryTask||!visible||!map||!r)return false;if(r.room!==null||distance(r,map.exit)>85){note('Вернитесь к зелёной отметке выхода.');return false}let arts=0;for(const[id,count]of Object.entries(r.bag))if(DB.items[id]&&count>0){g.addItem(id,count);if(DB.items[id].type==='artifact')arts+=count;}if(g.state.tracker)g.state.tracker.artsFound=(g.state.tracker.artsFound||0)+arts;for(const c of g.state.activeContracts||[])if(c.type==='arts'&&!c.completed)c.current=(c.current||0)+arts;g.state.rubles+=r.rubles;if((r.gram||0)>0)g.awardGram?.(Number(r.gram.toFixed(2)));const count=Object.values(r.bag).reduce((a,b)=>a+b,0);const gram=(r.gram||0)>0?' · '+Number(r.gram.toFixed(2))+' GRAM':'';state().run=null;pause();g.renderTrophyCabinet?.();g.updateBadges?.();g.toast('Вы вернулись: '+count+' предметов, '+r.rubles+' ₽'+gram,'gold');return true}
 function fail(){const r=run();if(!r)return;state().run=null;g.state.hp=1;pause();g.toast('Сталкер доставил вас в убежище. Полевая добыча потеряна.','red')}
 const interactionCandidate={kind:'',id:null,x:0,y:0},interactionScan={distance:78,found:false};
 function considerInteraction(o,kind,id,r,w){
@@ -12648,7 +12894,7 @@ function applyLootRoll(token){
  if(reward.rad>0)g.state.radiation=Math.min(100,(g.state.radiation||0)+reward.rad);
  return {name:got?.name||'Хабар',dust:reward.dust,gram:reward.gram,rad:reward.rad};
 }
-function action(){if(!visible||!run())return;const r=run(),t=target();if(!t){note('Подойдите к ящику, выжившему или двери.');return}if(t.kind==='exit')return exitRun();if(t.kind==='door'){r.room=t.id;const entry=map.rooms[r.room].spawn||{x:380,y:510};r.x=entry.x;r.y=entry.y;clearSpawn(r,world());note('Внутри здания. Выход — через дверь внизу.')}else if(t.kind==='outside'){const door=map.buildings[r.room].door;r.room=null;r.x=door.x;r.y=door.y+14;clearSpawn(r,world());note('Вы вышли на улицу.')}else if(t.kind==='person'){r.talked.push(t.id);const lines=['Держись стен. Они укроют от мутантов. Ящики ищи внутри зданий.','Я отметил дорогу обратно. Сначала забери припасы, потом возвращайся к выходу.','За помощь держи немного припасов. Не задерживайся в Зоне.'];note('Выживший: «'+lines[seedOf(t.id)%lines.length]+'» +30 ₽ в полевой рюкзак.');r.rubles+=30}else{r.opened.push(t.id);const reward=applyLootRoll('cache:'+String(r.room)+':'+t.id);note('Ящик: '+reward.name+(reward.dust?' · Радиационная пыль':'')+(reward.gram?' · +'+reward.gram.toFixed(2)+' GRAM':'')+'.')}save();hud()}
+function action(){if(entryTask||!visible||!run())return;const r=run(),t=target();if(!t){note('Подойдите к ящику, выжившему или двери.');return}if(t.kind==='exit')return exitRun();if(t.kind==='door'){r.room=t.id;const entry=map.rooms[r.room].spawn||{x:380,y:510};r.x=entry.x;r.y=entry.y;clearSpawn(r,world());note('Внутри здания. Выход — через дверь внизу.')}else if(t.kind==='outside'){const door=map.buildings[r.room].door;r.room=null;r.x=door.x;r.y=door.y+14;clearSpawn(r,world());note('Вы вышли на улицу.')}else if(t.kind==='person'){r.talked.push(t.id);const lines=['Держись стен. Они укроют от мутантов. Ящики ищи внутри зданий.','Я отметил дорогу обратно. Сначала забери припасы, потом возвращайся к выходу.','За помощь держи немного припасов. Не задерживайся в Зоне.'];note('Выживший: «'+lines[seedOf(t.id)%lines.length]+'» +30 ₽ в полевой рюкзак.');r.rubles+=30}else{r.opened.push(t.id);const reward=applyLootRoll('cache:'+String(r.room)+':'+t.id);note('Ящик: '+reward.name+(reward.dust?' · Радиационная пыль':'')+(reward.gram?' · +'+reward.gram.toFixed(2)+' GRAM':'')+'.')}save();hud()}
 function enemyData(e){const r=run(),proto=DB.enemies[e.enemyId]||{};return r.enemyState[e.id]||(r.enemyState[e.id]={x:e.x,y:e.y,hp:Math.max(18,Number(proto.maxHp||proto.hp)||30+Math.min(140,(loc().minLevel||1)*1.5)),cool:0,enemyId:e.enemyId})}
 function npcData(p){
  const r=run(),key=String(r.room??'outside')+':'+p.id,states=r.npcState||(r.npcState={});
@@ -12771,7 +13017,7 @@ function stepEnemies(dt,w){
  return stepEnemyProjectiles(dt,w);
 }
 function attack(){
- if(!visible||!run()||shot>0)return;
+ if(entryTask||!visible||!run()||shot>0)return;
  const r=run(),w=world(),selected=pickAttackTarget();
  if(!selected){note(attackScan.near?'Противник за преградой. Нужна прямая видимость.':'Противник вне радиуса атаки. Подойдите ближе.');return}
  shot=.5;const {e,d}=selected,proto=DB.enemies[e.enemyId]||{},power=g.getAttackPower();d.hp-=Math.max(2,(power[0]+power[1])/2);hitLine={x:d.x,y:d.y,t:.14};feedbackOutgoing(d.x,d.y);
@@ -12815,10 +13061,10 @@ function stepAnomalies(dt){
  }
  return true;
 }
-function step(dt){if(!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x,dy=stick.y;const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];move(r,v[0]*155*dt,v[1]*155*dt);stepPeople(dt,w);if(!stepEnemies(dt,w))return;
+function step(dt){if(entryTask||!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x,dy=stick.y;const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];move(r,v[0]*155*dt,v[1]*155*dt);stepPeople(dt,w);if(!stepEnemies(dt,w))return;
 
 if(!stepAnomalies(dt))return;saveTimer+=dt;hudTimer+=dt;if(saveTimer>=5){saveTimer=0;save()}if(hudTimer>.2){hudTimer=0;hud()}}
-function hud(){const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=Math.max(.18,Math.min(.94,(map?.theme?.nightBias??.34)+(.5-.5*Math.cos(phase))*.21)),tod=night>.68?'НОЧЬ':night>.43?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / '+(world().zones?.find(z=>r.x>=z.x&&r.x<=z.x+z.w&&r.y>=z.y&&r.y<=z.y+z.h)?.name||world().name||('Здание '+(r.room+1))):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(phoneEco()?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action-label').textContent=verb;$('sv-action').setAttribute('aria-label',verb);const prompt=$('sv-3d-prompt');if(window.ZonaSurvivalInterface){window.ZonaSurvivalInterface.syncAction(t?.kind,mode3d)}else{prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb;}$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,g.state.maxEnergy||100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit));const routeReadout=$('sv-route-readout');if(routeReadout){routeReadout.textContent=(r.room===null?'Выход':'Наружу')+' · '+exitDist+' м';routeReadout.title=r.room===null?'Расстояние до выхода в убежище':'Расстояние до выхода из здания';}const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}window.ZonaSurvivalHUD?.update()}
+function hud(){if(entryTask)return;const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=Math.max(.18,Math.min(.94,(map?.theme?.nightBias??.34)+(.5-.5*Math.cos(phase))*.21)),tod=night>.68?'НОЧЬ':night>.43?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / '+(world().zones?.find(z=>r.x>=z.x&&r.x<=z.x+z.w&&r.y>=z.y&&r.y<=z.y+z.h)?.name||world().name||('Здание '+(r.room+1))):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(phoneEco()?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action-label').textContent=verb;$('sv-action').setAttribute('aria-label',verb);const prompt=$('sv-3d-prompt');if(window.ZonaSurvivalInterface){window.ZonaSurvivalInterface.syncAction(t?.kind,mode3d)}else{prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb;}$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,g.state.maxEnergy||100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit));const routeReadout=$('sv-route-readout');if(routeReadout){routeReadout.textContent=(r.room===null?'Выход':'Наружу')+' · '+exitDist+' м';routeReadout.title=r.room===null?'Расстояние до выхода в убежище':'Расстояние до выхода из здания';}const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}window.ZonaSurvivalHUD?.update()}
 function resize(){
  const b=canvas.parentElement.getBoundingClientRect(),dpr=window.devicePixelRatio||1,budget=phoneEco()?300000:520000;
  const ratio=Math.max(.65,Math.min(dpr,phoneEco()?1.15:1.5,Math.sqrt(budget/Math.max(1,b.width*b.height)))*mobileRender.scale);
@@ -12829,7 +13075,7 @@ function resize(){
 }
 
 function loop(t){
- if(!visible||!run())return;
+ if(entryTask||!visible||!run())return;
  if(last&&t-last<32){frame=requestAnimationFrame(loop);return}
  const elapsed=last?t-last:0,dt=last?Math.min(.05,elapsed/1000):0;last=t;
  if(elapsed>=25&&elapsed<120){
@@ -13199,13 +13445,13 @@ function joy(e){
  const travel=Math.min(range,distance),rx=distance?rawX/distance*travel:0,ry=distance?rawY/distance*travel:0;
  pad.firstElementChild.style.transform='translate(calc(-50% + '+rx.toFixed(1)+'px),calc(-50% + '+ry.toFixed(1)+'px))';
 }
-pad.addEventListener('pointerdown',e=>{if(stick.id!==null||!visible)return;e.preventDefault();stick.id=e.pointerId;pad.classList.add('is-active');try{pad.setPointerCapture(e.pointerId)}catch(_){}joy(e)});
+pad.addEventListener('pointerdown',e=>{if(entryTask||stick.id!==null||!visible)return;e.preventDefault();stick.id=e.pointerId;pad.classList.add('is-active');try{pad.setPointerCapture(e.pointerId)}catch(_){}joy(e)});
 pad.addEventListener('pointermove',e=>{if(e.pointerId===stick.id){e.preventDefault();joy(e)}});
 for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,e=>{if(e.pointerId!==stick.id)return;pad.classList.remove('is-active');stick.id=null;stick.x=stick.y=0;pad.firstElementChild.style.transform='translate(-50%,-50%)'});
 for(const ev of ['pointerup','pointercancel'])window.addEventListener(ev,e=>{if(e.pointerId===stick.id){stick.id=null;stick.x=stick.y=0;pad.classList.remove('is-active');pad.firstElementChild.style.transform='translate(-50%,-50%)'}for(const [id,pointerId] of survivalTouchButtons)if(pointerId===e.pointerId){survivalTouchButtons.delete(id);$(id).classList.remove('is-pressed')}},{passive:true});
 window.addEventListener('resize',()=>{if(visible){resetInput();resize()}});window.addEventListener('orientationchange',resetInput);window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});window.addEventListener('pagehide',pause);
 // Public interface also provides deterministic mechanics for regression tests.
-g.survival={get feedback(){return feedbackSnapshot()},enter,pause,suspend,leaveToPDA,action,attack,step,exit:exitRun,build,solid,sight,state,refresh,get map(){return map},get visible(){return visible},get is3d(){return mode3d},get renderer(){return renderer3d}};refresh();
+g.survival={get loading(){return !!entryTask},get entryReady(){return entryReady},get feedback(){return feedbackSnapshot()},enter,pause,suspend,leaveToPDA,action,attack,step,exit:exitRun,build,solid,sight,state,refresh,get map(){return map},get visible(){return visible},get is3d(){return mode3d},get renderer(){return renderer3d}};refresh();
 });
 </script><style id="zona-survival-v132">#sv-screen header:after{content:"";position:absolute;inset:5px 5px 5px 5px;border:1px solid rgba(186,157,91,.16);pointer-events:none;}
 #sv-screen header .sv-head-copy{display:flex;flex-direction:column;justify-content:center;min-width:0;z-index:1;}
@@ -13614,6 +13860,7 @@ function update(){
 }
 function showPage(next){page=['pause','controls','weapon'].includes(next)?next:'pause';$('sv-menu-pause').hidden=page!=='pause';$('sv-menu-controls-page').hidden=page!=='controls';$('sv-menu-weapon-page').hidden=page!=='weapon';$('sv-menu-title').textContent={pause:'Пауза',controls:'Управление',weapon:'Оружие'}[page];$('sv-menu-back').textContent=page==='pause'?'В КПК':'Назад';menu.querySelector('.sv-menu-body').scrollTop=0;}
 function open(next='pause'){
+ if(survival.loading){survival.pause();return false}
  if(!survival.state().run)return false;
  if(survival.visible)survival.suspend();
  if(menu.hidden){previousFocus=document.activeElement;oldInert=!!app?.inert;if(app)app.inert=true;}
