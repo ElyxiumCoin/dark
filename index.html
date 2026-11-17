@@ -8568,13 +8568,60 @@ function siteOvergrowth(m,map,low){
   }
  }
 }
+
+const worldSeamPalettes=new WeakMap();
+function worldSeamPalette(map){
+ let palette=worldSeamPalettes.get(map);if(palette)return palette;
+ const colors=new Array(9).fill(null),atmospheres=new Array(9).fill(null),present=new Array(9).fill(false);
+ colors[4]=rgb(map.theme.ground);atmospheres[4]=sectorAtmosphere(map.theme.id);present[4]=true;
+ const neighborhood=map.worldPortals?.[0]?.neighborhood;
+ for(const item of neighborhood||[]){
+  if(!item||!Number.isInteger(item.dx)||!Number.isInteger(item.dy)||Math.abs(item.dx)>1||Math.abs(item.dy)>1)continue;
+  const key=(item.dy+1)*3+item.dx+1;
+  if(key!==4)colors[key]=rgb(item.ground||sectorLook(item.id).ground);
+  atmospheres[key]=sectorAtmosphere(item.id);present[key]=true;
+ }
+ const own=colors[4],air=atmospheres[4];
+ for(let i=0;i<9;i++){if(!colors[i])colors[i]=own;if(!atmospheres[i])atmospheres[i]=air;}
+ const skies=atmospheres.map(a=>rgb(a.sky));
+ palette={w:map.w,h:map.h,colors,atmospheres,skies,present,enabled:Array.isArray(neighborhood)};worldSeamPalettes.set(map,palette);return palette;
+}
+function worldSeamWeight(distance){const t=Math.max(0,Math.min(1,distance/320));return .5*(1-t*t*(3-2*t))}
+function worldSeamFactors(p,x,z){
+ const dx=x<320?-1:x>p.w-320?1:0,dz=z<320?-1:z>p.h-320?1:0;
+ const horizontal=4+dx,vertical=4+dz*3,diagonal=4+dx+dz*3;
+ const wx=dx&&p.present[horizontal]?worldSeamWeight(dx<0?x:p.w-x):0,wz=dz&&p.present[vertical]?worldSeamWeight(dz<0?z:p.h-z):0;
+ return {horizontal,vertical,diagonal,wx,wz};
+}
+function worldSeamColor(p,x,z,color){
+ if(!p.enabled)return color;
+ const {horizontal,vertical,diagonal,wx,wz}=worldSeamFactors(p,x,z);if(!wx&&!wz)return color;
+ const a=(1-wx)*(1-wz),b=wx*(1-wz),c=(1-wx)*wz,d=wx*wz,detail=(1-2*wx)*(1-2*wz),own=p.colors[4],cx=p.colors[horizontal],cz=p.colors[vertical],corner=p.colors[diagonal];
+ for(let k=0;k<3;k++)color[k]=own[k]*a+cx[k]*b+cz[k]*c+corner[k]*d+(color[k]-own[k])*detail;
+ return color;
+}
+function worldSceneAtmosphere(map,run){
+ const own=sectorAtmosphere(map.theme.id),p=worldSeamPalette(map);
+ if(!p.enabled||run?.room!=null)return {...own,skyRGB:rgb(own.sky)};
+ const x=Number.isFinite(run?.x)?run.x:map.w/2,z=Number.isFinite(run?.y)?run.y:map.h/2,{horizontal,vertical,diagonal,wx,wz}=worldSeamFactors(p,x,z);
+ if(!wx&&!wz)return {...own,skyRGB:rgb(own.sky)};
+ const indices=[4,horizontal,vertical,diagonal],weights=[(1-wx)*(1-wz),wx*(1-wz),(1-wx)*wz,wx*wz],out={...own,skyRGB:[0,0,0],lightTint:[0,0,0],fogReach:0,wetness:0,nightBias:0,mist:0};
+ for(let i=0;i<4;i++){
+  const a=p.atmospheres[indices[i]],sky=p.skies[indices[i]],weight=weights[i];
+  for(const key of ['fogReach','wetness','nightBias','mist'])out[key]+=a[key]*weight;
+  for(let k=0;k<3;k++){out.skyRGB[k]+=sky[k]*weight;out.lightTint[k]+=a.lightTint[k]*weight;}
+ }
+ return out;
+}
+function worldVisualSeed(run){return Number.isFinite(run?.world?.visualSeed)?run.world.visualSeed:run?.seed||0}
+
 function terrainMesh(m,map,low){
  // One ground surface: overlapping coplanar triangle fans caused camera-dependent flicker.
  const step=low?64:40,cols=Math.ceil(map.w/step),rows=Math.ceil(map.h/step),base=rgb(map.theme.ground),patches=[...(map.patches||[]),...siteGroundPatches(map)].map(p=>({...p,c:rgb(p.color)}));
  // Sample only nearby soil patches; extra yard detail does not require a full-map scan per vertex.
  const patchGrid=new Map(),cell=128;
  for(const p of patches)for(let gz=Math.floor((p.y-p.r)/cell);gz<=Math.floor((p.y+p.r)/cell);gz++)for(let gx=Math.floor((p.x-p.r)/cell);gx<=Math.floor((p.x+p.r)/cell);gx++){const key=gx+','+gz;if(!patchGrid.has(key))patchGrid.set(key,[]);patchGrid.get(key).push(p);}
- const colors=new Array((cols+1)*(rows+1));
+ const colors=new Array((cols+1)*(rows+1)),seam=worldSeamPalette(map);
  for(let iz=0;iz<=rows;iz++)for(let ix=0;ix<=cols;ix++){
   const x=Math.min(map.w,ix*step),z=Math.min(map.h,iz*step),c=base.slice();
   for(const p of patchGrid.get(Math.floor(x/cell)+','+Math.floor(z/cell))||[]){
@@ -8582,7 +8629,7 @@ function terrainMesh(m,map,low){
    const edge=1-d,weight=edge*edge*(3-2*edge)*(p.strength??.72);
    for(let k=0;k<3;k++)c[k]+=(p.c[k]-c[k])*weight;
   }
-  colors[iz*(cols+1)+ix]=c;
+  colors[iz*(cols+1)+ix]=worldSeamColor(seam,x,z,c);
  }
  for(let iz=0;iz<rows;iz++)for(let ix=0;ix<cols;ix++){
   const x=ix*step,z=iz*step,x1=Math.min(map.w,x+step),z1=Math.min(map.h,z+step),a=iz*(cols+1)+ix,b=a+1,c=a+cols+2,d=a+cols+1;
@@ -9855,9 +9902,41 @@ function createStaticSceneWorker(){
  let url=null;
  try{
   const source=document.getElementById('zona-3d-engine')?.textContent;if(!source)return null;
-  const tail="\nself.onmessage=e=>{try{const q=e.data,send=(p,phase)=>self.postMessage({data:p.data,chunks:p.chunks,water:p.water,phase},[p.data.buffer,p.water.data.buffer]);if(q.room==null)send(self.ZonaSurvival3D.buildWorkerNearScene(q.map,q.eco,q.focus),'near');send(self.ZonaSurvival3D.buildWorkerScene(q.map,q.room,q.eco),'full');}catch(error){self.postMessage({error:String(error&&error.message||error)});}};";
+  const tail="\nself.onmessage=e=>{try{const q=e.data,send=(p,phase)=>self.postMessage({data:p.data,chunks:p.chunks,water:p.water,phase},[p.data.buffer,p.water.data.buffer]);if(q.room==null&&!q.fullOnly)send(self.ZonaSurvival3D.buildWorkerNearScene(q.map,q.eco,q.focus),'near');send(self.ZonaSurvival3D.buildWorkerScene(q.map,q.room,q.eco),'full');}catch(error){self.postMessage({error:String(error&&error.message||error)});}};";
   url=URL.createObjectURL(new Blob(['self.window=self;\n',source,tail],{type:'text/javascript'}));
   return {worker:new Worker(url),url};
+ }catch(error){if(url)URL.revokeObjectURL(url);return null;}
+}
+
+
+function buildWorldBorderScene(map,eco,point){
+ const origin=sceneFocusPoint(map,point),near=nearbySceneMap(map,origin,700),limit=eco?30000:60000;
+ const vertices=staticMesh(near,null,eco);let radius=eco?560:700,count=0;
+ // Keep complete triangles around the shared edge; the permanent floor and
+ // intersecting road surfaces remain continuous at the local origin change.
+ for(let attempt=0;attempt<7;attempt++){
+  count=0;
+  for(let i=0;i<vertices.length;i+=30){
+   const minX=Math.min(vertices[i],vertices[i+10],vertices[i+20]),maxX=Math.max(vertices[i],vertices[i+10],vertices[i+20]),minZ=Math.min(vertices[i+2],vertices[i+12],vertices[i+22]),maxZ=Math.max(vertices[i+2],vertices[i+12],vertices[i+22]);
+   if(maxX<origin.x-radius||minX>origin.x+radius||maxZ<origin.y-radius||minZ>origin.y+radius)continue;count++;
+  }
+  if(count<=limit)break;radius*=.8;
+ }
+ if(count>limit)throw Error('Border detail exceeds phone geometry budget');
+ const data=new Float32Array(count*30);let offset=0;
+ for(let i=0;i<vertices.length;i+=30){
+  const minX=Math.min(vertices[i],vertices[i+10],vertices[i+20]),maxX=Math.max(vertices[i],vertices[i+10],vertices[i+20]),minZ=Math.min(vertices[i+2],vertices[i+12],vertices[i+22]),maxZ=Math.max(vertices[i+2],vertices[i+12],vertices[i+22]);
+  if(maxX<origin.x-radius||minX>origin.x+radius||maxZ<origin.y-radius||minZ>origin.y+radius)continue;data.set(vertices.subarray(i,i+30),offset);offset+=30;
+ }
+ const water=buildFootfallWaterIndex(data,4096,true),packed=packStaticChunks(data);
+ return {data:packed.data,chunks:packed.chunks,water,radius,focus:origin};
+}
+function createWorldBorderWorker(){
+ if(typeof Worker!=='function'||typeof document==='undefined')return null;let url=null;
+ try{
+  const source=document.getElementById('zona-3d-engine')?.textContent;if(!source)return null;
+  const tail="\nself.onmessage=e=>{try{const q=e.data,p=self.ZonaSurvival3D.buildWorldBorderScene(q.map,q.eco,q.focus);self.postMessage(p,[p.data.buffer,p.water.data.buffer]);}catch(error){self.postMessage({error:String(error&&error.message||error)});}};";
+  url=URL.createObjectURL(new Blob(['self.window=self;\n',source,tail],{type:'text/javascript'}));return {worker:new Worker(url),url};
  }catch(error){if(url)URL.revokeObjectURL(url);return null;}
 }
 
@@ -10830,14 +10909,14 @@ let gl=null;try{gl=canvas.getContext('webgl',{alpha:false,antialias:!options.eco
 let program,staticBuffer,dynamicBuffer,staticData=null,staticChunks=[],roomKey=null,scene=map,eco=options.eco||false;
 const sceneCache=new Map();let sceneBuilds=0,sceneCacheHits=0;
 const clothMotionQuery=window.matchMedia?.('(prefers-reduced-motion: reduce)');
-const vs=`uniform vec4 uAir;attribute vec3 aPosition;attribute vec3 aColor;attribute vec3 aNormal;attribute float aMaterial;uniform mat4 uShadowMatrix;varying vec4 vShadow;uniform mat4 uMVP;uniform float uTime;uniform vec3 uCamera;uniform float uFog;uniform vec3 uTint;varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;void main(){vWorld=aPosition.xz;vWorldPos=aPosition;vNormal=aNormal;vMaterial=aMaterial;vHeight=aPosition.y;vec3 drawn=aPosition;if(abs(aMaterial-32.)<.1&&aPosition.y>4.){float sway=sin(uTime*.85+aPosition.x*.025+aPosition.z*.018);float flutter=sin(uTime*1.6+aPosition.z*.09)*.22;float flex=clamp((aPosition.y-4.)/65.,0.,1.);drawn.x+=(sway+flutter)*flex*1.5;drawn.z+=sin(uTime*.63+aPosition.x*.03)*flex*.8;}if(aMaterial>=72.&&aMaterial<=73.){
+const vs=`uniform vec4 uAir;uniform vec2 uWorldOffset;attribute vec3 aPosition;attribute vec3 aColor;attribute vec3 aNormal;attribute float aMaterial;uniform mat4 uShadowMatrix;varying vec4 vShadow;uniform mat4 uMVP;uniform float uTime;uniform vec3 uCamera;uniform float uFog;uniform vec3 uTint;varying vec3 vColor;varying float vFog;varying vec2 vWorld;varying float vHeight;varying vec3 vWorldPos;varying vec3 vNormal;varying float vMaterial;void main(){vec3 borderPosition=aPosition+vec3(uWorldOffset.x,0.,uWorldOffset.y);vWorld=borderPosition.xz;vWorldPos=borderPosition;vNormal=aNormal;vMaterial=aMaterial;vHeight=borderPosition.y;vec3 drawn=borderPosition;if(abs(aMaterial-32.)<.1&&borderPosition.y>4.){float sway=sin(uTime*.85+borderPosition.x*.025+borderPosition.z*.018);float flutter=sin(uTime*1.6+borderPosition.z*.09)*.22;float flex=clamp((borderPosition.y-4.)/65.,0.,1.);drawn.x+=(sway+flutter)*flex*1.5;drawn.z+=sin(uTime*.63+borderPosition.x*.03)*flex*.8;}if(aMaterial>=72.&&aMaterial<=73.){
  vMaterial=57.;
  float freeCloth=clamp(aMaterial-72.,0.,1.);
- float seed=aPosition.x*.013+aPosition.z*.017;
+ float seed=borderPosition.x*.013+borderPosition.z*.017;
  float gust=sin(uTime*.78+seed)*.72+sin(uTime*1.41+seed*1.37)*.28;
- float ripple=sin(uTime*1.13+seed+aPosition.z*.08);
+ float ripple=sin(uTime*1.13+seed+borderPosition.z*.08);
  drawn+=vec3(gust*.84,ripple*.24,gust*.36)*freeCloth*uAir.y;
-}vShadow=uShadowMatrix*vec4(drawn,1.);gl_Position=uMVP*vec4(drawn,1.0);vColor=aColor*uTint;float d=distance(aPosition,uCamera);vFog=clamp((d-190.0)/uFog,0.0,0.95);}`;
+}vShadow=uShadowMatrix*vec4(drawn,1.);gl_Position=uMVP*vec4(drawn,1.0);vColor=aColor*uTint;float d=distance(borderPosition,uCamera);vFog=clamp((d-190.0)/uFog,0.0,0.95);}`;
 const fs=`#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -11636,7 +11715,7 @@ function linkShader(fragment){
 let compactMode=true;
 try{program=linkShader(fsCompact)}catch(error){console.warn('Survival mobile shader unavailable:',error);return null}
 try{dynamicBuffer=gl.createBuffer()}catch(e){console.warn('Survival 3D buffers:',e);return null}
-const A={position:gl.getAttribLocation(program,'aPosition'),color:gl.getAttribLocation(program,'aColor'),normal:gl.getAttribLocation(program,'aNormal'),material:gl.getAttribLocation(program,'aMaterial')},U={shadowMatrix:gl.getUniformLocation(program,'uShadowMatrix'),shadowMap:gl.getUniformLocation(program,'uShadowMap'),shadowReady:gl.getUniformLocation(program,'uShadowReady'),shadowTexel:gl.getUniformLocation(program,'uShadowTexel'),torchBands:gl.getUniformLocation(program,'uTorchBands[0]'),torch:gl.getUniformLocation(program,'uTorch'),mvp:gl.getUniformLocation(program,'uMVP'),cam:gl.getUniformLocation(program,'uCamera'),fog:gl.getUniformLocation(program,'uFog'),sky:gl.getUniformLocation(program,'uSky'),air:gl.getUniformLocation(program,'uAir'),eye:gl.getUniformLocation(program,'uEye'),shadows:gl.getUniformLocation(program,'uShadows[0]'),contacts:gl.getUniformLocation(program,'uContacts[0]'),contactFade:gl.getUniformLocation(program,'uContactFade'),tint:gl.getUniformLocation(program,'uTint'),lights:gl.getUniformLocation(program,'uLights[0]'),lightBounds:gl.getUniformLocation(program,'uLightBounds[0]'),lightColors:gl.getUniformLocation(program,'uLightColors[0]'),night:gl.getUniformLocation(program,'uNight'),wetness:gl.getUniformLocation(program,'uWetness'),storm:gl.getUniformLocation(program,'uStorm'),cutaway:gl.getUniformLocation(program,'uCutaway'),cutFade:gl.getUniformLocation(program,'uCutFade'),time:gl.getUniformLocation(program,'uTime'),detail:gl.getUniformLocation(program,'uDetail'),atlas:gl.getUniformLocation(program,'uAtlas'),surfaceAtlas:gl.getUniformLocation(program,'uSurfaceAtlas'),surfaceReady:gl.getUniformLocation(program,'uSurfaceReady'),textureReady:gl.getUniformLocation(program,'uTextureReady')};
+const A={position:gl.getAttribLocation(program,'aPosition'),color:gl.getAttribLocation(program,'aColor'),normal:gl.getAttribLocation(program,'aNormal'),material:gl.getAttribLocation(program,'aMaterial')},U={worldOffset:gl.getUniformLocation(program,'uWorldOffset'),shadowMatrix:gl.getUniformLocation(program,'uShadowMatrix'),shadowMap:gl.getUniformLocation(program,'uShadowMap'),shadowReady:gl.getUniformLocation(program,'uShadowReady'),shadowTexel:gl.getUniformLocation(program,'uShadowTexel'),torchBands:gl.getUniformLocation(program,'uTorchBands[0]'),torch:gl.getUniformLocation(program,'uTorch'),mvp:gl.getUniformLocation(program,'uMVP'),cam:gl.getUniformLocation(program,'uCamera'),fog:gl.getUniformLocation(program,'uFog'),sky:gl.getUniformLocation(program,'uSky'),air:gl.getUniformLocation(program,'uAir'),eye:gl.getUniformLocation(program,'uEye'),shadows:gl.getUniformLocation(program,'uShadows[0]'),contacts:gl.getUniformLocation(program,'uContacts[0]'),contactFade:gl.getUniformLocation(program,'uContactFade'),tint:gl.getUniformLocation(program,'uTint'),lights:gl.getUniformLocation(program,'uLights[0]'),lightBounds:gl.getUniformLocation(program,'uLightBounds[0]'),lightColors:gl.getUniformLocation(program,'uLightColors[0]'),night:gl.getUniformLocation(program,'uNight'),wetness:gl.getUniformLocation(program,'uWetness'),storm:gl.getUniformLocation(program,'uStorm'),cutaway:gl.getUniformLocation(program,'uCutaway'),cutFade:gl.getUniformLocation(program,'uCutFade'),time:gl.getUniformLocation(program,'uTime'),detail:gl.getUniformLocation(program,'uDetail'),atlas:gl.getUniformLocation(program,'uAtlas'),surfaceAtlas:gl.getUniformLocation(program,'uSurfaceAtlas'),surfaceReady:gl.getUniformLocation(program,'uSurfaceReady'),textureReady:gl.getUniformLocation(program,'uTextureReady')};
 const shadowSize=eco?256:(compactMode?512:1024);let shadowProgram=null,shadowFBO=null,shadowTexture=null,shadowDepth=null,shadowMatrix=orthographic(-1,1,-1,1,1,2),shadowTick=0,shadowAnchor=null,shadowValid=false,shadowPosition=-1,shadowUniform=null;
 const shadowVS=`attribute vec3 aPosition;uniform mat4 uLightMatrix;varying float vCasterHeight;void main(){vCasterHeight=aPosition.y;gl_Position=uLightMatrix*vec4(aPosition,1.);}`;
 const shadowFS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -11763,7 +11842,7 @@ function cancelSceneBuild(job){
 
 function finishSceneUpload(job){
  if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}
- const cached=job.cached,old=cached.buffer,phase=job.phase||'full',complete=phase==='full';
+ const cached=job.cached,old=cached.buffer,phase=job.phase||'full',complete=phase==='full',worldPreview=captureWorldBorderPreview(cached,job.room??null);
  cached.buffer=job.uploadBuffer;job.uploadBuffer=null;cached.length=job.data.length;cached.chunks=job.chunks;
  const w=job.water;cached.waterIndex=makeFootfallWaterQuery(w.data,w.grid,w.wide,w.cellSize,w.sourceTriangles,w.references);
  cached.complete=complete;cached.phase=phase;cached.error=null;
@@ -11771,7 +11850,7 @@ function finishSceneUpload(job){
  else{cached.nearTriangles=cached.length/30;cached.nearAt=performance.now();cached.previewBuilds++;}
  if(complete)finishRoomPrewarm(job);
  const key=job.room??null;if(roomKey===key)useStaticScene(cached,key,false);
- if(old&&old!==cached.buffer)gl.deleteBuffer(old);
+ if(old&&old!==cached.buffer&&!retainWorldBorderPreview(worldPreview))gl.deleteBuffer(old);
  job.data=job.water=job.chunks=null;job.offset=0;
  if(complete){cancelSceneBuild(job);return;}
  // A worker can finish the full packet while the near packet is still uploading.
@@ -11845,7 +11924,7 @@ function startSceneBuild(key=roomKey){
  const job=sceneCache.get(key)?.job;if(!job||job.started||!requiredJobCurrent(job))return;
  job.started=true;
  if(!job.worker){failSceneBuild(job,Error('Scene worker unavailable'));return;}
- try{job.worker.postMessage({map,room:job.room??null,eco,focus:job.cached.nearOrigin});}catch(error){failSceneBuild(job,error);}
+ try{job.worker.postMessage({map,room:job.room??null,eco,focus:job.cached.nearOrigin,fullOnly:!!job.fullOnly});}catch(error){failSceneBuild(job,error);}
 }
 
 function refreshNearScene(cached,point){
@@ -11929,58 +12008,151 @@ function rebuild(room,point=options.focus){
 
 const worldNeighborScenes=new Map();
 let worldSectorChanges=0,worldNeighborBuilds=0;
+
+const worldBorderScenes=new Map();
+let worldBorderJob=null,worldBorderTimer=0,worldBorderRequested=0,worldBorderCompleted=0,worldBorderCancelled=0,worldBorderFailures=0,worldBorderPromoted=0,worldBorderRetained=0;
+const worldBorderBudget=eco?3600000:7200000;
+function worldBorderId(m){return String(m?.theme?.id||'')}
+function releaseWorldBorderJob(job){
+ if(job.timer)clearTimeout(job.timer);job.timer=0;
+ if(job.worker){job.worker.onmessage=job.worker.onerror=null;job.worker.terminate();job.worker=null}
+ if(job.url){URL.revokeObjectURL(job.url);job.url=null}
+ if(job.uploadBuffer){gl.deleteBuffer(job.uploadBuffer);job.uploadBuffer=null}
+ job.data=job.water=job.chunks=null;
+ if(worldBorderJob===job)worldBorderJob=null;
+ if(job.record?.job===job)job.record.job=null;
+}
+function cancelWorldBorderJob(job){if(!job)return;worldBorderCancelled++;releaseWorldBorderJob(job)}
+function worldBorderCurrent(job){return !!(job&&worldBorderJob===job&&!disposed&&!gl.isContextLost()&&worldBorderScenes.get(job.record.id)===job.record&&job.record.job===job)}
+function dropWorldBorder(record){
+ if(record.job)cancelWorldBorderJob(record.job);
+ if(record.buffer)gl.deleteBuffer(record.buffer);record.buffer=null;if(worldBorderScenes.get(record.id)===record)worldBorderScenes.delete(record.id);
+}
 function clearWorldNeighbors(){
- for(const cached of worldNeighborScenes.values())if(cached.buffer)gl.deleteBuffer(cached.buffer);
+ if(worldBorderTimer)clearTimeout(worldBorderTimer);worldBorderTimer=0;
+ if(worldBorderJob)cancelWorldBorderJob(worldBorderJob);
+ for(const record of [...worldBorderScenes.values()])dropWorldBorder(record);
  worldNeighborScenes.clear();
+}
+function worldBorderChunks(record){
+ const x=record.offsetX||0,y=record.offsetY||0;
+ if(!record.translatedChunks||record.chunksX!==x||record.chunksY!==y){record.translatedChunks=record.chunks.map(c=>({...c,center:[c.center[0]+x,c.center[1],c.center[2]+y]}));record.chunksX=x;record.chunksY=y;}
+ return record.translatedChunks;
+}
+function requestWorldBorder(record,point){
+ const focus={x:Math.max(0,Math.min(record.map.w,point.x)),y:Math.max(0,Math.min(record.map.h,point.y))};
+ record.wantedFocus=focus;
+ if(record.buffer&&record.detail&&Math.hypot(focus.x-record.focus.x,focus.y-record.focus.y)<Math.max(240,record.radius*.55))return;
+ if(record.job&&Math.hypot(focus.x-record.job.focus.x,focus.y-record.job.focus.y)<240)return;
+ record.needsBuild=true;
+ if(!worldBorderTimer)worldBorderTimer=setTimeout(()=>{worldBorderTimer=0;startWorldBorderJob()},0);
+}
+function startWorldBorderJob(){
+ if(disposed||gl.isContextLost()||worldBorderJob)return;
+ const currentId=worldBorderId(map),records=[...worldBorderScenes.values()].filter(r=>!r.diagonal&&r.needsBuild&&performance.now()>(r.retryAt||0));
+ // Prepare the destination first, then the current side for the return view.
+ records.sort((a,b)=>(a.id===currentId?1:0)-(b.id===currentId?1:0));const record=records[0];if(!record)return;
+ const prepared=createWorldBorderWorker();if(!prepared){record.needsBuild=false;record.retryAt=performance.now()+10000;return;}
+ const job={...prepared,record,focus:{...record.wantedFocus},data:null,water:null,chunks:null,uploadBuffer:null,offset:0,timer:0};worldBorderJob=job;record.job=job;record.needsBuild=false;worldBorderRequested++;
+ const fail=()=>{if(!worldBorderCurrent(job)){releaseWorldBorderJob(job);return;}worldBorderFailures++;record.retryAt=performance.now()+8000;releaseWorldBorderJob(job);startWorldBorderJob()};
+ job.worker.onmessage=e=>{
+  if(!worldBorderCurrent(job)){releaseWorldBorderJob(job);return;}
+  const packet=e.data;if(packet.error||!packet.data||packet.data.byteLength>worldBorderBudget){fail();return;}
+  if(job.worker){job.worker.onmessage=job.worker.onerror=null;job.worker.terminate();job.worker=null}if(job.url){URL.revokeObjectURL(job.url);job.url=null}
+  job.data=packet.data;job.water=packet.water;job.chunks=packet.chunks;job.radius=packet.radius;job.focus=packet.focus;
+  try{
+   job.uploadBuffer=gl.createBuffer();if(!job.uploadBuffer)throw Error('Border GPU buffer unavailable');gl.bindBuffer(gl.ARRAY_BUFFER,job.uploadBuffer);gl.bufferData(gl.ARRAY_BUFFER,job.data.byteLength,gl.STATIC_DRAW);
+   if(gl.getBufferParameter(gl.ARRAY_BUFFER,gl.BUFFER_SIZE)!==job.data.byteLength){gl.getError();throw Error('Border detail does not fit phone memory');}
+   const upload=()=>{job.timer=0;if(!worldBorderCurrent(job)){releaseWorldBorderJob(job);return;}try{
+    const until=performance.now()+2;gl.bindBuffer(gl.ARRAY_BUFFER,job.uploadBuffer);
+    do{const end=Math.min(job.data.length,job.offset+131070);gl.bufferSubData(gl.ARRAY_BUFFER,job.offset*4,job.data.subarray(job.offset,end));job.offset=end}while(job.offset<job.data.length&&performance.now()<until);
+    if(job.offset<job.data.length){job.timer=setTimeout(upload,0);return;}
+    const old=record.buffer,w=job.water;record.buffer=job.uploadBuffer;job.uploadBuffer=null;record.length=job.data.length;record.chunks=job.chunks;record.translatedChunks=null;record.waterIndex=makeFootfallWaterQuery(w.data,w.grid,w.wide,w.cellSize,w.sourceTriangles,w.references);record.focus=job.focus;record.radius=job.radius;record.detail=true;record.retryAt=0;worldBorderCompleted++;
+    if(old&&old!==record.buffer)gl.deleteBuffer(old);releaseWorldBorderJob(job);startWorldBorderJob();
+   }catch(error){fail()}};job.timer=setTimeout(upload,0);
+  }catch(error){fail()}
+ };
+ job.worker.onerror=e=>{e.preventDefault();fail()};
+ try{job.worker.postMessage({map:record.map,eco,focus:job.focus})}catch(error){fail()}
+}
+function worldBorderRecord(m,offsetX=0,offsetY=0){
+ const id=worldBorderId(m);let record=worldBorderScenes.get(id);
+ if(record&&record.map!==m){dropWorldBorder(record);record=null}
+ if(!record){record={id,map:m,buffer:null,length:0,chunks:[],focus:null,radius:0,detail:false,job:null,needsBuild:false,offsetX,offsetY,translatedChunks:null};worldBorderScenes.set(id,record)}
+ record.offsetX=offsetX;record.offsetY=offsetY;return record;
+}
+function makeWorldBorderShell(record,focus){
+ const data=makeScenePlaceholder(record.map,null,focus),packed=packStaticChunks(data),buffer=gl.createBuffer();if(!buffer)return;
+ try{bindBuffer(buffer,packed.data,gl.STATIC_DRAW);if(gl.getBufferParameter(gl.ARRAY_BUFFER,gl.BUFFER_SIZE)!==packed.data.byteLength)throw Error('Border shell allocation failed')}
+ catch(error){gl.deleteBuffer(buffer);return}
+ if(record.buffer)gl.deleteBuffer(record.buffer);record.buffer=buffer;record.length=packed.data.length;record.chunks=packed.chunks;record.focus=focus;record.detail=false;record.translatedChunks=null;
 }
 function setWorldNeighbors(items,point=null){
  if(disposed||gl.isContextLost())return false;
- const wanted=new Set(),origin=sceneFocusPoint(map,point||options.focus);
- for(const item of (Array.isArray(items)?items:[]).slice(0,2)){
+ const origin=sceneFocusPoint(map,point||options.focus),wanted=new Set(),list=Array.isArray(items)?items:[],selected=list.filter(item=>!item?.diagonal).slice(0,2),diagonal=list.find(item=>item?.diagonal);if(diagonal)selected.push(diagonal);worldNeighborScenes.clear();
+ let activeFocus=null,nearest=Infinity;
+ for(const item of selected){
   if(!item?.map||item.map===map||!Number.isFinite(item.offsetX)||!Number.isFinite(item.offsetY))continue;
-  const key=String(item.id||item.map.theme?.id||'')+':'+item.offsetX+':'+item.offsetY;
-  if(wanted.has(key))continue;wanted.add(key);
-  const local=sceneFocusPoint(item.map,item.focus||{x:origin.x-item.offsetX,y:origin.y-item.offsetY});
-  const previous=worldNeighborScenes.get(key);
-  if(previous&&previous.map===item.map&&Math.hypot(local.x-previous.focus.x,local.y-previous.focus.y)<600)continue;
-  // At most two bounded shells are resident. Full neighboring sectors stay on
-  // the CPU until they become active, avoiding 28 full GPU scenes on a phone.
-  const data=makeScenePlaceholder(item.map,null,local);
-  for(let i=0;i<data.length;i+=10){data[i]+=item.offsetX;data[i+2]+=item.offsetY;}
-  const packed=packStaticChunks(data),buffer=gl.createBuffer();
-  if(!buffer){if(!previous)wanted.delete(key);continue;}
-  try{
-   bindBuffer(buffer,packed.data,gl.STATIC_DRAW);
-   if(gl.getBufferParameter(gl.ARRAY_BUFFER,gl.BUFFER_SIZE)!==packed.data.byteLength)throw Error('World border shell unavailable');
-  }catch(error){gl.deleteBuffer(buffer);if(!previous)wanted.delete(key);continue;}
-  worldNeighborScenes.set(key,{buffer,length:packed.data.length,chunks:packed.chunks,map:item.map,focus:local});worldNeighborBuilds++;
-  if(previous?.buffer)gl.deleteBuffer(previous.buffer);
+  const record=worldBorderRecord(item.map,item.offsetX,item.offsetY),local=sceneFocusPoint(item.map,item.focus||{x:origin.x-item.offsetX,y:origin.y-item.offsetY}),focus={x:Math.max(0,Math.min(item.map.w,local.x)),y:Math.max(0,Math.min(item.map.h,local.y))};
+  wanted.add(record.id);record.diagonal=!!item.diagonal;
+  if(record.diagonal){record.needsBuild=false;if(record.job)cancelWorldBorderJob(record.job);if(record.detail){if(record.buffer)gl.deleteBuffer(record.buffer);record.buffer=null;record.detail=false;}}
+  if(!record.buffer)makeWorldBorderShell(record,focus);if(!record.diagonal)requestWorldBorder(record,focus);worldNeighborScenes.set(record.id,record);worldBorderChunks(record);
+  const bx=focus.x+item.offsetX,by=focus.y+item.offsetY,d=Math.hypot(bx-origin.x,by-origin.y);
+  if(!record.diagonal&&d<nearest){nearest=d;activeFocus={x:bx,y:by}}
  }
- for(const [key,cached]of worldNeighborScenes)if(!wanted.has(key)){if(cached.buffer)gl.deleteBuffer(cached.buffer);worldNeighborScenes.delete(key);}
+ if(activeFocus){
+  const cached=sceneCache.get(null),covered=cached?.phase==='border'&&Math.hypot(activeFocus.x-(cached.borderFocus?.x??cached.nearOrigin.x),activeFocus.y-(cached.borderFocus?.y??cached.nearOrigin.y))<(cached.borderRadius||600)*.55;
+  const active=worldBorderScenes.get(worldBorderId(map));
+  if(active?.buffer||!covered){const record=worldBorderRecord(map,0,0);record.diagonal=false;wanted.add(record.id);requestWorldBorder(record,activeFocus);}
+ }
+ for(const record of [...worldBorderScenes.values()])if(!wanted.has(record.id))dropWorldBorder(record);
  return true;
+}
+function captureWorldBorderPreview(cached,key){
+ if(key!==null||cached.phase!=='border'||cached.length*4>worldBorderBudget||!cached.buffer)return null;
+ return {id:worldBorderId(map),map,buffer:cached.buffer,length:cached.length,chunks:cached.chunks,waterIndex:cached.waterIndex,focus:cached.borderFocus||cached.nearOrigin,radius:cached.borderRadius||600,detail:true,job:null,needsBuild:false,offsetX:0,offsetY:0,translatedChunks:null};
+}
+function retainWorldBorderPreview(preview){
+ if(!preview)return false;
+ const old=worldBorderScenes.get(preview.id);if(old&&old.buffer===preview.buffer)return true;
+ if(old)dropWorldBorder(old);worldBorderScenes.set(preview.id,preview);worldBorderRetained++;return true;
+}
+function adoptWorldBorder(record,point){
+ if(!record?.buffer||!record.detail)return false;
+ const prepared=options.progressive!==false?createStaticSceneWorker():null;
+ const cached={buffer:record.buffer,length:record.length,chunks:record.chunks,waterIndex:record.waterIndex,complete:false,phase:'border',worker:!!prepared,nearOrigin:sceneFocusPoint(map,point),nearAt:performance.now(),nearTriangles:record.length/30,fullTriangles:0,previewBuilds:1,error:null,job:null,borderFocus:record.focus,borderRadius:record.radius};
+ record.buffer=null;worldBorderScenes.delete(record.id);sceneCache.set(null,cached);sceneBuilds++;
+ const job={worker:null,url:null,...prepared,cached,room:null,prewarm:false,started:false,finished:false,data:null,water:null,chunks:null,queuedPacket:null,phase:null,offset:0,uploadBuffer:null,timer:0,fallback:false,fullOnly:true};cached.job=job;backgroundScenes.add(job);
+ if(job.worker){job.worker.onmessage=e=>{if(!requiredJobCurrent(job)){cancelSceneBuild(job);return;}if(e.data.error)failSceneBuild(job,Error(e.data.error));else try{acceptScenePacket(job,e.data)}catch(error){failSceneBuild(job,error)}};job.worker.onerror=e=>{e.preventDefault();failSceneBuild(job,Error(e.message||'World scene interrupted'))};}
+ worldBorderPromoted++;return true;
 }
 function setWorldSector(nextMap,point={}){
  if(disposed||gl.isContextLost()||!nextMap?.theme||!Array.isArray(nextMap.rooms))return false;
- cancelRoomPrewarm();
- for(const job of [...backgroundScenes])cancelSceneBuild(job);
- for(const cached of sceneCache.values())if(cached.buffer)gl.deleteBuffer(cached.buffer);
- sceneCache.clear();clearWorldNeighbors();
- map=nextMap;scene=map;options.focus=sceneFocusPoint(map,point);options.room=point.room??null;
+ const oldMap=map,oldId=worldBorderId(oldMap),nextId=worldBorderId(nextMap),incoming=worldBorderScenes.get(nextId),oldCached=sceneCache.get(null),oldPose=previousVisual;
+ const portal=(oldMap.worldPortals||[]).find(p=>p.to===nextId),fallbackX=portal?.direction==='east'?oldMap.w:portal?.direction==='west'?-nextMap.w:0,fallbackY=portal?.direction==='south'?oldMap.h:portal?.direction==='north'?-nextMap.h:0;
+ const offsetX=incoming?.offsetX??fallbackX,offsetY=incoming?.offsetY??fallbackY;
+ let outgoing=worldBorderScenes.get(oldId);
+ if(!outgoing?.buffer&&oldCached?.phase==='border')outgoing=captureWorldBorderPreview(oldCached,null);
+ if(worldBorderTimer)clearTimeout(worldBorderTimer);worldBorderTimer=0;if(worldBorderJob)cancelWorldBorderJob(worldBorderJob);
+ cancelRoomPrewarm();for(const job of [...backgroundScenes])cancelSceneBuild(job);
+ for(const cached of sceneCache.values())if(cached.buffer&&cached.buffer!==outgoing?.buffer)gl.deleteBuffer(cached.buffer);sceneCache.clear();
+ for(const record of [...worldBorderScenes.values()])if(record!==incoming&&record!==outgoing)dropWorldBorder(record);
+ worldNeighborScenes.clear();map=nextMap;scene=map;options.focus=sceneFocusPoint(map,point);options.room=point.room??null;
  staticBuffer=null;staticData=null;staticChunks=[];roomKey=null;
- footfallGround=rgb(map.theme.ground);footfallWetness=sectorAtmosphere(map.theme.id).wetness;
- sceneContacts=createPropContacts(map,eco);footfallMotion.reset(null,EMPTY_FOOTFALL_WATER);
- previousVisual=null;actorHistory.clear();animation.actors.clear();animation.recoil=0;
- focus=null;cutBuilding=null;cutFade=0;currentMVP=null;shadowValid=false;shadowAnchor=null;shadowTick=0;
- lightCache=null;lightCacheRoom=null;lightCacheTime=-1;lightCacheX=lightCacheY=0;
- for(const key of Object.keys(lightSelection))delete lightSelection[key];
- roomWarmRun=null;roomWarmCandidate=null;roomWarmStableAt=roomWarmNextScan=roomWarmRetryAt=0;
+ footfallGround=rgb(map.theme.ground);footfallWetness=sectorAtmosphere(map.theme.id).wetness;sceneContacts=createPropContacts(map,eco);footfallMotion.reset(null,EMPTY_FOOTFALL_WATER);
+ previousVisual=oldPose?{...oldPose,x:oldPose.x-offsetX,y:oldPose.y-offsetY}:null;actorHistory.clear();animation.actors.clear();animation.recoil=0;
+ focus=null;cutBuilding=null;cutFade=0;currentMVP=null;shadowValid=false;shadowAnchor=null;shadowTick=0;lightCache=null;lightCacheRoom=null;lightCacheTime=-1;lightCacheX=lightCacheY=0;
+ for(const key of Object.keys(lightSelection))delete lightSelection[key];roomWarmRun=null;roomWarmCandidate=null;roomWarmStableAt=roomWarmNextScan=roomWarmRetryAt=0;
+ if(outgoing?.buffer){outgoing.offsetX=-offsetX;outgoing.offsetY=-offsetY;outgoing.translatedChunks=null;worldBorderScenes.set(oldId,outgoing);worldNeighborScenes.set(oldId,outgoing)}
+ if(options.room===null&&incoming?.detail&&incoming.map===nextMap&&Math.hypot(point.x-incoming.focus.x,point.y-incoming.focus.y)<incoming.radius*.95)adoptWorldBorder(incoming,point);
  worldSectorChanges++;rebuild(options.room,options.focus);return true;
 }
 function worldSceneStats(){
- return {sector:map.theme.id,sectorChanges:worldSectorChanges,neighborBuilds:worldNeighborBuilds,neighbors:worldNeighborScenes.size,neighborBytes:[...worldNeighborScenes.values()].reduce((n,s)=>n+s.length*4,0)};
+ let bytes=0,detailed=0;for(const record of worldBorderScenes.values())if(record.buffer){bytes+=record.length*4;if(record.detail)detailed++}
+ return {sector:map.theme.id,sectorChanges:worldSectorChanges,neighborBuilds:worldNeighborBuilds,neighbors:worldNeighborScenes.size,neighborBytes:bytes,borderDetailed:detailed,borderRequested:worldBorderRequested,borderCompleted:worldBorderCompleted,borderCancelled:worldBorderCancelled,borderFailures:worldBorderFailures,borderPromoted:worldBorderPromoted,borderRetained:worldBorderRetained,borderPending:worldBorderJob?.record.id||null,borderCPUBytes:worldBorderJob?.data?.byteLength||0,borderBudget:worldBorderBudget};
 }
 
-function drawBuffer(buffer,count,chunks=null,matrix=null){if(!count)return;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(A.position);gl.enableVertexAttribArray(A.color);gl.enableVertexAttribArray(A.normal);gl.enableVertexAttribArray(A.material);gl.vertexAttribPointer(A.position,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(A.color,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(A.normal,3,gl.FLOAT,false,40,24);gl.vertexAttribPointer(A.material,1,gl.FLOAT,false,40,36);if(chunks){for(const c of chunks)if(chunkVisible(c,matrix))gl.drawArrays(gl.TRIANGLES,c.first,c.count)}else gl.drawArrays(gl.TRIANGLES,0,count)}
+function drawBuffer(buffer,count,chunks=null,matrix=null,offsetX=0,offsetY=0){if(!count)return;gl.uniform2f(U.worldOffset,offsetX,offsetY);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(A.position);gl.enableVertexAttribArray(A.color);gl.enableVertexAttribArray(A.normal);gl.enableVertexAttribArray(A.material);gl.vertexAttribPointer(A.position,3,gl.FLOAT,false,40,0);gl.vertexAttribPointer(A.color,3,gl.FLOAT,false,40,12);gl.vertexAttribPointer(A.normal,3,gl.FLOAT,false,40,24);gl.vertexAttribPointer(A.material,1,gl.FLOAT,false,40,36);if(chunks){for(const c of chunks)if(chunkVisible(c,matrix))gl.drawArrays(gl.TRIANGLES,c.first,c.count)}else gl.drawArrays(gl.TRIANGLES,0,count)}
 function draw(run,enemyData,time,visual={}){if(disposed||gl.isContextLost()||!run||!textureReady)return;
  const same=previousVisual&&previousVisual.room===run.room,dx=same?run.x-previousVisual.x:0,dz=same?run.y-previousVisual.y:0,dist=Math.hypot(dx,dz),dt=same?Math.max(.001,time-previousVisual.time):.016;
  const pose=animation.player;pose.hurt=run.hurtAt==null?0:clamp(1-(time-run.hurtAt)/.35,0,1);pose.speed=dist>.02?Math.min(1,dist/dt/120):0;pose.phase+=Math.min(dist,15)*.11;
@@ -12014,12 +12186,12 @@ else{cutBuilding=blocking;cutFade=blocking?Math.min(.92,cutFade+fadeStep):0;}
 animation.inView=(x,z)=>{const p=project(x,30,z),margin=110*canvas.width/Math.max(1,canvas.clientWidth);return p&&p.z>=-1.2&&p.z<=1.2&&p.x>=-margin&&p.x<=canvas.width+margin&&p.y>=-margin&&p.y<=canvas.height+margin};
 const dyn=entityMesh(w,map,run,enemyData,time,eco,animation);bindBuffer(dynamicBuffer,dyn,gl.DYNAMIC_DRAW);
 if(!shadowValid||needsShadowRefresh(shadowAnchor,target,asp,zoom))renderShadow(target,asp,dyn.length/10);
-gl.viewport(0,0,canvas.width,canvas.height);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthFunc(gl.LEQUAL);gl.disable(gl.BLEND);const atmosphere=sectorAtmosphere(map.theme.id),inside=run.room!=null;const sky=rgb(atmosphere.sky).map(v=>v*(inside?.085:.145));gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.uniformMatrix4fv(U.mvp,false,frameArray('mvp',M));
-gl.uniformMatrix4fv(U.shadowMatrix,false,frameArray('shadow',shadowMatrix));gl.uniform1f(U.shadowReady,shadowValid?1:0);gl.uniform1f(U.shadowTexel,1/shadowSize);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadowTexture||atlasTexture);gl.uniform1i(U.shadowMap,1);gl.activeTexture(gl.TEXTURE0);gl.uniform3fv(U.cam,frameArray('cam',target));if(U.eye)gl.uniform3fv(U.eye,frameArray('eye',eye));gl.uniform3fv(U.sky,frameArray('sky',sky));gl.uniform1f(U.fog,inside?1800:atmosphere.fogReach);if(U.air)gl.uniform4fv(U.air,frameArray('air',[inside?.14:atmosphere.mist,tentClothWind(atmosphere.weather,inside,eco,clothMotionQuery?.matches),inside?1.04:1.07,inside?1:0]));gl.uniform3fv(U.tint,frameArray('tint',sectorTint(map.theme.id,run.room!=null)));const phase=((run.worldTime||0)+((run.seed%94)*1.6))/520*Math.PI*2;const night=clamp(atmosphere.nightBias+(.5-.5*Math.cos(phase))*.21,.18,.94);const l=sceneLights(run,time);if(U.lightBounds)gl.uniform4fv(U.lightBounds,compactMode?l.bounds.subarray(0,12):l.bounds);if(U.lights)gl.uniform4fv(U.lights,compactMode?l.pos.subarray(0,12):l.pos);if(U.lightColors)gl.uniform3fv(U.lightColors,compactMode?l.colors.subarray(0,9):l.colors);gl.uniform4fv(U.cutaway,frameArray('cutaway',cutBuilding?[cutBuilding.x-10,cutBuilding.y-10,cutBuilding.x+cutBuilding.w+10,cutBuilding.y+cutBuilding.h+12]:[0,0,0,0]));gl.uniform1f(U.cutFade,cutFade);gl.uniform1f(U.night,night);gl.uniform1f(U.wetness,inside?atmosphere.wetness*.22:atmosphere.wetness);gl.uniform1f(U.storm,stormState(run.worldTime||0,run.seed,inside||atmosphere.weather!=='rain',window.matchMedia?.('(prefers-reduced-motion: reduce)').matches).flash);gl.uniform1f(U.time,clothMotionQuery?.matches?0:time);
+gl.viewport(0,0,canvas.width,canvas.height);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthFunc(gl.LEQUAL);gl.disable(gl.BLEND);const atmosphere=worldSceneAtmosphere(map,run),inside=run.room!=null;const sky=(atmosphere.skyRGB||rgb(atmosphere.sky)).map(v=>v*(inside?.085:.145));gl.clearColor(sky[0],sky[1],sky[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);gl.uniformMatrix4fv(U.mvp,false,frameArray('mvp',M));
+gl.uniformMatrix4fv(U.shadowMatrix,false,frameArray('shadow',shadowMatrix));gl.uniform1f(U.shadowReady,shadowValid?1:0);gl.uniform1f(U.shadowTexel,1/shadowSize);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadowTexture||atlasTexture);gl.uniform1i(U.shadowMap,1);gl.activeTexture(gl.TEXTURE0);gl.uniform3fv(U.cam,frameArray('cam',target));if(U.eye)gl.uniform3fv(U.eye,frameArray('eye',eye));gl.uniform3fv(U.sky,frameArray('sky',sky));gl.uniform1f(U.fog,inside?1800:atmosphere.fogReach);if(U.air)gl.uniform4fv(U.air,frameArray('air',[inside?.14:atmosphere.mist,tentClothWind(atmosphere.weather,inside,eco,clothMotionQuery?.matches),inside?1.04:1.07,inside?1:0]));gl.uniform3fv(U.tint,frameArray('tint',inside?atmosphere.lightTint.map((v,i)=>v*.45+[1.02,.99,.94][i]*.55):atmosphere.lightTint));const phase=((run.worldTime||0)+((worldVisualSeed(run)%94)*1.6))/520*Math.PI*2;const night=clamp(atmosphere.nightBias+(.5-.5*Math.cos(phase))*.21,.18,.94);const l=sceneLights(run,time);if(U.lightBounds)gl.uniform4fv(U.lightBounds,compactMode?l.bounds.subarray(0,12):l.bounds);if(U.lights)gl.uniform4fv(U.lights,compactMode?l.pos.subarray(0,12):l.pos);if(U.lightColors)gl.uniform3fv(U.lightColors,compactMode?l.colors.subarray(0,9):l.colors);gl.uniform4fv(U.cutaway,frameArray('cutaway',cutBuilding?[cutBuilding.x-10,cutBuilding.y-10,cutBuilding.x+cutBuilding.w+10,cutBuilding.y+cutBuilding.h+12]:[0,0,0,0]));gl.uniform1f(U.cutFade,cutFade);gl.uniform1f(U.night,night);gl.uniform1f(U.wetness,inside?atmosphere.wetness*.22:atmosphere.wetness);gl.uniform1f(U.storm,stormState(run.worldTime||0,worldVisualSeed(run),inside||atmosphere.weather!=='rain',window.matchMedia?.('(prefers-reduced-motion: reduce)').matches).flash);gl.uniform1f(U.time,clothMotionQuery?.matches?0:time);
  const tx=Math.sin(pose.angle),tz=-Math.cos(pose.angle),reach=215;
  if(U.torchBands)gl.uniform3fv(U.torchBands,torchRanges(w,run.x,run.y,pose.angle,reach));
  if(U.torch)gl.uniform4fv(U.torch,frameArray('torch',[run.x,run.y,tx*reach,tz*reach]));gl.uniform1f(U.detail,eco?0:1);const contacts=sceneContacts(run,time);if(U.contacts)gl.uniform4fv(U.contacts,contacts.pos);if(U.contactFade)gl.uniform4fv(U.contactFade,contacts.fade);if(U.shadows)gl.uniform4fv(U.shadows,compactMode?sceneShadows(run,enemyData).subarray(0,16):sceneShadows(run,enemyData));gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,atlasTexture);gl.uniform1i(U.atlas,0);gl.uniform1f(U.textureReady,textureReady?1:0);gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);gl.uniform1i(U.surfaceAtlas,2);gl.uniform1f(U.surfaceReady,surfaceReady?1:0);gl.activeTexture(gl.TEXTURE0);drawBuffer(staticBuffer,staticData.length/10,staticChunks,M);
-if(run.room==null)for(const neighbor of worldNeighborScenes.values())drawBuffer(neighbor.buffer,neighbor.length/10,neighbor.chunks,M);
+if(run.room==null)for(const neighbor of worldNeighborScenes.values())if(neighbor.buffer)drawBuffer(neighbor.buffer,neighbor.length/10,worldBorderChunks(neighbor),M,neighbor.offsetX,neighbor.offsetY);
 drawBuffer(dynamicBuffer,dyn.length/10);startSceneBuild();updateRoomPrewarm(run);
 }
 
@@ -12146,28 +12318,186 @@ class SurvivalAudio {
  }
 
  tick(run,map,scene,health,enemyData){if(!this.active||!this.enabled||!this.ctx||this.ctx.state!=='running')return;const t=run.worldTime||0,c=this.ctx,inside=run.room!==null;
-  const weather=map.theme.weather,wind=window.ZonaSurvival3D.stormState(t,run.seed,inside||weather!=='rain');
+  const weather=map.theme.weather,wind=window.ZonaSurvival3D.stormState(t,window.ZonaSurvival3D.worldVisualSeed(run),inside||weather!=='rain');
   this.atmosphere(run,map,scene,t,inside);this.localSourceEvents(run,map,t);
   const same=this.last?.room===run.room,dist=same?Math.hypot(run.x-this.last.x,run.y-this.last.y):0;
   this.walk+=Math.min(dist,12);if(this.walk>32){this.walk%=32;const road=(map.roads||[]).some(q=>run.x>=q.x&&run.x<q.x+q.w&&run.y>=q.y&&run.y<q.y+q.h);this.noise(.10,inside?.10:road?.09:.065,inside?1300:road?900:430);if(!inside)this.noise(.16,.025,2300,'bandpass');}
   const breath=(health<.3?.035:dist>.1?.012:.003)*(.45+.55*Math.sin(t*2.2)**2);this.breath.gain.setTargetAtTime(breath,c.currentTime,.12);
-  if(!inside&&weather==='rain'){if(this.cycle===null)this.cycle=wind.cycle;if(wind.flash>.65&&this.cycle!==wind.cycle+'f'){this.cycle=wind.cycle+'f';this.thunderAt=t+1.8+(run.seed%21)/10;}if(this.thunderAt!==null&&t>=this.thunderAt){this.noise(3.2,.35,180);this.noise(1.3,.12,700);this.thunderAt=null;}}
+  if(!inside&&weather==='rain'){if(this.cycle===null)this.cycle=wind.cycle;if(wind.flash>.65&&this.cycle!==wind.cycle+'f'){this.cycle=wind.cycle+'f';this.thunderAt=t+1.8+(window.ZonaSurvival3D.worldVisualSeed(run)%21)/10;}if(this.thunderAt!==null&&t>=this.thunderAt){this.noise(3.2,.35,180);this.noise(1.3,.12,700);this.thunderAt=null;}}
   else this.thunderAt=null;
   if(t-this.lastGrowl>8){const near=(scene.enemies||[]).filter(e=>!run.defeated.includes(e.id)).map(e=>({e,d:Math.hypot(enemyData(e).x-run.x,enemyData(e).y-run.y)})).filter(o=>o.d<210).sort((a,b)=>a.d-b.d)[0];if(near){this.lastGrowl=t;this.growl(near.e.enemyId,.055*(1-near.d/260));}}
   this.last={x:run.x,y:run.y,room:run.room};
  }
 }
 window.ZonaSurvivalAudio=SurvivalAudio;
-window.ZonaSurvival3D={init,buildWorkerScene,buildWorkerNearScene,combatProfile,npcRecord,npcRole,sectorLook,sectorAtmosphere,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.62'};
+window.ZonaSurvival3D={init,worldSceneAtmosphere,worldVisualSeed,buildWorkerScene,buildWorkerNearScene,buildWorldBorderScene,combatProfile,npcRecord,npcRole,sectorLook,sectorAtmosphere,vehicleBounds,collisionParts,dressingParts,stormState,version:'16.62'};
 })();
 
-</script><script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
+</script><script id="survival-world-navigation">
+(() => {
+ 'use strict';
+ const indices=new WeakMap(),CELL=96,EPS=1e-7,metrics={calls:0,searches:0,expanded:0,segmentChecks:0};
+ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),finite=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
+ function geometry(map){
+  let cached=indices.get(map);
+  if(cached&&cached.walls===map.walls&&cached.colliders===map.colliders&&cached.grid===map.collisionGrid&&cached.w===map.w&&cached.h===map.h)return cached;
+  const rectangles=[],seen=new Set(),add=p=>{if(!p||seen.has(p)||!Number.isFinite(p.x)||!Number.isFinite(p.y)||!(p.w>0)||!(p.h>0))return;seen.add(p);rectangles.push(p)};
+  for(const p of map.walls||[])add(p);
+  if(Array.isArray(map.colliders))for(const p of map.colliders)add(p);
+  else if(map.collisionGrid?.values)for(const bucket of map.collisionGrid.values())for(const p of bucket)add(p);
+  const buckets=new Map();
+  for(let i=0;i<rectangles.length;i++){
+   const p=rectangles[i];
+   for(let y=Math.floor(p.y/CELL);y<=Math.floor((p.y+p.h)/CELL);y++)for(let x=Math.floor(p.x/CELL);x<=Math.floor((p.x+p.w)/CELL);x++){
+    const key=y*65536+x;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(i);
+   }
+  }
+  cached={walls:map.walls,colliders:map.colliders,grid:map.collisionGrid,w:map.w,h:map.h,rectangles,buckets,stamps:new Int32Array(rectangles.length),stamp:0};indices.set(map,cached);return cached;
+ }
+ function clearance(map,inside,radius,allowEdges){
+  const edges=allowEdges===true?{north:true,east:true,south:true,west:true}:allowEdges||(!inside?{north:true,east:true,south:true,west:true}:{});
+  const inset=radius+8,minX=edges.west?0:inset,minY=edges.north?0:inset,maxX=map.w-(edges.east?0:inset),maxY=map.h-(edges.south?0:inset);
+  const index=geometry(map),rectangles=index.rectangles;
+  const inBounds=p=>p.x>=minX-EPS&&p.y>=minY-EPS&&p.x<=maxX+EPS&&p.y<=maxY+EPS;
+  // Slab intersection against the same expanded rectangles as player solid().
+  // This checks the entire swept segment, including a diagonal's inside corner.
+  const hits=(a,b,p)=>{
+   const left=p.x-radius+EPS,right=p.x+p.w+radius-EPS,top=p.y-radius+EPS,bottom=p.y+p.h+radius-EPS;
+   let lo=0,hi=1;const dx=b.x-a.x,dy=b.y-a.y;
+   if(Math.abs(dx)<EPS){if(a.x<=left||a.x>=right)return false}
+   else{let t0=(left-a.x)/dx,t1=(right-a.x)/dx;if(t0>t1){const t=t0;t0=t1;t1=t}lo=Math.max(lo,t0);hi=Math.min(hi,t1);if(lo>hi)return false}
+   if(Math.abs(dy)<EPS){if(a.y<=top||a.y>=bottom)return false}
+   else{let t0=(top-a.y)/dy,t1=(bottom-a.y)/dy;if(t0>t1){const t=t0;t0=t1;t1=t}lo=Math.max(lo,t0);hi=Math.min(hi,t1);if(lo>hi)return false}
+   return lo<=hi;
+  };
+  const segment=(a,b)=>{
+   if(!inBounds(a)||!inBounds(b))return false;
+   const x0=Math.floor((Math.min(a.x,b.x)-radius)/CELL),x1=Math.floor((Math.max(a.x,b.x)+radius)/CELL),y0=Math.floor((Math.min(a.y,b.y)-radius)/CELL),y1=Math.floor((Math.max(a.y,b.y)+radius)/CELL);
+   // Long diagonal queries are cheaper as one rectangle scan than a large
+   // empty bounding-box grid. Short A* edges use only their local buckets.
+   if((x1-x0+1)*(y1-y0+1)>40){for(const p of rectangles)if(hits(a,b,p))return false;return true}
+   if(++index.stamp>=2147483646){index.stamps.fill(0);index.stamp=1}
+   const stamp=index.stamp;
+   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)for(const id of index.buckets.get(y*65536+x)||[]){if(index.stamps[id]===stamp)continue;index.stamps[id]=stamp;if(hits(a,b,rectangles[id]))return false}
+   return true;
+  };
+  return {minX,minY,maxX,maxY,inBounds,segment,free:p=>segment(p,p)};
+ }
+ function smooth(raw,segment){
+  if(raw.length<3)return raw;
+  const points=[raw[0]];let anchor=raw[0];
+  for(let i=2;i<raw.length;i++)if(!segment(anchor,raw[i])){anchor=raw[i-1];points.push(anchor)}
+  const last=raw[raw.length-1];if(last.x!==points[points.length-1].x||last.y!==points[points.length-1].y)points.push(last);return points;
+ }
+ const length=points=>{let total=0;for(let i=1;i<points.length;i++)total+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return total};
+ function search(start,goal,clear,unit,maxNodes,weight){
+  metrics.searches++;
+  const cols=Math.ceil((clear.maxX-clear.minX)/unit)+1,rows=Math.ceil((clear.maxY-clear.minY)/unit)+1,count=cols*rows;
+  if(count>110000)return {points:[start],complete:false,expanded:0,reason:'grid-budget'};
+  const costs=new Float64Array(count);costs.fill(Infinity);const parents=new Int32Array(count);parents.fill(-2);const states=new Uint8Array(count),free=new Uint8Array(count),keys=[],scores=[];
+  const point=k=>({x:Math.min(clear.maxX,clear.minX+(k%cols)*unit),y:Math.min(clear.maxY,clear.minY+Math.floor(k/cols)*unit)});
+  const heuristic=p=>Math.hypot(p.x-goal.x,p.y-goal.y);
+  const available=k=>{if(free[k]===0)free[k]=clear.free(point(k))?1:2;return free[k]===1};
+  const push=(key,score)=>{
+   let i=keys.length;keys.push(key);scores.push(score);
+   while(i){const parent=(i-1)>>1;if(scores[parent]<=score)break;keys[i]=keys[parent];scores[i]=scores[parent];i=parent}keys[i]=key;scores[i]=score;
+  };
+  const pop=()=>{
+   const top=keys[0],key=keys.pop(),score=scores.pop();if(keys.length){let i=0;while(true){const left=i*2+1;if(left>=keys.length)break;const right=left+1,child=right<keys.length&&scores[right]<scores[left]?right:left;if(scores[child]>=score)break;keys[i]=keys[child];scores[i]=scores[child];i=child}keys[i]=key;scores[i]=score}return top;
+  };
+  const sx=Math.round((start.x-clear.minX)/unit),sy=Math.round((start.y-clear.minY)/unit);
+  const seeds=[];
+  for(let y=Math.max(0,sy-2);y<=Math.min(rows-1,sy+2);y++)for(let x=Math.max(0,sx-2);x<=Math.min(cols-1,sx+2);x++){
+   const key=y*cols+x,p=point(key);if(available(key)&&clear.segment(start,p))seeds.push({key,p,d:Math.hypot(p.x-start.x,p.y-start.y)});
+  }
+  seeds.sort((a,b)=>a.d-b.d);
+  for(const item of seeds.slice(0,12)){costs[item.key]=item.d;parents[item.key]=-1;push(item.key,item.d+heuristic(item.p)*weight)}
+  if(!keys.length)return {points:[start],complete:false,expanded:0,reason:'no-grid-start'};
+  let expanded=0,found=-1,best=-1,bestDistance=heuristic(start);
+  while(keys.length&&expanded<maxNodes){
+   const key=pop();if(states[key]===2)continue;states[key]=2;expanded++;
+   const p=point(key),d=heuristic(p);if(d<bestDistance){bestDistance=d;best=key}
+   if(d<=unit*2.1&&clear.segment(p,goal)){found=key;break}
+   const x=key%cols,y=Math.floor(key/cols);
+   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=cols||ny>=rows)continue;
+    const next=ny*cols+nx;if(states[next]===2||!available(next))continue;
+    const q=point(next),cost=costs[key]+Math.hypot(q.x-p.x,q.y-p.y);if(cost>=costs[next]-EPS||!clear.segment(p,q))continue;
+    costs[next]=cost;parents[next]=key;push(next,cost+heuristic(q)*weight);
+   }
+  }
+  const end=found>=0?found:best;if(end<0)return {points:[start],complete:false,expanded,reason:expanded>=maxNodes?'node-budget':'unreachable'};
+  const raw=[];for(let key=end;key>=0;key=parents[key])raw.push(point(key));raw.reverse();raw.unshift(start);if(found>=0)raw.push(goal);
+  return {points:smooth(raw,clear.segment),complete:found>=0,expanded,reason:found>=0?'routed':expanded>=maxNodes?'node-budget':'unreachable'};
+ }
+ function findPath(input){
+  metrics.calls++;
+  const map=input?.map,start=finite(input?.start)?{x:input.start.x,y:input.start.y}:null,requested=finite(input?.goal)?{x:input.goal.x,y:input.goal.y}:null;
+  if(!map||!(map.w>0)||!(map.h>0)||!start||!requested)return {points:[],goal:null,requestedGoal:requested,reachedGoal:false,complete:false,distance:0,expanded:0,reason:'invalid'};
+  const inside=!!input.inside,radius=clamp(Number(input.radius)||12,1,30),maxNodes=clamp(Math.floor(Number(input.maxNodes)||12000),64,20000),clear=clearance(map,inside,radius,input.allowEdges);
+  const result=(points,goal,complete,expanded,reason)=>{metrics.expanded+=expanded;return {points,goal,requestedGoal:requested,endpoint:points[points.length-1]||null,reachedGoal:complete&&Math.hypot(goal.x-requested.x,goal.y-requested.y)<.01,complete,distance:length(points),expanded,reason}};
+  if(!clear.free(start))return result([start],requested,false,0,'start-blocked');
+  let goal={x:clamp(requested.x,clear.minX,clear.maxX),y:clamp(requested.y,clear.minY,clear.maxY)},projected=goal.x!==requested.x||goal.y!==requested.y;
+  if(!clear.free(goal)){
+   const candidates=[];
+   for(let ring=16;ring<=640;ring+=16){
+    for(let i=0;i<24;i++){const angle=i*Math.PI/12,p={x:clamp(requested.x+Math.cos(angle)*ring,clear.minX,clear.maxX),y:clamp(requested.y+Math.sin(angle)*ring,clear.minY,clear.maxY)};if(clear.free(p))candidates.push({p,d:Math.hypot(p.x-requested.x,p.y-requested.y),travel:Math.hypot(p.x-start.x,p.y-start.y)})}
+    if(candidates.length)break;
+   }
+   if(!candidates.length)return result([start],goal,false,0,'goal-blocked');
+   candidates.sort((a,b)=>Math.abs(a.d-b.d)>.01?a.d-b.d:a.travel-b.travel);goal=candidates[0].p;projected=true;
+  }
+  if(clear.segment(start,goal))return result([start,goal],goal,true,0,projected?'approach':'direct');
+  const unit=inside?16:32;
+  const weight=inside?1.04:1.12;
+  let route=search(start,goal,clear,unit,maxNodes,weight);
+  // Thin interior doorways and narrow exterior passages receive one finer
+  // attempt only when the first grid exhausted its reachable component.
+  if(!route.complete&&route.reason!=='node-budget'&&route.expanded<maxNodes*.6){
+   const finer=search(start,goal,clear,unit/2,maxNodes-route.expanded,weight);finer.expanded+=route.expanded;
+   if(finer.complete||length(finer.points)>0&&Math.hypot(finer.points.at(-1).x-goal.x,finer.points.at(-1).y-goal.y)<Math.hypot(route.points.at(-1).x-goal.x,route.points.at(-1).y-goal.y))route=finer;
+   else route.expanded=finer.expanded;
+  }
+  return result(route.points,goal,route.complete,route.expanded,route.complete&&projected?'approach':route.reason);
+ }
+ function segmentClear(map,a,b,options={}){metrics.segmentChecks++;return !!(map&&finite(a)&&finite(b)&&clearance(map,!!options.inside,clamp(Number(options.radius)||12,1,30),options.allowEdges).segment(a,b))}
+ function isSegmentClear(input){return !!input&&segmentClear(input.map,input.start,input.goal,input)}
+ window.ZonaSurvivalNavigation=Object.freeze({version:1,findPath,segmentClear,isSegmentClear,get stats(){return {...metrics}},invalidate(map){if(map)indices.delete(map)}});
+})();
+</script>
+<style id="survival-single-world-entry">
+#kpk-survival .sv-world-entry{padding:18px;border:1px solid #93805570;border-radius:8px;background:linear-gradient(125deg,#283024eb,#101b15f5);box-shadow:inset 0 1px #d9c68f0d;}
+#kpk-survival .sv-world-entry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font:600 10px/1.2 var(--st-body,Arial,sans-serif);letter-spacing:1.2px;color:#a9b69a;}
+#kpk-survival .sv-world-entry-head b{flex:0 0 auto;padding:5px 7px;border:1px solid #8c805247;border-radius:3px;font-size:9px;font-weight:600;color:#d2c18b;letter-spacing:.8px;}
+#kpk-survival .sv-world-entry h2{margin:12px 0 5px;font:600 26px/1.15 var(--st-head,Arial,sans-serif);color:#ead9ae;letter-spacing:.5px;}
+#kpk-survival .sv-world-entry-lead{margin:0 0 17px;max-width:42em;color:#aebca4;font:13px/1.55 var(--st-body,Arial,sans-serif);}
+#kpk-survival .sv-world-entry-position{padding:13px 14px;border-left:2px solid #ba9f61;background:#0b1712a8;border-radius:0 4px 4px 0;}
+#kpk-survival .sv-world-entry-position small{display:block;margin:0 0 5px;color:#a5b297;font:600 9px/1.25 var(--st-body,Arial,sans-serif);letter-spacing:1.2px;}
+#kpk-survival .sv-world-entry-position strong{display:block;color:#e0dbc2;font:600 15px/1.35 var(--st-body,Arial,sans-serif);overflow-wrap:anywhere;}
+#kpk-survival .sv-world-entry-position p{margin:5px 0 0;color:#9da990;font:11px/1.5 var(--st-body,Arial,sans-serif);}
+#kpk-survival .sv-world-entry-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0;}
+#kpk-survival .sv-world-entry-stats>div{min-width:0;padding:0 4px;}
+#kpk-survival .sv-world-entry-stats>div+div{border-left:1px solid #7b805b44;padding-left:14px;}
+#kpk-survival .sv-world-entry-stats dt{margin:0 0 5px;color:#9caa8e;font:600 9px/1.3 var(--st-body,Arial,sans-serif);letter-spacing:.9px;}
+#kpk-survival .sv-world-entry-stats dd{margin:0;color:#ddd5b8;font:600 14px/1.3 var(--st-body,Arial,sans-serif);overflow-wrap:anywhere;}
+html.proportion-v2 body #app #kpk-survival .sv-world-entry #sv-start{display:block;width:100%;min-height:60px!important;height:auto!important;box-sizing:border-box;margin:0!important;font-size:14px;letter-spacing:1px;touch-action:manipulation;}
+#kpk-survival .sv-world-entry-status{min-height:16px;margin:9px 0 0;color:#9eae91;font:11px/1.45 var(--st-body,Arial,sans-serif);text-align:center;}
+#kpk-survival .sv-world-entry-help{display:flex;align-items:flex-start;gap:11px;margin-top:16px;padding-top:15px;border-top:1px solid #7b805b44;}
+#kpk-survival .sv-world-entry-help svg{flex:0 0 25px;width:25px;height:25px;fill:none;stroke:#bcaa75;stroke-width:1.3;stroke-linejoin:round;stroke-linecap:round;}
+#kpk-survival .sv-world-entry-help p{margin:0;color:#a7b49a;font:11px/1.5 var(--st-body,Arial,sans-serif);}
+#kpk-survival .sv-world-entry-help strong{display:block;margin-bottom:3px;color:#cbc6a9;font-size:12px;font-weight:600;}
+#kpk-survival .sv-world-entry-help span{display:block;}
+#kpk-survival .sv-world-entry-note{margin:13px 0 0;color:#86947e;font:10px/1.5 var(--st-body,Arial,sans-serif);}
+#kpk-survival .sv-world-entry #sv-location[hidden]{display:none!important;}
+@media(max-width:350px){#kpk-survival .sv-world-entry{padding:14px;}#kpk-survival .sv-world-entry h2{font-size:24px;}#kpk-survival .sv-world-entry-position{padding:11px 12px;}}
+</style>
+<script id="survival-mode">/* ZONA Z Survival: local deterministic maps and persistent field runs. */
 window.addEventListener('zona:ready',()=>{
 'use strict';
 const g=window.game;if(!g||document.getElementById('kpk-survival'))return;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const panel=document.createElement('details');panel.id='kpk-survival';panel.className='kpk-panel';
-panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ОБЩАЯ КАРТА · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><p class="sv-intro">Выберите точку входа в общую Зону. Между секторами можно идти пешком. Коснитесь миникарты, чтобы открыть карту и поставить цель. Добыча хранится в рюкзаке до эвакуации.</p><div class="sv-grid"><section class="sv-card"><div class="section-label"><span>МАРШРУТ SURVIVAL</span><small>ТОЧКА ВХОДА</small></div><button type="button" class="sv-picker-trigger" id="sv-location-trigger"><span><span id="sv-location-current">Локация не выбрана</span><small id="sv-location-sub">Выберите сектор Зоны</small></span><b aria-hidden="true">⌄</b></button><div class="sv-location-menu" id="sv-location-menu" hidden><label class="sv-sector-search"><span>ПОИСК СЕКТОРА</span><input id="sv-sector-search" type="search" placeholder="Название локации" aria-label="Поиск локации" autocomplete="off"></label><div id="sv-location-options" role="group" aria-label="Доступные секторы"></div></div><p class="sv-note">Мобы, награды и доступность секторов соответствуют разделу «Локации».</p><select id="sv-location" hidden></select></section><section class="sv-card"><div class="section-label"><span>СВОДКА ПО ЛОКАЦИИ</span><small>МОБЫ И НАГРАДЫ</small></div><div id="sv-location-visual" class="sv-location-visual" aria-hidden="true"></div><p id="sv-atmosphere-note" class="sv-atmosphere-note"></p><div id="sv-location-meta"></div><p class="sv-route-status" id="sv-run-info"></p><button class="btn btn-gold" id="sv-start">Войти в Зону</button></section></div></div>';
+panel.innerHTML='<summary class="zone-hero"><img src="zona-assets/asset-25.webp" alt="" decoding="async"><div class="hero-copy"><div class="eyebrow">КПК СТАЛКЕРА / ЖИВАЯ ЗОНА</div><h1>SURVIVAL <span class="sv-version-badge" aria-label="Бета-версия"><i aria-hidden="true"></i>BETA<small>ТЕСТОВАЯ ВЕРСИЯ</small></span></h1><p>Исследуйте заброшенные территории, сражайтесь с обитателями Зоны и выносите найденный хабар.</p><div class="hero-meta"><span>28 СЕКТОРОВ · ОБЩАЯ КАРТА · ПОЛЕВАЯ ВЫЛАЗКА</span><span class="kpk-toggle"><span class="when-closed">ОТКРЫТЬ</span><span class="when-open">СВЕРНУТЬ</span><span class="kpk-chevron" aria-hidden="true">⌄</span></span></div></div></summary><div class="sv-body"><section class="sv-world-entry" aria-labelledby="sv-entry-title"><div class="sv-world-entry-head"><span>ПОЛЕВАЯ ВЫЛАЗКА</span><b>28 СЕКТОРОВ</b></div><h2 id="sv-entry-title">Общая Зона</h2><p class="sv-world-entry-lead">Один мир для исследования. Между районами можно идти пешком.</p><div class="sv-world-entry-position"><small id="sv-entry-position-label">НАЧАЛО ПУТИ</small><strong id="sv-entry-sector">Кордон: Деревня Новичков</strong><p id="sv-entry-context">Первая вылазка начинается у лагеря новичков.</p></div><dl class="sv-world-entry-stats"><div><dt id="sv-entry-energy-label">ВХОД</dt><dd id="sv-entry-energy">5 энергии</dd></div><div><dt>ПОЛЕВОЙ РЮКЗАК</dt><dd id="sv-entry-bag">Пусто</dd></div></dl><button type="button" class="btn btn-gold" id="sv-start">ВОЙТИ В ЗОНУ</button><p id="sv-run-info" class="sv-world-entry-status" role="status"></p><div class="sv-world-entry-help"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2V5Zm6-2v16m6-14v16"/></svg><p><strong>Маршрут на карте</strong><span>Коснитесь миникарты в игре, чтобы увидеть районы и поставить точку назначения.</span></p></div><p class="sv-world-entry-note">Добыча хранится в полевом рюкзаке до эвакуации. При гибели она теряется.</p><select id="sv-location" hidden disabled tabindex="-1" aria-hidden="true"><option value="loc_kordon_village">Кордон: Деревня Новичков</option></select></section></div>';
 document.getElementById('tab-locations').append(panel);
 const overlay=document.createElement('section');overlay.id='sv-screen';overlay.hidden=true;overlay.setAttribute('aria-label','Survival');overlay.innerHTML='<header><div class="sv-head-copy"><small><span class="sv-signal" aria-hidden="true">▂▄▆</span> ПОЛЕВОЙ КПК <span class="sv-head-version">16.62</span></small><strong id="sv-title"></strong></div><button id="sv-sound" type="button" aria-label="Выключить звук" aria-pressed="true">ЗВУК</button><button id="sv-pause" class="btn btn-dark" aria-label="Пауза и КПК"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span>КПК</span></button></header><div class="sv-vitals" id="sv-vitals"></div><div class="sv-view"><canvas id="sv-canvas" aria-label="Трёхмерная карта локации"></canvas><canvas id="sv-3d-fx" aria-hidden="true" hidden></canvas><canvas id="sv-minimap-3d" aria-label="Миникарта" hidden></canvas><div id="sv-route-readout" class="sv-route-readout" aria-label="Расстояние до выхода"></div><div class="sv-hud-panel sv-hud-left"><div class="sv-brand">ZONA Z · 16.62 <b id="sv-level">LVL 1</b></div><div class="sv-stat"><span>ЖИЗНЬ</span><b class="sv-bar"><i id="sv-bar-hp"></i></b><em id="sv-text-hp"></em></div><div class="sv-stat"><span>СТАМ</span><b class="sv-bar"><i id="sv-bar-energy"></i></b><em id="sv-text-energy"></em></div><div class="sv-stat"><span>ГОЛОД</span><b class="sv-bar"><i id="sv-bar-hunger"></i></b><em id="sv-text-hunger"></em></div><div class="sv-stat"><span>ЖАЖДА</span><b class="sv-bar"><i id="sv-bar-thirst"></i></b><em id="sv-text-thirst"></em></div><div class="sv-stat"><span title="Радиация">РАД.</span><b class="sv-bar"><i id="sv-bar-radiation"></i></b><em id="sv-text-radiation"></em></div><div class="sv-money"><span id="sv-money">0 ₽</span><span id="sv-bag">Рюкзак 0</span></div></div><div class="sv-hud-panel sv-hud-right"><div class="sv-weapon-box"><small>ОРУЖИЕ</small><strong id="sv-weapon-name">Нож</strong><div id="sv-weapon-ammo">ГОТОВ К БОЮ</div></div><div class="sv-objective-box"><small id="sv-zone-state">ЗОНА ИССЛЕДОВАНИЯ</small><strong id="sv-objective-name">Выход к убежищу</strong><div id="sv-objective-dist">0 м</div></div></div><div id="sv-3d-prompt" hidden></div><div id="sv-message" role="status"></div><div class="sv-controls"><div id="sv-stick" aria-label="Джойстик движения"><span></span></div><div class="sv-actions"><button id="sv-action" aria-label="Действие"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h22v15H5zM4 8h24v5H4zM14 13v6h4v-6M9 8V5h14v3"/></svg><span id="sv-action-label">Обыск</span></button><button id="sv-attack" aria-label="Атака"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9"/><path d="M16 2v9m0 10v9M2 16h9m10 0h9"/><circle cx="16" cy="16" r="2"/></svg><span>Атака</span></button></div></div><div class="sv-legend">Зелёный — выход · Золотой — ящики · Голубой — выжившие · Алая подсветка — враги</div></div>';
 document.body.append(overlay);
@@ -12198,7 +12528,8 @@ function seedOf(s){let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(
 function save(){storeWorldSector();g.saveState()}
 function note(s){const el=$('sv-message');el.textContent=s;el.hidden=false;noteUntil=performance.now()+3600}
 function loc(){return DB.locations.find(l=>l.id===run()?.locId)}
-function currentLocChoice(){const select=$('sv-location'),st=state(),active=run();const unlocked=DB.locations.filter(l=>g.state.level>=(l.minLevel||1));if(active)return active.locId;if(st.selectedLoc&&DB.locations.some(l=>l.id===st.selectedLoc&&g.state.level>=(l.minLevel||1)))return st.selectedLoc;if(select?.value&&DB.locations.some(l=>l.id===select.value&&g.state.level>=(l.minLevel||1)))return select.value;return unlocked[0]?.id||DB.locations[0]?.id||''}
+function currentLocChoice(){return run()?.locId||'loc_kordon_village'}
+
 function locEnemyNames(l){return (l?.enemies||[]).map(id=>DB.enemies[id]?.name||id)}
 function locLootPreview(l){return (l?.loot||[]).map(id=>DB.items[id]).filter(Boolean).filter(it=>!it.buildingOnly&&!it.plotExclusive&&it.id!=='scrap_doc'&&it.rarity!=='metro').slice(0,4).map(it=>it.name)}
 const sectorArt=Object.fromEntries(DB.locations.map((l,i)=>[l.id,'zona-assets/asset-'+String(i+9).padStart(2,'0')+'.webp']));
@@ -12213,40 +12544,22 @@ const svHeroImage=panel.querySelector('summary.zone-hero>img');
 if(svHeroImage)setSectorArt(svHeroImage,'loc_kordon_village',svHeroImage.getAttribute('src'));
 
 function renderLocSummary(l,active){
- const box=$('sv-location-meta'),visual=$('sv-location-visual');if(!box||!l)return;
- if(visual){visual.replaceChildren();const img=document.createElement('img');setSectorArt(img,l.id);img.alt='';img.loading='lazy';img.decoding='async';visual.append(img);const label=document.createElement('span');label.textContent=(l.dangerText||'ЗОНА')+' · '+(SCENE_WEATHER[window.ZonaSurvival3D.sectorAtmosphere(l.id).weather]||'');visual.append(label);}
- const fieldNote=$('sv-atmosphere-note');if(fieldNote)fieldNote.textContent=SV_FIELD_NOTES[l.id]||'';
- const preview=locLootPreview(l);
- box.innerHTML='<div class="sv-meta-list"><div class="sv-meta-pill"><small>УРОВЕНЬ</small><b>'+esc(String(l.minLevel||1))+'</b></div><div class="sv-meta-pill"><small>ВХОД</small><b>'+(l.energyCost||l.energy||5)+' ЭНЕРГИИ</b></div><div class="sv-meta-pill"><small>ОПАСНОСТЬ</small><b>'+esc(l.dangerText||'Неизвестно')+'</b></div><div class="sv-meta-pill"><small>ШАНС GRAM</small><b>'+esc(l.gramStr||(((l.gramcoinChance||l.gramChance||0)*100).toFixed(1)+'%'))+'</b></div></div><details class="sv-detail-fold"><summary>Противники и хабар <span>+</span></summary><div class="sv-detail-copy"><div><strong>Противники:</strong> '+esc(locEnemyNames(l).join(' · ')||'Нет данных')+'</div><div><strong>Возможный хабар:</strong> '+esc(preview.join(' · ')||'Припасы и хлам')+'</div></div></details>';
- $('sv-run-info').textContent=active?'Маршрут сохранён: '+(loc()?.name||active.locId):'Возвращение — у зелёной отметки на карте.';
+ const count=Object.values(active?.bag||{}).reduce((sum,value)=>sum+(Number(value)||0),0),fee=l?.energyCost||l?.energy||5;
+ $('sv-entry-position-label').textContent=active?'ВЫ НАХОДИТЕСЬ':'НАЧАЛО ПУТИ';
+ $('sv-entry-sector').textContent=l?.name||'Кордон: Деревня Новичков';
+ $('sv-entry-context').textContent=active?(active.room===null?'Вылазка сохранена. Продолжите с того же места.':'Внутри здания. Вылазка сохранена с текущего места.'):'Первая вылазка начинается у лагеря новичков.';
+ $('sv-entry-energy-label').textContent=active?'ПРОДОЛЖЕНИЕ':'ВХОД';
+ $('sv-entry-energy').textContent=active?'Без затрат':fee+' энергии';
+ $('sv-entry-bag').textContent=count?count+' предм. · '+(active.rubles||0)+' ₽':'Пусто';
+ $('sv-run-info').textContent=active?'Рюкзак и найденная добыча сохранены.':'Маршрут выбирается уже в общем мире.';
 }
-function renderSectorOptions(){
- const list=$('sv-location-options');if(!list)return;
- const value=$('sv-location')?.value;
- const query=($('sv-sector-search')?.value||'').trim().toLocaleLowerCase('ru');const rows=DB.locations.map((l,i)=>({l,i})).filter(({l})=>!query||l.name.toLocaleLowerCase('ru').includes(query));
- const frag=document.createDocumentFragment();
- if(!rows.length){const none=document.createElement('p');none.className='sv-empty-sectors';none.textContent='Секторы не найдены';frag.append(none)}
- for(const {l,i} of rows){const locked=g.state.level<(l.minLevel||1),chosen=l.id===value;
-  const item=document.createElement('button');item.type='button';item.className='sv-location-option'+(chosen?' is-active':'')+(locked?' is-locked':'');item.dataset.svLoc=l.id;item.disabled=locked;item.setAttribute('aria-current',chosen?'true':'false');
-  const photo=document.createElement('img');setSectorArt(photo,l.id);photo.alt='';photo.loading='lazy';photo.decoding='async';photo.className='sv-loc-thumb';
-  const copy=document.createElement('span');copy.className='sv-loc-copy';const name=document.createElement('strong');name.textContent=l.name;const detail=document.createElement('small');detail.textContent='УР. '+(l.minLevel||1)+' · '+(l.dangerText||'ЗОНА');copy.append(name,detail);
-  const symbol=document.createElement('span');symbol.className='sv-loc-mark';symbol.textContent=locked?'🔒':chosen?'✓':'›';
-  item.append(photo,copy,symbol);frag.append(item);
- }
- list.replaceChildren(frag);
-}
+
 function refresh(){
- const active=run(),select=$('sv-location');if(!select)return;
- const value=currentLocChoice();select.innerHTML=DB.locations.map(l=>'<option value="'+esc(l.id)+'" '+(g.state.level<(l.minLevel||1)?'disabled':'')+'>'+esc(l.name)+'</option>').join('');
- if(DB.locations.some(l=>l.id===value))select.value=value;
- state().selectedLoc=select.value||value;select.disabled=!!active;
- const chosen=DB.locations.find(l=>l.id===select.value)||DB.locations[0],trigger=$('sv-location-trigger'),current=$('sv-location-current'),sub=$('sv-location-sub'),menu=$('sv-location-menu');
- if(trigger){trigger.disabled=!!active;trigger.setAttribute('aria-expanded','false')}
- if(current&&chosen)current.textContent=chosen.name;
- if(sub&&chosen)sub.textContent='УР. '+(chosen.minLevel||1)+' · '+(chosen.dangerText||'Зона');
- if(menu){menu.hidden=true;renderSectorOptions();}
- $('sv-start').textContent=active?'ПРОДОЛЖИТЬ SURVIVAL':'ВОЙТИ В ЗОНУ';
- renderLocSummary(chosen,active)
+ const active=run(),value=active?.locId||'loc_kordon_village',chosen=DB.locations.find(l=>l.id===value)||DB.locations[0],select=$('sv-location');
+ if(select){select.replaceChildren();const option=document.createElement('option');option.value=value;option.textContent=chosen?.name||value;select.append(option);select.value=value;select.disabled=true;}
+ state().selectedLoc=value;
+ $('sv-start').textContent=active?'ПРОДОЛЖИТЬ ВЫЛАЗКУ':'ВОЙТИ В ЗОНУ';
+ renderLocSummary(chosen,active);
 }
 
 let entryTask=null,entrySerial=0,entryReady=Promise.resolve(true);
@@ -12294,7 +12607,7 @@ function finishEntry(task,worldMap){
  try{
   map=worldMap;
   for(const zone of [map,...map.rooms])for(const e of zone.enemies){const actor=st.run.enemyState[e.id];if(actor)clearSpawn(actor,zone)}
-  clearSpawn(st.run,st.run.room===null?map:map.rooms[st.run.room]);
+  restoreWorldPlayerSpawn(st.run);
   releaseRenderer();const replacement=canvas.cloneNode(false);canvas.replaceWith(replacement);canvas=replacement;
   renderer3d=window.ZonaSurvival3D.init(canvas,map,{eco:phoneEco(),room:st.run.room,focus:{x:st.run.x,y:st.run.y}});
   if(!renderer3d)throw Error('WebGL 3D недоступен');
@@ -12321,24 +12634,59 @@ function startEntry(task){
  task.timer=0;const prepared=createWorldWorker(task);
  const fallback=()=>{
   if(!entryCurrent(task))return;releaseEntryWorker(task);
-  task.timer=setTimeout(()=>{task.timer=0;if(!entryCurrent(task))return;try{finishEntry(task,connectWorldSector(build(task.run.seed),worldPortalsFor(task.run.locId)))}catch(error){console.warn('Survival map failed:',error);rollbackEntry(task,true)}},0);
+  task.timer=setTimeout(()=>{task.timer=0;if(!entryCurrent(task))return;try{finishEntry(task,buildWorldSectorMap(task.run.locId,task.run.world.sectors[task.run.locId],task.run))}catch(error){console.warn('Survival map failed:',error);rollbackEntry(task,true)}},0);
  };
  if(!prepared){fallback();return}
  task.worker=prepared.worker;task.url=prepared.url;
  task.worker.onmessage=e=>{if(!entryCurrent(task))return;if(e.data.error){fallback();return}finishEntry(task,e.data.map)};
  task.worker.onerror=e=>{e.preventDefault();fallback()};
- try{task.worker.postMessage({run:task.run,location:task.location,enemies:DB.enemies,portals:worldPortalsFor(task.run.locId)})}catch(error){fallback()}
+ try{task.worker.postMessage({run:worldBuildRun(task.run),location:task.location,enemies:DB.enemies,portals:worldPortalsFor(task.run.locId)})}catch(error){fallback()}
 }
 
+
+
+function worldGenerationPosition(id,value={}){
+ const village=id==='loc_kordon_village';
+ return {room:value.room===null?null:Number.isInteger(value.room)?value.room:null,x:Number.isFinite(value.x)?value.x:village?535:140,y:Number.isFinite(value.y)?value.y:village?1110:1260,layoutVersion:value.layoutVersion};
+}
+function ensureWorldGeneration(r){
+ const w=r?.world;if(!w||w.generationVersion===1)return;
+ // Older world saves have no record of the original generation position.
+ // Prefetched sectors originally used their normal entry spawn. For an active
+ // legacy starting sector retain its previous cold-resume generation context.
+ for(const [id,record]of Object.entries(w.sectors||{}))if(record&&!record.generation){
+  record.generation=worldGenerationPosition(id,id===w.startId&&id===r.locId?r:{layoutVersion:record.layoutVersion});
+ }
+ w.generationVersion=1;
+}
+function worldBuildRun(r,record=r?.world?.sectors?.[r.locId]){
+ const generation=record?.generation||worldGenerationPosition(r.locId,r);
+ return {locId:r.locId,seed:r.seed,layoutVersion:generation.layoutVersion,room:generation.room,x:generation.x,y:generation.y};
+}
+function buildWorldSectorMap(id,record,r=run()){
+ const descriptor=worldBuildRun({...record,locId:id},record),saved={locId:r.locId,seed:r.seed,layoutVersion:r.layoutVersion,room:r.room,x:r.x,y:r.y};
+ try{
+  // Compatibility generation is synchronous, so no actor/input callback can
+  // observe this temporary, minimal generation facade.
+  Object.assign(r,descriptor);
+  return connectWorldSector(build(descriptor.seed),worldPortalsFor(id));
+ }finally{Object.assign(r,saved)}
+}
+function restoreWorldPlayerSpawn(r){
+ if(r.room===null&&r.world&&r.x>=0&&r.y>=0&&r.x<map.w&&r.y<map.h&&!worldWalkSolid(r.x,r.y))return;
+ clearSpawn(r,r.room===null?map:map.rooms[r.room]);
+}
 
 const worldCatalog=window.ZonaSurvivalWorld;
 worldCatalog.sectors(DB.locations);
 const WORLD_LOCAL_FIELDS=['opened','talked','defeated','enemyState','npcState','anomalyState','defeatedAt','enemyProjectiles'];
+let worldDesiredIds=new Set();
 let worldStreamRun=null,worldStreamTask=null,worldStreamQueue=[],worldMaps=new Map(),worldStreamSerial=0,worldStreamAt=-1,worldNeighborSignature='',worldEdgeNoteAt=0,worldWorkersUnavailable=false;
 const worldMapLinks=worldCatalog.sectors().flatMap(a=>worldCatalog.neighbors(a.id).filter(b=>a.id<b).map(b=>{const target=worldCatalog.byId(b),p=worldCatalog.portal(a.id,b);return {a:a.id,b,points:[{x:a.x+a.w/2,y:a.y+a.h/2},{x:p.worldX,y:p.worldY},{x:target.x+target.w/2,y:target.y+target.h/2}]}}));
 function storeWorldSector(r=run()){
  if(!r?.world)return;
  const records=r.world.sectors||(r.world.sectors={}),record=records[r.locId]||(records[r.locId]={});
+ if(!record.generation)record.generation=worldGenerationPosition(r.locId,r);
  record.seed=r.seed;record.layoutVersion=r.layoutVersion;record.room=r.room;record.x=r.x;record.y=r.y;record.visited=true;
  for(const key of WORLD_LOCAL_FIELDS)if(r[key]!==undefined)record[key]=r[key];else delete record[key];
 }
@@ -12348,7 +12696,7 @@ function ensureWorldRun(r){
  if(!r.world.sectors||typeof r.world.sectors!=='object')r.world.sectors={};
  const point=r.world.waypoint;
  if(point&&(!Number.isFinite(point.x)||!Number.isFinite(point.y)||!worldCatalog.at(point.x,point.y)))r.world.waypoint=null;
- storeWorldSector(r);return r.world;
+ ensureWorldGeneration(r);storeWorldSector(r);if(!Number.isFinite(r.world.visualSeed))r.world.visualSeed=r.world.sectors[r.world.startId]?.seed??r.seed;return r.world;
 }
 function worldRecord(id,r=run()){
  const w=ensureWorldRun(r);if(!w||!worldCatalog.byId(id))return null;
@@ -12356,13 +12704,19 @@ function worldRecord(id,r=run()){
   const visit=(Number(state().visits[id])||0)+1;
   w.sectors[id]={seed:seedOf(id+':'+visit),layoutVersion:10,room:null,x:id==='loc_kordon_village'?535:140,y:id==='loc_kordon_village'?1110:1260,opened:[],talked:[],defeated:[],enemyState:{},visited:false,visit};
  }
- return w.sectors[id];
+ const record=w.sectors[id];if(!record.generation)record.generation=worldGenerationPosition(id,record);
+ return record;
 }
-function worldPortalsFor(id){return worldCatalog.neighbors(id).map(next=>worldCatalog.portal(id,next)).filter(Boolean)}
+function worldPortalsFor(id){
+ const portals=worldCatalog.neighbors(id).map(next=>worldCatalog.portal(id,next)).filter(Boolean).map(p=>({...p})),sector=worldCatalog.byId(id);
+ if(portals.length&&sector){const neighborhood=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const other=worldCatalog.at(sector.x+(dx+.5)*sector.w,sector.y+(dy+.5)*sector.h);if(other)neighborhood.push({dx,dy,id:other.id,ground:window.ZonaSurvival3D.sectorLook(other.id).ground})}portals[0].neighborhood=neighborhood;}
+ return portals;
+}
 function releaseWorldStream(){
+ cancelWorldNavigation();
  worldStreamSerial++;worldStreamQueue.length=0;
  if(worldStreamTask){releaseEntryWorker(worldStreamTask);worldStreamTask=null}
- worldMaps.clear();worldStreamRun=null;worldStreamAt=-1;worldNeighborSignature='';worldWorkersUnavailable=false;
+ worldDesiredIds.clear();worldMaps.clear();worldStreamRun=null;worldStreamAt=-1;worldNeighborSignature='';worldWorkersUnavailable=false;
 }
 function attachWorldStream(r,worldMap){
  ensureWorldRun(r);worldStreamRun=r;worldMaps.set(r.locId,{map:worldMap,seed:r.seed,at:performance.now()});worldStreamAt=-1;worldNeighborSignature='';
@@ -12371,14 +12725,15 @@ function worldStreamCurrent(task){return worldStreamTask===task&&worldStreamRun=
 function trimWorldMaps(){
  if(worldMaps.size<=5)return;
  const active=run()?.locId,near=new Set(worldCatalog.neighbors(active));
- const victims=[...worldMaps].filter(([id])=>id!==active).sort((a,b)=>(near.has(a[0])?1:0)-(near.has(b[0])?1:0)||a[1].at-b[1].at);
+ const priority=id=>(worldDesiredIds.has(id)?4:0)+(near.has(id)?1:0);
+ const victims=[...worldMaps].filter(([id])=>id!==active).sort((a,b)=>priority(a[0])-priority(b[0])||a[1].at-b[1].at);
  while(worldMaps.size>5&&victims.length)worldMaps.delete(victims.shift()[0]);
 }
 function finishWorldPrefetch(task,nextMap){
  if(!worldStreamCurrent(task))return;
  releaseEntryWorker(task);worldStreamTask=null;
  if(task.owner.world?.sectors?.[task.id]?.seed===task.record.seed){worldMaps.set(task.id,{map:nextMap,seed:task.record.seed,at:performance.now()});trimWorldMaps()}
- worldStreamAt=-1;processWorldQueue();
+ if(worldNavCache?.ids[1]===task.id){cancelWorldNavigation();if(visible&&!entryTask)hud()}worldStreamAt=-1;processWorldQueue();
 }
 function processWorldQueue(){
  if(worldWorkersUnavailable||worldStreamTask||!worldStreamRun||run()!==worldStreamRun||!renderer3d?.valid)return;
@@ -12397,7 +12752,7 @@ function processWorldQueue(){
   finishWorldPrefetch(task,e.data.map);
  };
  task.worker.onerror=e=>{e.preventDefault();if(!worldStreamCurrent(task))return;worldWorkersUnavailable=true;releaseEntryWorker(task);worldStreamTask=null};
- try{task.worker.postMessage({run:{...record,locId:id},location,enemies:DB.enemies,portals:worldPortalsFor(id)})}catch(error){worldWorkersUnavailable=true;releaseEntryWorker(task);worldStreamTask=null}
+ try{task.worker.postMessage({run:worldBuildRun({...record,locId:id},record),location,enemies:DB.enemies,portals:worldPortalsFor(id)})}catch(error){worldWorkersUnavailable=true;releaseEntryWorker(task);worldStreamTask=null}
 }
 function requestWorldSector(id,urgent=false){
  if(!id||id===run()?.locId||worldMaps.has(id)||worldStreamTask?.id===id)return;
@@ -12412,36 +12767,141 @@ function worldPosition(r=run()){
  if(r.room!==null&&map?.buildings?.[r.room]?.door)p=map.buildings[r.room].door;
  return worldCatalog.global(r.locId,p.x,p.y);
 }
-function worldNavigation(r=run()){
- const point=r?.world?.waypoint;if(!r||!point)return null;
- const player=worldPosition(r),destination=worldCatalog.at(point.x,point.y);if(!player||!destination)return null;
- const allowed=worldCatalog.route(r.locId,destination.id,sector=>sector.minLevel<=g.state.level),ids=allowed.length?allowed:worldCatalog.route(r.locId,destination.id),points=[{x:player.x,y:player.y}];
- for(let i=0;i<ids.length-1;i++){const p=worldCatalog.portal(ids[i],ids[i+1]);if(p)points.push({x:p.worldX,y:p.worldY})}
- points.push({x:point.x,y:point.y});
- let distance=0;for(let i=1;i<points.length;i++)distance+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);
- let target;
- if(r.room!==null)target={...world().exit};
- else if(ids.length>1){const p=worldCatalog.portal(r.locId,ids[1]);target={x:p.x,y:p.y}}
- else target=worldCatalog.local(r.locId,point.x,point.y);
- return {target,ids,points,distance,destination,arrived:r.room===null&&Math.hypot(player.x-point.x,player.y-point.y)<55};
+
+let worldNavCache=null,worldNavTimer=0,worldNavPlans=0,worldNavLastMS=0;
+function cancelWorldNavigation(){if(worldNavTimer)clearTimeout(worldNavTimer);worldNavTimer=0;worldNavCache=null}
+function worldNavLength(points){let n=0;for(let i=1;i<points.length;i++)n+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return n}
+function worldNavEdges(id){const out={};for(const next of worldCatalog.neighbors(id)){const p=worldCatalog.portal(id,next);if(worldCatalog.byId(next).minLevel<=g.state.level)out[p.direction]=true}return out}
+function worldNavBoundary(fromId,toId,start,destination){
+ const p=worldCatalog.portal(fromId,toId),sector=worldCatalog.byId(fromId);if(!p)return null;
+ const vertical=p.direction==='east'||p.direction==='west',edge=vertical?p.worldX:p.worldY,axis=vertical?'x':'y',other=vertical?'y':'x',delta=destination[axis]-start[axis];
+ const t=Math.abs(delta)>1e-9?(edge-start[axis])/delta:-1;
+ const raw=t>=0&&t<=1?start[other]+(destination[other]-start[other])*t:destination[other];
+ const value=Math.max(sector[other]+24,Math.min(sector[other]+(vertical?sector.h:sector.w)-24,raw));
+ return vertical?{x:edge,y:value}:{x:value,y:edge};
 }
+function worldNavEntry(cache,desired){
+ if(cache.ids.length<2||cache.blocked)return desired;
+ const next=worldMaps.get(cache.ids[1])?.map,p=worldCatalog.portal(cache.sectorId,cache.ids[1]),other=worldCatalog.byId(cache.ids[1]),vertical=p.direction==='east'||p.direction==='west',axis=vertical?'y':'x',max=vertical?cache.map.h:cache.map.w;
+ const finder=window.ZonaSurvivalNavigation,edges=worldNavEdges(cache.sectorId),offset={x:other.x-cache.sector.x,y:other.y-cache.sector.y};
+ const candidates=[0,48,-48,96,-96,192,-192,384,-384,768,-768].map(shift=>({...desired,[axis]:Math.max(24,Math.min(max-24,desired[axis]+shift))}));
+ candidates.push({x:p.x,y:p.y});
+ for(const goal of candidates){
+  if(!finder.isSegmentClear({map:cache.map,start:goal,goal,inside:false,allowEdges:edges}))continue;
+  if(next){const entry={x:goal.x-offset.x,y:goal.y-offset.y},inward={x:entry.x+(p.direction==='east'?18:p.direction==='west'?-18:0),y:entry.y+(p.direction==='south'?18:p.direction==='north'?-18:0)};if(!finder.isSegmentClear({map:next,start:entry,goal:inward,inside:false,allowEdges:worldNavEdges(cache.ids[1])}))continue;}
+  return goal;
+ }
+ return null;
+}
+function createWorldNav(r,point){
+ const player=worldPosition(r),destination=worldCatalog.at(point.x,point.y);if(!player||!destination)return null;
+ const allowed=worldCatalog.route(r.locId,destination.id,sector=>sector.minLevel<=g.state.level),ids=allowed.length?allowed:worldCatalog.route(r.locId,destination.id);
+ const blocked=!allowed.length,requiredLevel=blocked?Math.max(...ids.map(id=>worldCatalog.byId(id).minLevel)):0;
+ const room=r.room,scene=room===null?map:map.rooms[room],sector=worldCatalog.byId(r.locId),outsideStart=room===null?{x:r.x,y:r.y}:{...map.buildings[room].door};
+ const tail=[];let previous={x:sector.x+outsideStart.x,y:sector.y+outsideStart.y};
+ for(let i=0;i<ids.length-1;i++){const p=worldNavBoundary(ids[i],ids[i+1],previous,point);if(p){tail.push(p);previous=p}}
+ tail.push({x:point.x,y:point.y});
+ const outsideGoal=ids.length>1?{x:tail[0].x-sector.x,y:tail[0].y-sector.y}:worldCatalog.local(r.locId,point.x,point.y);
+ const cache={run:r,map,scene,room,point,sectorId:r.locId,level:g.state.level,destination,ids,blocked,requiredLevel,sector,outsideStart,outsideGoal,tail,pending:true,planned:false,local:[{x:r.x,y:r.y}],outside:[],localGoal:room===null?outsideGoal:{...scene.exit},complete:false,approach:false,progress:0,follow:null,lastPlan:0,lastPlanPosition:{x:r.x,y:r.y},cost:0};
+ cache.view={target:{...cache.localGoal},ids,points:[{x:player.x,y:player.y},...tail],distance:worldNavLength([{x:player.x,y:player.y},...tail]),legDistance:Math.hypot(r.x-cache.localGoal.x,r.y-cache.localGoal.y),destination,arrived:false,pending:true,blocked,requiredLevel,localPoints:[],approach:false,approximate:ids.length>1,unreachable:false};
+ return cache;
+}
+function worldNavValid(cache){return worldNavCache===cache&&run()===cache.run&&map===cache.map&&cache.run.room===cache.room&&cache.run.locId===cache.sectorId&&cache.run.world?.waypoint===cache.point&&cache.level===g.state.level}
+function queueWorldNavigation(cache){
+ if(worldNavTimer||!worldNavValid(cache))return;
+ cache.pending=true;
+ worldNavTimer=setTimeout(()=>{worldNavTimer=0;if(!worldNavValid(cache))return;const began=performance.now();
+  try{
+   const finder=window.ZonaSurvivalNavigation,r=cache.run,edges=worldNavEdges(r.locId),selected=worldNavEntry(cache,cache.outsideGoal),goal=selected||cache.outsideGoal,outside=finder.findPath({map:cache.map,start:cache.room===null?{x:r.x,y:r.y}:cache.outsideStart,goal,inside:false,allowEdges:edges,maxNodes:10000});
+   if(selected&&cache.ids.length>1){cache.tail[0]={x:cache.sector.x+selected.x,y:cache.sector.y+selected.y}}
+   if(!selected)outside.complete=false;
+   // The original paved connection remains a safe alternative when an edge
+   // approach is obstructed. Choose it only when it produces a complete path.
+   let exterior=outside;
+   if(cache.ids.length>1&&!outside.complete){const gate=worldCatalog.portal(r.locId,cache.ids[1]),gateGoal=worldNavEntry(cache,{x:gate.x,y:gate.y});if(gateGoal){const other=finder.findPath({map:cache.map,start:cache.room===null?{x:r.x,y:r.y}:cache.outsideStart,goal:gateGoal,inside:false,allowEdges:edges,maxNodes:10000});if(other.complete){exterior=other;cache.tail[0]={x:cache.sector.x+gateGoal.x,y:cache.sector.y+gateGoal.y}}}}
+   const active=cache.room===null?exterior:finder.findPath({map:cache.scene,start:{x:r.x,y:r.y},goal:cache.localGoal,inside:true,maxNodes:10000});
+   if(!worldNavValid(cache))return;
+   cache.local=active.points.length?active.points:[{x:r.x,y:r.y}];cache.outside=exterior.points;cache.outsideComplete=exterior.complete;cache.localGoal=active.goal;cache.complete=active.complete&&exterior.complete;cache.approach=cache.ids.length===1&&!exterior.reachedGoal;cache.progress=Math.min(1,cache.local.length-1);cache.follow=null;cache.pending=false;cache.planned=true;cache.lastPlan=performance.now();cache.lastPlanPosition={x:r.x,y:r.y};cache.cost=performance.now()-began;worldNavLastMS=cache.cost;worldNavPlans++;
+   if(visible&&!entryTask)hud();
+  }catch(error){cache.pending=false;cache.planned=true;cache.complete=false;cache.error=String(error?.message||error)}
+ },0);
+}
+function followWorldNavigation(cache,r){
+ if(cache.follow&&cache.follow.x===r.x&&cache.follow.y===r.y){if(cache.follow.needsPlan&&performance.now()-cache.lastPlan>800)queueWorldNavigation(cache);return cache.follow}
+ const path=cache.local,point={x:r.x,y:r.y},finder=window.ZonaSurvivalNavigation,edges=cache.room===null?worldNavEdges(r.locId):{};
+ let index=Math.max(0,Math.min(cache.progress,path.length-1)),safe=false;
+ for(let i=Math.min(path.length-1,index+5);i>=index;i--){if(finder.isSegmentClear({map:cache.scene,start:point,goal:path[i],inside:cache.room!==null,allowEdges:edges})){index=i;safe=true;break}}
+ if(path.length===1&&Math.hypot(point.x-path[0].x,point.y-path[0].y)<1)safe=true;
+ cache.progress=index;
+ const points=safe?[point,...path.slice(index)]:[point];
+ if(points.length>1&&Math.hypot(points[0].x-points[1].x,points[0].y-points[1].y)<1)points.splice(1,1);
+ const distance=worldNavLength(points),target=points[1]||points[0];
+ const needsPlan=!safe||Math.hypot(r.x-cache.lastPlanPosition.x,r.y-cache.lastPlanPosition.y)>180;
+ if(needsPlan&&performance.now()-cache.lastPlan>800)queueWorldNavigation(cache);
+ return cache.follow={x:r.x,y:r.y,points,distance,target,safe,needsPlan};
+}
+function worldNavigation(r=run()){
+ const point=r?.world?.waypoint;if(!r||!point){if(worldNavCache)cancelWorldNavigation();return null}
+ if(!worldNavCache||!worldNavValid(worldNavCache)){
+  cancelWorldNavigation();worldNavCache=createWorldNav(r,point);if(!worldNavCache)return null;queueWorldNavigation(worldNavCache);
+ }
+ const cache=worldNavCache,view=cache.view;
+ if(!cache.planned){view.pending=cache.pending;return view}
+ const follow=followWorldNavigation(cache,r),sector=cache.sector;
+ if(cache.viewFollow===follow&&cache.viewPending===cache.pending)return view;
+ cache.viewFollow=follow;cache.viewPending=cache.pending;
+ const outside=cache.room===null?follow.points:cache.outside,global=outside.map(p=>({x:sector.x+p.x,y:sector.y+p.y}));
+ const tail=cache.outsideComplete?cache.tail.slice(cache.ids.length>1?1:cache.approach?1:0):[];
+ for(const p of tail)if(!global.length||Math.hypot(global[global.length-1].x-p.x,global[global.length-1].y-p.y)>1)global.push(p);
+ const tailDistance=cache.ids.length>1?worldNavLength([cache.tail[0],...cache.tail.slice(1)]):0;
+ const outsideDistance=cache.room===null?0:worldNavLength(cache.outside);
+ view.target=follow.target;view.localPoints=follow.points;view.points=global;view.legDistance=follow.distance;view.distance=follow.distance+outsideDistance+tailDistance;view.pending=cache.pending;view.approach=cache.approach;view.unreachable=!cache.complete||!follow.safe;
+ view.approximate=tailDistance>64;view.arrived=!cache.pending&&!cache.blocked&&!view.unreachable&&cache.room===null&&cache.ids.length===1&&follow.distance<=(cache.approach?28:48);
+ return view;
+}
+function worldNavigationLabel(nav,inside=false){
+ if(nav.blocked)return 'Нужен ур. '+nav.requiredLevel;
+ if(nav.pending&&!worldNavCache?.planned)return 'Маршрут…';
+ if(nav.unreachable)return 'Нет прохода';
+ const d=inside?nav.legDistance:nav.distance,label=d>=1000?(d/1000).toFixed(1).replace('.',',')+' км':Math.round(d)+' м';
+ return (inside?'Наружу':nav.arrived?(nav.approach?'У отметки':'Вы на месте'):'Метка')+' · '+(nav.approximate&&!inside?'≈ ':'')+label;
+}
+function drawWorldWaypoint(c,r,X,Y,range){
+ const nav=worldNavigation(r);if(!nav)return;
+ const dx=nav.target.x-r.x,dy=nav.target.y-r.y,d=Math.hypot(dx,dy),f=Math.min(1,(range-34)/(d||1)),x=X(r.x+dx*f),y=Y(r.y+dy*f);
+ c.save();c.strokeStyle=nav.blocked?'#b99478':'#edd097';c.fillStyle=c.strokeStyle;c.lineWidth=1.7;c.setLineDash([3,4]);
+ if(!nav.pending&&!nav.blocked&&!nav.unreachable&&nav.localPoints.length>1){c.beginPath();c.moveTo(X(r.x),Y(r.y));for(const p of nav.localPoints.slice(1)){c.lineTo(X(p.x),Y(p.y))}c.stroke()}
+ c.setLineDash([]);c.translate(x,y);c.beginPath();c.moveTo(0,-6);c.lineTo(5,0);c.lineTo(0,6);c.lineTo(-5,0);c.closePath();c.fill();c.strokeStyle='#17241d';c.stroke();c.restore();
+}
+
 function updateWorldStream(force=false){
  const r=run();if(!r||!r.world||worldStreamRun!==r||!renderer3d?.valid)return;
- const now=performance.now();if(!force&&worldStreamAt>=0&&now-worldStreamAt<180)return;worldStreamAt=now;
- const current=worldCatalog.byId(r.locId),nav=worldNavigation(r),candidates=[];
+ const now=performance.now();if(!force&&worldStreamAt>=0&&now-worldStreamAt<150)return;worldStreamAt=now;
+ const current=worldCatalog.byId(r.locId),nav=worldNavigation(r),candidates=[];worldDesiredIds=new Set([r.locId]);
  if(r.room===null){
   for(const id of worldCatalog.neighbors(r.locId)){
    const p=worldCatalog.portal(r.locId,id),other=worldCatalog.byId(id),distance=p.direction==='east'?map.w-r.x:p.direction==='west'?r.x:p.direction==='south'?map.h-r.y:r.y;
-   if(distance<1450||nav?.ids[1]===id){if(g.state.level>=other.minLevel)requestWorldSector(id,nav?.ids[1]===id)}
-   const ready=worldMaps.get(id);if(ready&&distance<1000)candidates.push({id,map:ready.map,offsetX:other.x-current.x,offsetY:other.y-current.y,distance});
+   if((distance<2400||nav?.ids[1]===id)&&g.state.level>=other.minLevel){worldDesiredIds.add(id);requestWorldSector(id,nav?.ids[1]===id)}
+   const ready=worldMaps.get(id);if(ready&&distance<1600)candidates.push({id,map:ready.map,offsetX:other.x-current.x,offsetY:other.y-current.y,distance,diagonal:false});
+  }
+  const horizontal=r.x<1600?-1:r.x>map.w-1600?1:0,vertical=r.y<1600?-1:r.y>map.h-1600?1:0;
+  if(horizontal&&vertical){
+   const other=worldCatalog.at(current.x+(horizontal+.5)*current.w,current.y+(vertical+.5)*current.h);
+   if(other&&g.state.level>=other.minLevel){
+    worldDesiredIds.add(other.id);requestWorldSector(other.id,false);
+    const ready=worldMaps.get(other.id),distance=Math.hypot(horizontal<0?r.x:map.w-r.x,vertical<0?r.y:map.h-r.y);
+    if(ready&&distance<1200)candidates.push({id:other.id,map:ready.map,offsetX:other.x-current.x,offsetY:other.y-current.y,distance,diagonal:true});
+   }
   }
  }
- candidates.sort((a,b)=>a.distance-b.distance);const selected=candidates.slice(0,2);
- const signature=selected.map(s=>s.id+':'+s.map.worldConnectionVersion).join('|')+':'+(r.room===null?Math.floor(r.x/500)+','+Math.floor(r.y/500):'inside');
+ const selected=candidates.filter(s=>!s.diagonal).sort((a,b)=>a.distance-b.distance).slice(0,2);
+ const diagonal=candidates.find(s=>s.diagonal);if(diagonal)selected.push(diagonal);
+ const signature=selected.map(s=>s.id+':'+s.map.worldConnectionVersion+':'+(s.diagonal?'corner':'side')).join('|')+':'+(r.room===null?Math.floor(r.x/320)+','+Math.floor(r.y/320):'inside');
  if(signature!==worldNeighborSignature){renderer3d.setWorldNeighbors?.(selected,r);worldNeighborSignature=signature}
- if(nav?.arrived&&!r.world.waypoint.arrived){r.world.waypoint.arrived=true;note('Вы дошли до отметки на карте.');save()}
+ if(nav?.arrived&&!r.world.waypoint.arrived){r.world.waypoint.arrived=true;note(nav.approach?'Вы у ближайшего прохода к отметке.':'Вы дошли до отметки на карте.');save()}
  processWorldQueue();
 }
+
 function worldGateFor(x,y,w=map){
  const id=run()?.locId;if(!id||w!==map)return null;
  const portals=worldPortalsFor(id),direction=x<0?'west':x>=w.w?'east':y<0?'north':y>=w.h?'south':null;
@@ -12455,11 +12915,10 @@ function worldMapObstacle(w,x,y,radius=12){
  return false;
 }
 function worldWalkSolid(x,y,radius=12){
- const gate=worldGateFor(x,y),nearBoundary=x<radius+8||y<radius+8||x>map.w-radius-8||y>map.h-radius-8;
- if(!gate||!nearBoundary)return solid(x,y,radius,map);
- if(g.state.level<worldCatalog.byId(gate.to).minLevel)return true;
+ if(x<0||y<0||x>=map.w||y>=map.h)return true;
  return worldMapObstacle(map,x,y,radius);
 }
+
 function crossWorldSector(id,x,y){
  const r=run(),record=r?.world?.sectors?.[id],ready=worldMaps.get(id);if(!r||!record||!ready||ready.seed!==record.seed)return false;
  const nextMap=ready.map;
@@ -12483,45 +12942,48 @@ function prepareWorldBoundary(id){
  const task={id,owner:r,record,canceled:false,worker:null,url:'',timer:0};worldStreamTask=task;
  task.timer=setTimeout(()=>{
   task.timer=0;if(!worldStreamCurrent(task))return;
-  const saved={locId:r.locId,seed:r.seed,layoutVersion:r.layoutVersion,x:r.x,y:r.y,room:r.room};
-  try{Object.assign(r,{locId:id,seed:record.seed,layoutVersion:record.layoutVersion,x:record.x,y:record.y,room:record.room});const nextMap=connectWorldSector(build(record.seed),worldPortalsFor(id));Object.assign(r,saved);finishWorldPrefetch(task,nextMap)}
-  catch(error){Object.assign(r,saved);releaseEntryWorker(task);worldStreamTask=null;note('Не удалось подготовить соседний сектор. Попробуйте подойти ещё раз.')}
+  try{finishWorldPrefetch(task,buildWorldSectorMap(id,record,r))}
+  catch(error){releaseEntryWorker(task);worldStreamTask=null;note('Не удалось подготовить соседний сектор. Попробуйте подойти ещё раз.')}
  },0);
 }
 function moveWorldPlayer(o,dx,dy){
- const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/6));
+ const steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/6));let crossed=false;
  for(let i=0;i<steps;i++)for(const axis of ['x','y']){
-  if(!visible)return false;
+  if(!visible)return crossed;
   const amount=(axis==='x'?dx:dy)/steps;if(!amount)continue;
-  const x=o.x+(axis==='x'?amount:0),y=o.y+(axis==='y'?amount:0),gate=worldGateFor(x,y);
-  if(gate&&g.state.level<worldCatalog.byId(gate.to).minLevel){if(performance.now()>worldEdgeNoteAt){worldEdgeNoteAt=performance.now()+3000;note('Для сектора «'+worldCatalog.byId(gate.to).name+'» нужен уровень '+worldCatalog.byId(gate.to).minLevel)}continue}
-  if(x<0||x>=map.w||y<0||y>=map.h){
-   if(!gate)continue;
-   const from=worldCatalog.byId(o.locId),to=worldCatalog.byId(gate.to),nx=x+from.x-to.x,ny=y+from.y-to.y;
-   if(worldMaps.has(gate.to)){if(crossWorldSector(gate.to,nx,ny))return true}
+  const x=o.x+(axis==='x'?amount:0),y=o.y+(axis==='y'?amount:0),outside=x<0||x>=map.w||y<0||y>=map.h;
+  if(outside){
+   const gate=worldGateFor(x,y);if(!gate)continue;
+   const next=worldCatalog.byId(gate.to);
+   if(g.state.level<next.minLevel){if(performance.now()>worldEdgeNoteAt){worldEdgeNoteAt=performance.now()+3000;note('Для сектора «'+next.name+'» нужен уровень '+next.minLevel)}continue}
+   const from=worldCatalog.byId(o.locId),nx=x+from.x-next.x,ny=y+from.y-next.y;
+   if(worldMaps.has(gate.to)){if(crossWorldSector(gate.to,nx,ny))crossed=true}
    else{prepareWorldBoundary(gate.to);if(performance.now()>worldEdgeNoteAt){worldEdgeNoteAt=performance.now()+1800;note('Подготовка соседнего участка…')}}
    continue;
   }
   if(!worldWalkSolid(x,y))o[axis]+=amount;
  }
- return false;
+ return crossed;
 }
+
 function setWorldWaypoint(x,y){
  const r=run(),sector=Number.isFinite(x)&&Number.isFinite(y)?worldCatalog.at(x,y):null;if(!r||!sector)return false;
  ensureWorldRun(r);r.world.waypoint={x,y,sectorId:sector.id,arrived:false};save();worldStreamAt=-1;if(visible&&!entryTask){updateWorldStream(true);hud()}return true;
 }
-function clearWorldWaypoint(){const r=run();if(!r?.world)return false;r.world.waypoint=null;save();if(visible&&!entryTask)hud();return true}
+function clearWorldWaypoint(){cancelWorldNavigation();const r=run();if(!r?.world)return false;r.world.waypoint=null;save();if(visible&&!entryTask)hud();return true}
+const worldAnchorCache=new Map();
+function worldLocationAnchor(id){
+ let point=worldAnchorCache.get(id);if(point)return point;
+ const sector=worldCatalog.byId(id);if(!sector)return null;
+ const buildings=AUTHORED_SECTORS[id]?.buildings||[];
+ const local=id==='loc_kordon_village'?{x:535,y:1110}:buildings.length?{x:buildings.reduce((n,b)=>n+b.x+b.w/2,0)/buildings.length,y:buildings.reduce((n,b)=>n+b.y+b.h/2,0)/buildings.length}:{x:840,y:650};
+ point={x:sector.x+local.x,y:sector.y+local.y};worldAnchorCache.set(id,point);return point;
+}
 function worldMapSnapshot(){
  const r=run(),player=worldPosition(r),nav=r&&!entryTask&&map?worldNavigation(r):null;
- return {sectors:worldCatalog.sectors(DB.locations),player:player?{...player,room:r.room}:null,waypoint:r?.world?.waypoint||null,links:worldMapLinks,route:nav?.points||[],level:Number(g.state.level)||1};
+ return {sectors:worldCatalog.sectors(DB.locations).map(s=>({...s,anchor:worldLocationAnchor(s.id)})),player:player?{...player,room:r.room}:null,waypoint:r?.world?.waypoint||null,links:worldMapLinks,route:nav?.points||[],navigation:nav?{distance:nav.distance,legDistance:nav.legDistance,pending:nav.pending,blocked:nav.blocked,requiredLevel:nav.requiredLevel,unreachable:nav.unreachable,approach:nav.approach,approximate:nav.approximate,arrived:nav.arrived,inside:r.room!==null}:null,level:Number(g.state.level)||1};
 }
 const worldMapAPI={get snapshot(){return worldMapSnapshot()},setWaypoint:setWorldWaypoint,clearWaypoint:clearWorldWaypoint};
-function drawWorldWaypoint(c,r,X,Y,range){
- const nav=worldNavigation(r);if(!nav)return;
- const dx=nav.target.x-r.x,dy=nav.target.y-r.y,d=Math.hypot(dx,dy),f=Math.min(1,(range-34)/(d||1)),x=X(r.x+dx*f),y=Y(r.y+dy*f);
- c.save();c.strokeStyle='#edd097';c.fillStyle='#edd097';c.lineWidth=1.7;c.setLineDash([3,4]);c.beginPath();c.moveTo(X(r.x),Y(r.y));c.lineTo(x,y);c.stroke();c.setLineDash([]);
- c.translate(x,y);c.beginPath();c.moveTo(0,-6);c.lineTo(5,0);c.lineTo(0,6);c.lineTo(-5,0);c.closePath();c.fill();c.strokeStyle='#17241d';c.stroke();c.restore();
-}
 
 function rectHit(x,y,o,r=12){return x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h}
 function world(){return run().room===null?map:map.rooms[run().room]}
@@ -13487,7 +13949,7 @@ function stepAnomalies(dt){
 function step(dt){if(entryTask||!visible||!run())return;const r=run(),w=world();r.worldTime=(r.worldTime||0)+dt;shot=Math.max(0,shot-dt);if(hitLine){hitLine.t-=dt;if(hitLine.t<=0)hitLine=null}let dx=stick.x,dy=stick.y;const mag=Math.hypot(dx,dy);if(mag>1){dx/=mag;dy/=mag}const v=mode3d&&renderer3d?renderer3d.movement(dx,dy):[dx,dy];updateWorldStream();if(move(r,v[0]*155*dt,v[1]*155*dt)||!visible)return;stepPeople(dt,w);if(!stepEnemies(dt,w))return;
 
 if(!stepAnomalies(dt))return;saveTimer+=dt;hudTimer+=dt;if(saveTimer>=5){saveTimer=0;save()}if(hudTimer>.2){hudTimer=0;hud()}}
-function hud(){if(entryTask)return;const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+((r.seed%94)*1.6))/520*Math.PI*2,night=Math.max(.18,Math.min(.94,(map?.theme?.nightBias??.34)+(.5-.5*Math.cos(phase))*.21)),tod=night>.68?'НОЧЬ':night>.43?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / '+(world().zones?.find(z=>r.x>=z.x&&r.x<=z.x+z.w&&r.y>=z.y&&r.y<=z.y+z.h)?.name||world().name||('Здание '+(r.room+1))):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(phoneEco()?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action-label').textContent=verb;$('sv-action').setAttribute('aria-label',verb);const prompt=$('sv-3d-prompt');if(window.ZonaSurvivalInterface){window.ZonaSurvivalInterface.syncAction(t?.kind,mode3d)}else{prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb;}$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,g.state.maxEnergy||100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit)),worldNav=worldNavigation(r);const routeReadout=$('sv-route-readout');if(routeReadout){routeReadout.textContent=worldNav?(r.room!==null?'Наружу':worldNav.arrived?'Вы на месте':'Метка')+' · '+Math.round(r.room!==null?distance(r,world().exit):worldNav.distance)+' м':(r.room===null?'Выход':'Наружу')+' · '+exitDist+' м';routeReadout.title=worldNav?'Маршрут: '+worldNav.destination.name:r.room===null?'Расстояние до выхода в убежище':'Расстояние до выхода из здания';}const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}window.ZonaSurvivalHUD?.update()}
+function hud(){if(entryTask)return;const r=run();if(!r)return;const bagCount=Object.values(r.bag).reduce((a,b)=>a+b,0),weather=SCENE_WEATHER[map?.theme?.weather]||'ЗОНА',phase=((r.worldTime||0)+(((r.world?.visualSeed??r.seed)%94)*1.6))/520*Math.PI*2,night=Math.max(.18,Math.min(.94,(window.ZonaSurvival3D.worldSceneAtmosphere(map,r).nightBias??.34)+(.5-.5*Math.cos(phase))*.21)),tod=night>.68?'НОЧЬ':night>.43?'СУМЕРКИ':'ДЕНЬ';$('sv-title').textContent=loc().name+(r.room!==null?' / '+(world().zones?.find(z=>r.x>=z.x&&r.x<=z.x+z.w&&r.y>=z.y&&r.y<=z.y+z.h)?.name||world().name||('Здание '+(r.room+1))):'');$('sv-vitals').textContent='HP '+Math.ceil(g.state.hp)+' / '+Math.ceil(g.state.maxHp)+' · Рюкзак '+bagCount+' · '+r.rubles+' ₽ · '+weather+' · '+tod+(phoneEco()?' · ECO':'')+(renderer3d&&!renderer3d.webgl?' · МОБИЛЬНЫЙ РЕЖИМ':' · 3D СВЕРХУ');const t=target(),verb=t?({crate:'Обыскать',person:'Говорить',door:'Войти',outside:'Выйти',exit:'В убежище'}[t.kind]):'Действие';$('sv-action-label').textContent=verb;$('sv-action').setAttribute('aria-label',verb);const prompt=$('sv-3d-prompt');if(window.ZonaSurvivalInterface){window.ZonaSurvivalInterface.syncAction(t?.kind,mode3d)}else{prompt.hidden=!(mode3d&&t);if(!prompt.hidden)prompt.textContent=verb;}$('sv-level').textContent='LVL '+Math.max(1,Math.floor(g.state.level||1));meter('sv-bar-hp',g.state.hp,g.state.maxHp,Math.ceil(g.state.hp)+'/'+Math.ceil(g.state.maxHp));meter('sv-bar-energy',g.state.energy,g.state.maxEnergy||100,Math.ceil(g.state.energy));meter('sv-bar-hunger',g.state.hunger,100,Math.ceil(g.state.hunger));meter('sv-bar-thirst',g.state.thirst,100,Math.ceil(g.state.thirst));meter('sv-bar-radiation',Math.max(0,g.state.radiation||0),100,Math.ceil(g.state.radiation||0)+'%');$('sv-money').textContent=(r.rubles||0)+' ₽';$('sv-bag').textContent='Рюкзак '+bagCount;const weapon=equippedWeapon();$('sv-weapon-name').textContent=weapon?.name||'Нож';const hudPower=g.getAttackPower(),hudDamage=Math.max(2,(hudPower[0]+hudPower[1])/2);$('sv-weapon-ammo').textContent='Урон '+Number(hudDamage.toFixed(1));const exitDist=Math.round(distance(r,world().exit)),worldNav=worldNavigation(r);const routeReadout=$('sv-route-readout');if(routeReadout){routeReadout.textContent=worldNav?worldNavigationLabel(worldNav,r.room!==null):(r.room===null?'Выход':'Наружу')+' · '+exitDist+' м';routeReadout.title=worldNav?'Маршрут: '+worldNav.destination.name:r.room===null?'Расстояние до выхода в убежище':'Расстояние до выхода из здания';}const zoneState=$('sv-zone-state');const objName=$('sv-objective-name');const objDist=$('sv-objective-dist');if(t){zoneState.textContent=t.kind==='exit'?'ТОЧКА ВЫХОДА':t.kind==='door'?'ВХОД В ЗДАНИЕ':t.kind==='person'?'КОНТАКТ':t.kind==='crate'?'ЛУТ К РУКАМ':'ОБЪЕКТ';objName.textContent=verb;objDist.textContent=Math.round(distance(r,t))+' м'}else{zoneState.textContent=SAFE_LOCS.has(loc()?.id)?'ОТНОСИТЕЛЬНО БЕЗОПАСНО':'ЗОНА ИССЛЕДОВАНИЯ';objName.textContent='Выход к убежищу';objDist.textContent=exitDist+' м'}window.ZonaSurvivalHUD?.update()}
 function resize(){
  const b=canvas.parentElement.getBoundingClientRect(),dpr=window.devicePixelRatio||1,budget=phoneEco()?300000:520000;
  const ratio=Math.max(.65,Math.min(dpr,phoneEco()?1.15:1.5,Math.sqrt(budget/Math.max(1,b.width*b.height)))*mobileRender.scale);
@@ -13704,7 +14166,7 @@ if(!indoor&&(map.theme.mist>.35||swamp||mode==='fog'||mode==='rain'))for(const p
 if(lab){for(const l of world().lights||[]){const q=projected(l.x,45,l.y);if(!q)continue;const alpha=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?.04:.035+.012*Math.sin(t*.65+l.x);c.fillStyle='rgba(113,181,163,'+alpha+')';c.beginPath();c.ellipse(q.x,q.y,50,18,0,0,Math.PI*2);c.fill()}}
 if(hitLine){const q=projected(r.x,25,r.y);if(q){c.fillStyle='rgba(255,205,119,'+(hitLine.t/.14*.7)+')';c.beginPath();c.arc(q.x,q.y,3+hitLine.t*28,0,Math.PI*2);c.fill()}}
 if(mode==='rain'&&!indoor){
- const rainTime=weatherClock,seed=r.seed>>>0,reduced=weatherStill;
+ const rainTime=weatherClock,seed=(r.world?.visualSeed??r.seed)>>>0,reduced=weatherStill;
  const storm=window.ZonaSurvival3D.stormState(rainTime,seed,false,reduced),wind=storm.wind;
  const fract=n=>n-Math.floor(n),hash=n=>fract(Math.sin(n*127.1+seed*.001)*43758.5453);
  c.save();c.lineCap='round';
@@ -13833,7 +14295,7 @@ function draw3DMinimap(){
  c.restore();c.strokeStyle='#9c8c63';c.lineWidth=1.4;c.beginPath();c.arc(C,C,R+2,0,Math.PI*2);c.stroke();
  c.fillStyle='#d3c6a2';c.font='bold 13px monospace';c.textAlign='center';c.fillText('N',C,15);
 }
-$('sv-sector-search').addEventListener('input',renderSectorOptions);$('sv-start').addEventListener('click',()=>enter($('sv-location').value));$('sv-pause').addEventListener('click',pause);$('sv-sound').addEventListener('click',()=>{state().sound=state().sound===false;const on=state().sound;survivalAudio.stop();if(on)survivalAudio.start(true);$('sv-sound').textContent=on?'ЗВУК':'ТИХО';$('sv-sound').setAttribute('aria-pressed',String(on));$('sv-sound').setAttribute('aria-label',on?'Выключить звук':'Включить звук');save()});bindSurvivalTap('sv-action',action);bindSurvivalTap('sv-attack',attack);panel.addEventListener('toggle',()=>{if(!panel.open){const menu=$('sv-location-menu');if(menu)menu.hidden=true;}refresh()});panel.addEventListener('click',e=>{const pick=e.target.closest('[data-sv-loc]');if(pick&&!pick.disabled){$('sv-location').value=pick.dataset.svLoc;state().selectedLoc=pick.dataset.svLoc;const menu=$('sv-location-menu');if(menu)menu.hidden=true;save();refresh();return}const trigger=e.target.closest('#sv-location-trigger');if(trigger){if(trigger.disabled)return;const menu=$('sv-location-menu');if(menu){menu.hidden=!menu.hidden;trigger.setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden){renderSectorOptions()}}return}});document.addEventListener('click',e=>{const menu=$('sv-location-menu');if(menu&&!menu.hidden&&!panel.contains(e.target)){menu.hidden=true;$('sv-location-trigger').setAttribute('aria-expanded','false');}});
+$('sv-start').addEventListener('click',()=>enter(run()?.locId||'loc_kordon_village'));$('sv-pause').addEventListener('click',pause);$('sv-sound').addEventListener('click',()=>{state().sound=state().sound===false;const on=state().sound;survivalAudio.stop();if(on)survivalAudio.start(true);$('sv-sound').textContent=on?'ЗВУК':'ТИХО';$('sv-sound').setAttribute('aria-pressed',String(on));$('sv-sound').setAttribute('aria-label',on?'Выключить звук':'Включить звук');save()});bindSurvivalTap('sv-action',action);bindSurvivalTap('sv-attack',attack);panel.addEventListener('toggle',refresh);
 // Each thumb owns its own pointer: a moving left thumb never cancels a right-hand tap.
 const survivalTouchButtons=new Map();
 function releaseTouchButtons(){
@@ -13875,7 +14337,7 @@ for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventL
 for(const ev of ['pointerup','pointercancel'])window.addEventListener(ev,e=>{if(e.pointerId===stick.id){stick.id=null;stick.x=stick.y=0;pad.classList.remove('is-active');pad.firstElementChild.style.transform='translate(-50%,-50%)'}for(const [id,pointerId] of survivalTouchButtons)if(pointerId===e.pointerId){survivalTouchButtons.delete(id);$(id).classList.remove('is-pressed')}},{passive:true});
 window.addEventListener('resize',()=>{if(visible){resetInput();resize()}});window.addEventListener('orientationchange',resetInput);window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});window.addEventListener('pagehide',pause);
 // Public interface also provides deterministic mechanics for regression tests.
-g.survival={get worldMap(){return worldMapAPI},get worldStreamStats(){return {active:run()?.locId||null,cached:[...worldMaps.keys()],pending:worldStreamTask?.id||null,queued:[...worldStreamQueue]}},get loading(){return !!entryTask},get entryReady(){return entryReady},get feedback(){return feedbackSnapshot()},enter,pause,suspend,leaveToPDA,action,attack,step,exit:exitRun,build,solid,sight,state,refresh,get map(){return map},get visible(){return visible},get is3d(){return mode3d},get renderer(){return renderer3d}};refresh();
+g.survival={get worldMap(){return worldMapAPI},get navigationStats(){return {plans:worldNavPlans,pending:!!worldNavTimer,lastMS:worldNavLastMS,points:worldNavCache?.local.length||0}},get worldStreamStats(){return {active:run()?.locId||null,cached:[...worldMaps.keys()],pending:worldStreamTask?.id||null,queued:[...worldStreamQueue]}},get loading(){return !!entryTask},get entryReady(){return entryReady},get feedback(){return feedbackSnapshot()},enter,pause,suspend,leaveToPDA,action,attack,step,exit:exitRun,build,solid,sight,state,refresh,get map(){return map},get visible(){return visible},get is3d(){return mode3d},get renderer(){return renderer3d}};refresh();
 });
 </script><style id="zona-survival-v132">#sv-screen header:after{content:"";position:absolute;inset:5px 5px 5px 5px;border:1px solid rgba(186,157,91,.16);pointer-events:none;}
 #sv-screen header .sv-head-copy{display:flex;flex-direction:column;justify-content:center;min-width:0;z-index:1;}
@@ -14448,6 +14910,7 @@ function install(){
   element.addEventListener('click',e=>{e.preventDefault();if(e.detail===0&&!element.disabled)perform()});
  }
  const finite=(v,fallback=0)=>Number.isFinite(Number(v))?Number(v):fallback,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),center=o=>({x:o.x+o.w/2,y:o.y+o.h/2}),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ const anchor=o=>o.anchor&&Number.isFinite(Number(o.anchor.x))&&Number.isFinite(Number(o.anchor.y))?{x:Number(o.anchor.x),y:Number(o.anchor.y)}:center(o);
  const meters=v=>v>=1000?(v/1000).toLocaleString('ru-RU',{maximumFractionDigits:1})+' км':Math.round(v)+' м';
  function snapshot(){
   try{
@@ -14478,16 +14941,18 @@ function install(){
  function sectorAt(data,p){return data.sectors.find(o=>p.x>=o.x&&p.x<=o.x+o.w&&p.y>=o.y&&p.y<=o.y+o.h)||null}
  function setDestination(p){
   const data=snapshot();if(!data)return false;
+  if(camera.zoom<camera.min*1.6){const q=screenPoint(p),near=data.sectors.map(o=>({o,p:screenPoint(anchor(o))})).map(a=>({...a,d:Math.hypot(a.p.x-q.x,a.p.y-q.y)})).sort((a,b)=>a.d-b.d)[0];if(near&&near.d<13)p=anchor(near.o);}
   let ok=false;try{ok=s.worldMap.setWaypoint(p.x,p.y)!==false}catch(_){ok=false}
   if(!ok){$('sv-atlas-status').textContent='Выберите точку в доступной части карты.';return false}
   selectedId=sectorAt(data,p)?.id||null;update(snapshot());queueDraw();return true;
  }
- function chooseSector(id){const data=snapshot(),sector=data?.sectors.find(o=>o.id===id);if(!sector)return;const p=center(sector);selectedId=id;camera.x=p.x;camera.y=p.y;camera.zoom=clamp(Math.min((width-74)/sector.w,(height-48)/sector.h)*.86,camera.min,camera.max);isFitted=false;clampCamera();setDestination(p);queueDraw();}
+ function chooseSector(id){const data=snapshot(),sector=data?.sectors.find(o=>o.id===id);if(!sector)return;const p=anchor(sector);selectedId=id;camera.x=p.x;camera.y=p.y;camera.zoom=clamp(Math.min((width-74)/sector.w,(height-48)/sector.h)*.86,camera.min,camera.max);isFitted=false;clampCamera();setDestination(p);queueDraw();}
  function normalLink(link){return {a:typeof link.a==='object'?link.a.id:link.a??link.from,b:typeof link.b==='object'?link.b.id:link.b??link.to,points:Array.isArray(link.points)?link.points:null}}
  function route(data){
   if(!data.player||!data.waypoint)return [];
+  if(data.navigation?.pending)return [];
   const provided=Array.isArray(data.route)?data.route:data.route?.points;
-  if(provided?.length>1)return provided.filter(o=>o&&Number.isFinite(Number(o.x))&&Number.isFinite(Number(o.y))).slice(0,256).map(o=>({x:Number(o.x),y:Number(o.y)}));
+  if(provided?.length>1||data.navigation&&Array.isArray(provided)){const points=provided.filter(o=>o&&Number.isFinite(Number(o.x))&&Number.isFinite(Number(o.y))).map(o=>({x:Number(o.x),y:Number(o.y)}));if(points.length<=256)return points;return Array.from({length:256},(_,i)=>points[Math.round(i*(points.length-1)/255)]);}
   const byId=new Map(data.sectors.map(o=>[o.id,o])),start=data.player.sectorId||sectorAt(data,data.player)?.id,end=data.waypoint.sectorId||sectorAt(data,data.waypoint)?.id;
   if(!start||!end||start===end)return [data.player,data.waypoint];
   const links=(data.links||[]).map(normalLink).filter(o=>byId.has(o.a)&&byId.has(o.b)),cost=new Map([[start,0]]),previous=new Map(),pending=new Set(byId.keys());
@@ -14501,42 +14966,121 @@ function install(){
  function update(data=snapshot()){
   if(!data)return;const signature=data.sectors.map(o=>o.id+':'+o.name).join('|');
   if(signature!==knownSectors){knownSectors=signature;select.replaceChildren();const first=document.createElement('option');first.value='';first.textContent='Найти локацию · '+data.sectors.length;select.append(first);for(const o of data.sectors){const option=document.createElement('option');option.value=o.id;option.textContent=o.name;select.append(option)}}
-  $('sv-atlas-subtitle').textContent='ОБЩАЯ КАРТА · '+data.sectors.length+' СЕКТОРОВ';
+  $('sv-atlas-subtitle').textContent='ТОПОГРАФИЧЕСКАЯ СХЕМА · '+data.sectors.length+' РАЙОНОВ';
   const current=data.sectors.find(o=>o.id===data.player?.sectorId),target=data.waypoint&&(data.sectors.find(o=>o.id===data.waypoint.sectorId)||sectorAt(data,data.waypoint));
-  if(data.waypoint){const points=route(data);let length=0;for(let i=1;i<points.length;i++)length+=dist(points[i-1],points[i]);$('sv-atlas-status').textContent=(target?.name||'Точка назначения')+(data.player?' · '+meters(length||dist(data.player,data.waypoint)):'');$('sv-atlas-hint').textContent='Точка установлена. Коснитесь другого места, чтобы изменить маршрут.';}
+  if(data.waypoint){const points=route(data),nav=data.navigation;let length=0;for(let i=1;i<points.length;i++)length+=dist(points[i-1],points[i]);const distance=Number.isFinite(nav?.distance)?nav.distance:length||dist(data.player,data.waypoint);$('sv-atlas-status').textContent=(target?.name||'Точка назначения')+(data.player?' · '+(nav?.approximate?'≈ ':'')+meters(distance):'');$('sv-atlas-hint').textContent=nav?.blocked?'Для этого маршрута нужен уровень '+nav.requiredLevel+'. Можно выбрать другую цель.':nav?.pending?'Уточняем маршрут к отметке…':nav?.unreachable?'Проход к отметке не найден. Выберите ближайшее доступное место.':nav?.arrived?(nav.approach?'Вы у доступного места рядом с отметкой.':'Вы дошли до отметки.'):(nav?.approach?'Отметка у препятствия. Маршрут ведёт к ближайшему проходу.':'Точка установлена. Коснитесь другого места, чтобы изменить маршрут.');}
   else{$('sv-atlas-status').textContent=current?'Вы здесь: '+current.name:'Выберите точку назначения';$('sv-atlas-hint').textContent='Коснитесь места, чтобы поставить цель. Двигайте карту и меняйте масштаб двумя пальцами.';}
   $('sv-atlas-clear').disabled=!data.waypoint;select.value=selectedId&&data.sectors.some(o=>o.id===selectedId)?selectedId:'';
  }
  function path(points,stroke,lineWidth,dash=[]){if(points.length<2)return;ctx.beginPath();let i=0;for(const p of points){const q=screenPoint(p);if(i++===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.setLineDash(dash);ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();ctx.setLineDash([]);}
- function sectorColor(o){const id=o.id+' '+String(o.region||'');return /lab|sarco|reactor|institute/.test(id)?'#29392f':/swamp|marsh|lake/.test(id)?'#23453d':/forest|grove/.test(id)?'#254331':/city|pripyat|dead|military|prom/.test(id)?'#394034':'#334332'}
- function sectorLabel(o,rect,current,target){
-  const boxWidth=Math.max(24,Math.min(150,rect.w-8)),font=camera.zoom>camera.min*2.3?12:rect.w<68?9:10.5;
-  ctx.font='600 '+font+'px Arial,sans-serif';const full=o.name.replace(/^Локация\s*:\s*/i,''),clean=full.length>19&&full.includes(':')?full.slice(full.indexOf(':')+1).trim():full,words=clean.split(/\s+/),lines=[];let line='';
-  for(const word of words){const candidate=line?line+' '+word:word;if(line&&ctx.measureText(candidate).width>boxWidth){lines.push(line);line=word}else line=candidate;}if(line)lines.push(line);
-  const maxLines=rect.h>68?3:2,overflow=lines.length>maxLines;if(overflow)lines.length=maxLines;
-  for(let i=0;i<lines.length;i++){if(ctx.measureText(lines[i]).width<=boxWidth&&!(overflow&&i===lines.length-1))continue;let text=lines[i];while(text.length>1&&ctx.measureText(text+'…').width>boxWidth)text=text.slice(0,-1);lines[i]=text+'…';}
-  const cx=rect.x+rect.w/2,cy=rect.y+rect.h/2,h=lines.length*(font+2),wid=Math.min(164,Math.max(...lines.map(l=>ctx.measureText(l).width))+10);
-  ctx.fillStyle='#102017b8';ctx.fillRect(cx-wid/2,cy-h/2-4,wid,h+8);ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=2;ctx.strokeStyle='#0c170f';ctx.fillStyle=current?'#f1dfae':target?'#e7c681':'#c4ceb2';
-  for(let i=0;i<lines.length;i++){const y=cy-h/2+font/2+i*(font+2);ctx.strokeText(lines[i],cx,y);ctx.fillText(lines[i],cx,y);}
-  if(rect.h>70&&rect.w>70&&Number(o.minLevel)>1){ctx.font='9px Arial,sans-serif';ctx.fillStyle='#a4b391';ctx.fillText('ур. '+o.minLevel,cx,cy+h/2+10);}
+ const ATLAS_NAMES={loc_kordon_village:['Новички','Деревня Новичков'],loc_kordon_post:['Блокпост','Южный блокпост'],loc_swamp_base:['Болота','Лагерь Чистого Неба'],loc_dump_depo:['Депо','Заброшенное депо'],loc_dump_graveyard:['Кладбище\nтехники','Кладбище техники'],loc_agroprom_inst:['Агропром','НИИ Агропром'],loc_agroprom_under:['Подземелья','Подземелья Агропрома'],loc_valley_bandit:['Тёмная\nдолина','База Борова'],loc_lab18:['Х-18','Лаборатория Х-18'],loc_bar_100:['Росток','Бар 100 Рентген'],loc_wild_territory:['Дикая\nтерритория','Дикая территория'],loc_yantar_bunker:['Янтарь','Бункер Сахарова'],loc_lab16:['Х-16','Лаборатория Х-16'],loc_military_base:['Склады','Армейские склады'],loc_barrier:['Барьер','Барьер'],loc_deadcity:['Мёртвый\nгород','Мёртвый город'],loc_redforest:['Рыжий\nлес','Рыжий лес'],loc_skadovsk:['Скадовск','Сухогруз Скадовск'],loc_jupiter_janov:['Юпитер','Юпитер / Янов'],loc_limansk:['Лиманск','Лиманск'],loc_hospital:['Госпиталь','Заброшенный госпиталь'],loc_radar:['Радар','Выжигатель мозгов'],loc_tunnel_pripyat:['Припять-1','Путепровод Припять-1'],loc_pripyat_center:['Припять','Центр Припяти'],loc_lab8:['Х-8','Лаборатория Х-8'],loc_chaes_roof:['ЧАЭС','ЧАЭС / 4-й энергоблок'],loc_sarcophagus:['Саркофаг','Саркофаг'],loc_generators:['Генераторы','Генераторы']};
+ let terrainKey='',terrain=null,atlasStats={labels:0,markers:0,terrainShapes:0,sectorRectangles:0};
+ const atlasSeed=id=>{let n=2166136261;for(const c of id)n=Math.imul(n^c.charCodeAt(0),16777619);return n>>>0;};
+ function atlasRandom(seed){let n=seed||1;return ()=>{n^=n<<13;n^=n>>>17;n^=n<<5;return (n>>>0)/4294967296;};}
+ let textureCanvas=null,texturePattern=null;
+ function atlasTexture(){
+  if(textureCanvas)return textureCanvas;
+  const size=256,seed=atlasSeed('zona-landcover-v3'),random=atlasRandom(seed),canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+  const grids=[5,17,53].map(n=>{const values=new Float32Array(n*n);for(let i=0;i<values.length;i++)values[i]=random();return {n,values}});
+  const sample=(grid,x,y)=>{const fx=x*grid.n,fy=y*grid.n,x0=Math.floor(fx),y0=Math.floor(fy),tx=fx-x0,ty=fy-y0,wrap=n=>(n%grid.n+grid.n)%grid.n,at=(ix,iy)=>grid.values[wrap(iy)*grid.n+wrap(ix)],sx=tx*tx*(3-2*tx),sy=ty*ty*(3-2*ty),a=at(x0,y0)*(1-sx)+at(x0+1,y0)*sx,b=at(x0,y0+1)*(1-sx)+at(x0+1,y0+1)*sx;return a*(1-sy)+b*sy};
+  const image=canvas.getContext('2d').createImageData(size,size),pixels=image.data;
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){const i=(y*size+x)*4,coarse=sample(grids[0],x/size,y/size),middle=sample(grids[1],x/size,y/size),fine=sample(grids[2],x/size,y/size),grain=random()-.5,v=coarse*.58+middle*.3+fine*.12,rock=Math.max(0,.34-v),canopy=Math.max(0,v-.64);pixels[i]=Math.max(0,Math.min(255,82+v*28+rock*17-canopy*8+grain*11));pixels[i+1]=Math.max(0,Math.min(255,101+v*32+rock*5-canopy*11+grain*13));pixels[i+2]=Math.max(0,Math.min(255,75+v*23+rock*3-canopy*9+grain*10));pixels[i+3]=255;}
+  canvas.getContext('2d').putImageData(image,0,0);textureCanvas=canvas;return canvas;
  }
+ function blob(x,y,rx,ry,seed,count=20){const rnd=atlasRandom(seed),out=[];for(let i=0;i<count;i++){const a=i/count*Math.PI*2,r=.78+rnd()*.26;out.push({x:x+Math.cos(a)*rx*r,y:y+Math.sin(a)*ry*r});}return out;}
+ function polygon(points,fill,stroke=null,lineWidth=1){if(!points.length)return;ctx.beginPath();for(let i=0;i<points.length;i++){const p=screenPoint(points[i]);if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)}ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.stroke()}}
+ function smooth(points,stroke,lineWidth,dash=[]){if(points.length<2)return;const p=points.map(screenPoint);ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);for(let i=1;i<p.length-1;i++)ctx.quadraticCurveTo(p[i].x,p[i].y,(p[i].x+p[i+1].x)/2,(p[i].y+p[i+1].y)/2);ctx.lineTo(p.at(-1).x,p.at(-1).y);ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash);ctx.stroke();ctx.setLineDash([]);}
+ function terrainFor(data){
+  const key=data.sectors.map(o=>o.id+':'+o.x+','+o.y+','+o.w+','+o.h+':'+anchor(o).x+','+anchor(o).y).join('|');if(key===terrainKey)return terrain;terrainKey=key;
+  const b=mapBounds(data),shapes=[],forests=[],water=[],contours=[],settlements=[],rails=[];
+  // Paint broad, wandering terrain fields over the shared world. They are
+  // generated in world coordinates so the map reads as one landscape instead
+  // of 28 colored tiles.
+  const climate=atlasRandom(atlasSeed(data.sectors.map(o=>o.id).join(':'))),landTones=['#536d5b24','#b4ae8050','#576c6b30','#4d5f4e32','#a1947550','#69775c36'];
+  for(let i=0;i<58;i++){const x=b.x+b.w*(.025+climate()*.95),y=b.y+b.h*(.02+climate()*.96),rx=b.w*(.025+climate()*.075),ry=b.h*(.018+climate()*.065),seed=Math.floor(climate()*0xffffffff);shapes.push({points:blob(x,y,rx,ry,seed,28),color:landTones[Math.floor(climate()*landTones.length)]});}
+  // Contours follow large ridges rather than repeating around each location.
+  for(let i=0;i<22;i++){const x=b.x+b.w*(.04+climate()*.92),y=b.y+b.h*(.035+climate()*.93),rx=b.w*(.035+climate()*.065),ry=b.h*(.025+climate()*.065),seed=Math.floor(climate()*0xffffffff),tilt=(climate()-.5)*.22;for(let k=0;k<3;k++){const shrink=1-k*.19,points=blob(x+tilt*rx*k,y-tilt*ry*k,rx*shrink,ry*shrink,seed+k*41,32);contours.push(points);}}
+  for(const o of data.sectors){const seed=atlasSeed(o.id),rnd=atlasRandom(seed),c=center(o),site=anchor(o),id=o.id,wet=/swamp|yantar|skadovsk/.test(id)||/swamp|marsh/.test(o.region),woods=/forest|swamp|military|barrier|kordon|radar/.test(id)||/forest/.test(o.region),urban=/city|pripyat|limansk|agroprom|dump|jupiter|bar_100|chaes|generators|hospital/.test(id);
+   const woodsCount=woods?4:urban?1:2;for(let j=0;j<woodsCount;j++){const x=o.x+o.w*(.12+rnd()*.77),y=o.y+o.h*(.1+rnd()*.8),rx=o.w*(.2+rnd()*.2),ry=o.h*(.15+rnd()*.2),points=blob(x,y,rx,ry,seed+j*187+1);forests.push({points,x,y,rx,ry,seed:seed+j*187});}
+   if(wet){const x=o.x+o.w*(/skadovsk/.test(id)?.68:.72),y=o.y+o.h*(/swamp/.test(id)?.64:.43);water.push({points:blob(x,y,o.w*(/skadovsk/.test(id)?.32:.25),o.h*(/swamp/.test(id)?.38:.3),seed+441),x,y,wet});}
+   const buildings=[];if(urban||/village|post|base|lab|bunker|radar/.test(id)){for(let j=0;j<(urban?15:7);j++){const row=Math.floor(j/5),col=j%5;buildings.push({x:site.x+(col-2)*o.w*.045+(rnd()-.5)*80,y:site.y+(row-1)*o.h*.064+(rnd()-.5)*80,w:o.w*(.025+rnd()*.015),h:o.h*(.02+rnd()*.018)});}settlements.push({id:o.id,buildings});}
+   if(/dump_depo|wild|jupiter|janov|pripyat|chaes/.test(id)){rails.push([{x:o.x+o.w*.12,y:o.y+o.h*.68},{x:c.x-o.w*.1,y:c.y+o.h*.08},{x:c.x+o.w*.25,y:c.y-o.h*.05},{x:o.x+o.w*.9,y:o.y+o.h*.21}]);}
+  }
+  const outer=[{x:b.x-800,y:b.y+b.h*.05},{x:b.x+b.w*.07,y:b.y-850},{x:b.x+b.w*.4,y:b.y-1000},{x:b.x+b.w*.8,y:b.y-700},{x:b.x+b.w+850,y:b.y+b.h*.04},{x:b.x+b.w+1100,y:b.y+b.h*.35},{x:b.x+b.w+800,y:b.y+b.h*.7},{x:b.x+b.w+550,y:b.y+b.h+700},{x:b.x+b.w*.75,y:b.y+b.h+950},{x:b.x+b.w*.3,y:b.y+b.h+700},{x:b.x-600,y:b.y+b.h+800},{x:b.x-950,y:b.y+b.h*.7},{x:b.x-1100,y:b.y+b.h*.3}];
+  terrain={bounds:b,shapes,forests,water,contours,settlements,rails,outer};return terrain;
+ }
+ function localVisible(points){let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;for(const p of points){const q=screenPoint(p);left=Math.min(left,q.x);top=Math.min(top,q.y);right=Math.max(right,q.x);bottom=Math.max(bottom,q.y)}return right>-130&&bottom>-130&&left<width+130&&top<height+130;}
+ function drawTerrain(data){
+  const t=terrainFor(data);ctx.fillStyle='#273f3e';ctx.fillRect(0,0,width,height);
+  const bg=ctx.createLinearGradient(0,0,width,height);bg.addColorStop(0,'#8c9475');bg.addColorStop(.5,'#7c896d');bg.addColorStop(1,'#687b64');polygon(t.outer,bg,'#c2bf8a77',1.5);
+  ctx.save();ctx.beginPath();for(let i=0;i<t.outer.length;i++){const p=screenPoint(t.outer[i]);if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)}ctx.closePath();ctx.clip();
+  if(!texturePattern)texturePattern=ctx.createPattern(atlasTexture(),'repeat');const texture=texturePattern;
+  if(texture){if(texture.setTransform&&typeof DOMMatrix==='function'){const scale=camera.zoom*5000/256;texture.setTransform(new DOMMatrix([scale,0,0,scale,width/2-camera.x*camera.zoom,height/2-camera.y*camera.zoom]));}ctx.globalAlpha=.22;ctx.fillStyle=texture;ctx.fillRect(0,0,width,height);ctx.globalAlpha=1;}
+  for(const a of t.shapes)if(localVisible(a.points))polygon(a.points,a.color);
+  for(const a of t.forests)if(localVisible(a.points)){polygon(a.points,'#3b594d77','#52664c55',.7);if(camera.zoom>camera.min*1.5){const rnd=atlasRandom(a.seed);ctx.strokeStyle='#324b3c99';ctx.lineWidth=.65;for(let i=0;i<35;i++){const angle=rnd()*Math.PI*2,rad=Math.sqrt(rnd())*.83,p=screenPoint({x:a.x+Math.cos(angle)*a.rx*rad,y:a.y+Math.sin(angle)*a.ry*rad}),size=Math.min(4,Math.max(1.5,170*camera.zoom));ctx.beginPath();ctx.moveTo(p.x,p.y-size);ctx.lineTo(p.x-size*.65,p.y+size*.4);ctx.lineTo(p.x+size*.65,p.y+size*.4);ctx.closePath();ctx.stroke();}}}
+  for(const contour of t.contours)if(localVisible(contour))polygon(contour,null,'#5d624933',.65);
+  for(const a of t.water)if(localVisible(a.points)){polygon(a.points,'#3a6469','#a1b9a088',1);const p=screenPoint({x:a.x,y:a.y}),rx=700*camera.zoom;ctx.strokeStyle='#d0d7b344';ctx.lineWidth=.7;for(let j=-1;j<=1;j++){ctx.beginPath();ctx.moveTo(p.x-rx*.6,p.y+j*7);ctx.quadraticCurveTo(p.x,p.y+j*7-3,p.x+rx*.6,p.y+j*7);ctx.stroke();}}
+  const roads=atlasRoads(data);
+  // A subdued drainage system ties the northern wetlands to the southern marsh.
+  const channels=[
+   [{x:t.bounds.x+t.bounds.w*.72,y:t.bounds.y+t.bounds.h*.04},{x:t.bounds.x+t.bounds.w*.64,y:t.bounds.y+t.bounds.h*.21},{x:t.bounds.x+t.bounds.w*.83,y:t.bounds.y+t.bounds.h*.34},{x:t.bounds.x+t.bounds.w*.70,y:t.bounds.y+t.bounds.h*.51}],
+   [{x:t.bounds.x+t.bounds.w*.70,y:t.bounds.y+t.bounds.h*.51},{x:t.bounds.x+t.bounds.w*.55,y:t.bounds.y+t.bounds.h*.66},{x:t.bounds.x+t.bounds.w*.38,y:t.bounds.y+t.bounds.h*.79},{x:t.bounds.x+t.bounds.w*.46,y:t.bounds.y+t.bounds.h*.98}]
+  ];
+  for(const channel of channels){smooth(channel,'#315c6355',5*camera.zoom/camera.min);smooth(channel,'#a6c0a355',1.2*camera.zoom/camera.min);}
+  if(camera.zoom>camera.min*1.8)for(const road of roads.trails)smooth(road.points,'#bdc19b66',.75,[3,5]);
+  for(const road of roads.branches){smooth(road.points,'#3a493b66',2.7);smooth(road.points,'#c6c79b99',1.05);}
+  for(const road of roads.trunk){smooth(road.points,'#394639aa',4);smooth(road.points,'#e0d7a4',1.65);}
+  for(const line of t.rails){if(!localVisible(line))continue;smooth(line,'#424b40',1.2,[7,3]);if(camera.zoom>camera.min*1.8){for(let i=1;i<line.length;i++){const a=screenPoint(line[i-1]),b=screenPoint(line[i]),n=Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/9),dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;ctx.strokeStyle='#384538';ctx.lineWidth=.65;for(let k=0;k<n;k++){const x=a.x+dx*k/n,y=a.y+dy*k/n;ctx.beginPath();ctx.moveTo(x-dy/d*3,y+dx/d*3);ctx.lineTo(x+dy/d*3,y-dx/d*3);ctx.stroke();}}}}
+  if(camera.zoom>camera.min*1.25)for(const site of t.settlements){ctx.fillStyle='#4b5448aa';ctx.strokeStyle='#b7b38a66';ctx.lineWidth=.5;for(const o of site.buildings){const p=screenPoint(o),w=Math.max(1.5,o.w*camera.zoom),h=Math.max(1.5,o.h*camera.zoom);if(p.x+w<0||p.x>width||p.y+h<0||p.y>height)continue;ctx.fillRect(p.x,p.y,w,h);if(w>3)ctx.strokeRect(p.x,p.y,w,h);}}
+  const unit=5000*camera.zoom;if(unit>20){ctx.beginPath();for(let x=((width/2-camera.x*camera.zoom)%unit+unit)%unit;x<width;x+=unit){ctx.moveTo(x,0);ctx.lineTo(x,height)}for(let y=((height/2-camera.y*camera.zoom)%unit+unit)%unit;y<height;y+=unit){ctx.moveTo(0,y);ctx.lineTo(width,y)}ctx.strokeStyle='#d8d5ad10';ctx.lineWidth=.6;ctx.stroke();}
+  ctx.restore();atlasStats.terrainShapes=t.shapes.length+t.forests.length+t.water.length+t.contours.length;
+ }
+ let roadKey='',roadCache=null;
+ function atlasRoads(data){
+  const key=data.sectors.map(o=>o.id+':'+anchor(o).x+','+anchor(o).y).join('|');if(roadKey===key)return roadCache;roadKey=key;
+  const byId=new Map(data.sectors.map(o=>[o.id,o])),links=(data.links||[]).map(normalLink).filter(l=>byId.has(l.a)&&byId.has(l.b));
+  const parent=new Map(data.sectors.map(o=>[o.id,o.id])),find=id=>{let p=parent.get(id);while(p!==parent.get(p))p=parent.get(p);return p;},tree=[],trails=[];
+  const shaped=links.map(l=>{const a=anchor(byId.get(l.a)),b=anchor(byId.get(l.b)),seed=atlasSeed([l.a,l.b].sort().join(':')),random=atlasRandom(seed),dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,nx=-dy/d,ny=dx/d,bend=(.035+random()*.075)*d*(random()>.5?1:-1),waypoints=l.points?.length>2?[a,...l.points,b]:[a,{x:a.x+dx*.3,y:a.y+dy*.3},{x:a.x+dx*.7,y:a.y+dy*.7},b],points=waypoints.map((p,i)=>{if(i===0||i===waypoints.length-1||l.points?.length>2&&i===2)return {...p};const side=i===1?1:-.65;return {x:p.x+nx*bend*side,y:p.y+ny*bend*side}});return {...l,weight:d*(.62+random()*.8),points};}).sort((a,b)=>a.weight-b.weight);
+  for(const l of shaped){const a=find(l.a),b=find(l.b);if(a!==b){parent.set(a,b);tree.push(l)}else trails.push(l)}
+  const start=data.sectors.find(o=>o.id==='loc_kordon_village')?.id||data.sectors[0]?.id,end=data.sectors.find(o=>o.id==='loc_generators')?.id||data.sectors.at(-1)?.id,queue=[start],previous=new Map([[start,null]]);
+  for(let i=0;i<queue.length&&!previous.has(end);i++){for(const l of tree){const next=l.a===queue[i]?l.b:l.b===queue[i]?l.a:null;if(next&&!previous.has(next)){previous.set(next,{id:queue[i],link:l});queue.push(next)}}}
+  const main=new Set();for(let id=end;id&&id!==start;){const step=previous.get(id);if(!step)break;main.add(step.link);id=step.id}
+  return roadCache={trunk:tree.filter(l=>main.has(l)),branches:tree.filter(l=>!main.has(l)),trails};
+ }
+ function markerKind(id){return /lab|under|sarcophagus|tunnel/.test(id)?'research':/village|bar_100|skadovsk|bunker|janov/.test(id)?'shelter':/military|post|barrier|radar/.test(id)?'checkpoint':/forest|swamp/.test(id)?'nature':'settlement';}
+ function locationMarker(o,current,target,selected){const p=screenPoint(anchor(o)),kind=markerKind(o.id),size=current||selected?5:3.7;ctx.save();ctx.translate(p.x,p.y);ctx.lineWidth=1.2;ctx.strokeStyle=current?'#fff1b4':target||selected?'#f8d181':'#e9e3bd';ctx.fillStyle=kind==='research'?'#4c6262':kind==='checkpoint'?'#7b694d':'#405448';ctx.shadowColor='#172c22';ctx.shadowBlur=3;
+  ctx.beginPath();if(kind==='research'){ctx.moveTo(0,-size-1);ctx.lineTo(size+1,0);ctx.lineTo(0,size+1);ctx.lineTo(-size-1,0);ctx.closePath()}else if(kind==='shelter'){ctx.moveTo(0,-size-2);ctx.lineTo(size+1,-1);ctx.lineTo(size+1,size);ctx.lineTo(-size-1,size);ctx.lineTo(-size-1,-1);ctx.closePath()}else if(kind==='checkpoint'){ctx.rect(-size,-size,size*2,size*2)}else ctx.arc(0,0,size,0,Math.PI*2);ctx.fill();ctx.stroke();if(current||selected){ctx.shadowBlur=0;ctx.strokeStyle=current?'#f1e6b8aa':'#f8d181aa';ctx.beginPath();ctx.arc(0,0,size+4,0,Math.PI*2);ctx.stroke()}ctx.restore();return p;}
+ function labelLines(o,font,detailed){const known=ATLAS_NAMES[o.id],raw=known?(detailed?known[1]:known[0]):o.name.replace(/^.*?:\s*/,'').replace(/\s+\d+$/,'');if(raw.includes('\n'))return raw.split('\n');ctx.font='600 '+font+'px Arial,sans-serif';const limit=detailed?Math.min(180,Math.max(100,o.w*camera.zoom*.9)):58,words=raw.split(/\s+/),out=[];let line='';for(const word of words){if(line&&ctx.measureText(line+' '+word).width>limit){out.push(line);line=word}else line=line?line+' '+word:word}if(line)out.push(line);return out;}
+ function drawLocationLabels(data){
+  const selected=data.sectors.filter(o=>{const p=screenPoint(anchor(o));return p.x>-90&&p.y>-70&&p.x<width+90&&p.y<height+70}).map(o=>({o,current:o.id===data.player?.sectorId,target:o.id===data.waypoint?.sectorId,selected:o.id===selectedId}));
+  const major=id=>/village|bar_100|yantar|military_base|redforest|skadovsk|jupiter|pripyat_center|chaes_roof/.test(id);
+  selected.sort((a,b)=>(b.current?8:0)+(b.target||b.selected?6:0)+(major(b.o.id)?2:0)-(a.current?8:0)-(a.target||a.selected?6:0)-(major(a.o.id)?2:0));
+  const occupied=[{x:width-62,y:0,w:62,h:220},{x:0,y:0,w:46,h:65},{x:0,y:height-39,w:105,h:39},{x:width/2-42,y:height-25,w:84,h:25}],overlap=(a,b)=>a.x<b.x+b.w+2&&a.x+a.w+2>b.x&&a.y<b.y+b.h+2&&a.y+a.h+2>b.y;
+  atlasStats.labels=0;atlasStats.markers=selected.length;
+  for(const item of selected){item.p=locationMarker(item.o,item.current,item.target,item.selected);occupied.push({x:item.p.x-6,y:item.p.y-6,w:12,h:12});}
+  for(const item of selected){const {o,current,target,selected:active,p}=item,detailed=camera.zoom>=camera.min*2.6;let font=detailed?11.5:Math.min(9.5,Math.max(8.5,o.w*camera.zoom/6.3)),lines,wid,h,box=null;
+   const inside=b=>b.x>4&&b.x+b.w<width-4&&b.y>4&&b.y+b.h<height-4,free=b=>inside(b)&&!occupied.some(q=>overlap(b,q));
+   for(let attempt=0;attempt<2&&!box;attempt++){
+    if(attempt)font=detailed?10.5:8.1;lines=labelLines(o,font,detailed);ctx.font='600 '+font+'px Arial,sans-serif';wid=Math.max(...lines.map(l=>ctx.measureText(l).width))+6;h=lines.length*(font+1.5)+3;
+    const offsets=[[0,10],[0,-h-10],[10+wid/2,-h/2],[-10-wid/2,-h/2],[12,-h-10],[-12,10],[wid*.65,10],[-wid*.65,10],[wid+15,-h/2],[-wid-15,-h/2]],candidates=offsets.map(([x,y])=>({x:p.x+x-wid/2,y:p.y+y,w:wid,h}));box=candidates.find(free);
+    if(!box){let best=Infinity;for(let y=6;y+h<height-5;y+=7)for(let x=6;x+wid<width-5;x+=7){const cost=(x+wid/2-p.x)**2+(y+h/2-p.y)**2;if(cost>=best)continue;const candidate={x,y,w:wid,h};if(free(candidate)){best=cost;box=candidate}}}
+   }
+   if(!box)continue;occupied.push(box);atlasStats.labels++;
+   const cx=box.x+box.w/2,cy=box.y+box.h/2;if(Math.abs(cx-p.x)>wid*.25||cy<p.y-5||Math.abs(cy-p.y)>h+12){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(cx,Math.max(box.y,Math.min(box.y+box.h,p.y)));ctx.strokeStyle='#ded8b18a';ctx.lineWidth=.6;ctx.stroke();}
+   if(current||target||active){ctx.fillStyle='#31493ade';ctx.beginPath();ctx.roundRect(box.x-3,box.y-2,box.w+6,box.h+4,3);ctx.fill();}
+   ctx.font='600 '+font+'px Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';ctx.strokeStyle='#243b2b';ctx.lineWidth=3;ctx.fillStyle=current?'#fff0b8':target||active?'#ffdb8e':'#f0edcf';
+   lines.forEach((line,i)=>{const y=box.y+font*.62+i*(font+1.5);ctx.strokeText(line,cx,y);ctx.fillText(line,cx,y)});
+   if(detailed&&o.minLevel>1){ctx.font='9px Arial,sans-serif';ctx.fillStyle='#40503d';ctx.strokeStyle='#c4c6a5';ctx.lineWidth=2;const label='ур. '+o.minLevel;ctx.strokeText(label,cx,box.y+box.h+8);ctx.fillText(label,cx,box.y+box.h+8);}
+  }
+ }
+
  function draw(){
   if(dialog.hidden||!ctx)return;const data=snapshot();if(!data?.sectors.length)return;
-  ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,width,height);ctx.fillStyle='#102018';ctx.fillRect(0,0,width,height);
-  const gridUnit=Math.pow(10,Math.floor(Math.log10(75/camera.zoom))),gridStep=gridUnit*camera.zoom;
-  ctx.beginPath();for(let x=((width/2-camera.x*camera.zoom)%gridStep+gridStep)%gridStep;x<width;x+=gridStep){ctx.moveTo(x,0);ctx.lineTo(x,height)}for(let y=((height/2-camera.y*camera.zoom)%gridStep+gridStep)%gridStep;y<height;y+=gridStep){ctx.moveTo(0,y);ctx.lineTo(width,y)}ctx.strokeStyle='#8f9b6d13';ctx.lineWidth=1;ctx.stroke();
-  const byId=new Map(data.sectors.map(o=>[o.id,o]));for(const raw of data.links||[]){const link=normalLink(raw);if(!byId.has(link.a)||!byId.has(link.b))continue;const points=link.points?.length>1?link.points:[center(byId.get(link.a)),center(byId.get(link.b))];path(points,'#1b2d20',7);path(points,'#89916b99',2,[5,5]);}
-  const labels=[];
-  for(const o of data.sectors){const p=screenPoint(o),w=o.w*camera.zoom,h=o.h*camera.zoom;if(p.x+w<0||p.y+h<0||p.x>width||p.y>height)continue;
-   const current=o.id===data.player?.sectorId,target=o.id===data.waypoint?.sectorId,selected=o.id===selectedId,bevel=Math.min(7,w*.08,h*.08);
-   ctx.beginPath();ctx.moveTo(p.x+bevel,p.y);ctx.lineTo(p.x+w,p.y);ctx.lineTo(p.x+w,p.y+h-bevel);ctx.lineTo(p.x+w-bevel,p.y+h);ctx.lineTo(p.x,p.y+h);ctx.lineTo(p.x,p.y+bevel);ctx.closePath();ctx.fillStyle=sectorColor(o);ctx.fill();ctx.strokeStyle=current?'#c8bd7b':target||selected?'#c6a662':'#84926a99';ctx.lineWidth=current||selected?2:1;ctx.stroke();
-   ctx.save();ctx.clip();let seed=0;for(const c of o.id)seed=(seed*31+c.charCodeAt(0))>>>0;ctx.strokeStyle='#b7c08912';ctx.lineWidth=1;for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(p.x+w*(.2+((seed>>i*3)%6)/10),p.y+h*(.25+i*.24),w*(.3+i*.08),h*.25,(seed%9)*.12,0,Math.PI*2);ctx.stroke();}ctx.restore();
-   if(w>30&&h>24)labels.push({o,rect:{x:p.x,y:p.y,w,h},current,target});
-  }
-  const points=route(data);if(points.length>1){path(points,'#0e190ed9',5);path(points,'#dfc77c',2,[7,5]);}
-  for(const item of labels)sectorLabel(item.o,item.rect,item.current,item.target);
-  if(data.waypoint){const p=screenPoint(data.waypoint);ctx.strokeStyle='#111a10';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(p.x,p.y+3);ctx.lineTo(p.x,p.y-20);ctx.stroke();ctx.strokeStyle='#efcc7c';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#efcc7c';ctx.beginPath();ctx.moveTo(p.x+1,p.y-21);ctx.lineTo(p.x+15,p.y-17);ctx.lineTo(p.x+1,p.y-11);ctx.closePath();ctx.fill();ctx.strokeStyle='#f2ce7d';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(p.x,p.y+4,7,3,0,0,Math.PI*2);ctx.stroke();}
-  if(data.player){const p=screenPoint(data.player),angle=finite(data.player.angle,0);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.fillStyle='#17352b';ctx.strokeStyle='#0b150e';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(7,8);ctx.lineTo(0,4);ctx.lineTo(-7,8);ctx.closePath();ctx.stroke();ctx.fillStyle='#c9e4bb';ctx.fill();ctx.strokeStyle='#629f7e';ctx.lineWidth=1.3;ctx.stroke();ctx.restore();ctx.beginPath();ctx.arc(p.x,p.y,16,0,Math.PI*2);ctx.strokeStyle='#bddcb178';ctx.lineWidth=1;ctx.stroke();}
+  ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,width,height);drawTerrain(data);
+  const points=route(data);if(points.length>1){path(points,'#304630d9',5);path(points,'#f5dc8e',2.1,[7,5]);}
+  drawLocationLabels(data);
+  if(data.waypoint){const p=screenPoint(data.waypoint);ctx.strokeStyle='#19352b';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(p.x,p.y+3);ctx.lineTo(p.x,p.y-20);ctx.stroke();ctx.strokeStyle='#ffe1a0';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#ffda87';ctx.beginPath();ctx.moveTo(p.x+1,p.y-21);ctx.lineTo(p.x+15,p.y-17);ctx.lineTo(p.x+1,p.y-11);ctx.closePath();ctx.fill();ctx.strokeStyle='#f6df9f';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(p.x,p.y+4,7,3,0,0,Math.PI*2);ctx.stroke();}
+  if(data.player){const p=screenPoint(data.player),angle=finite(data.player.angle,0);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.fillStyle='#173c31';ctx.strokeStyle='#173c31';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(7,8);ctx.lineTo(0,4);ctx.lineTo(-7,8);ctx.closePath();ctx.stroke();ctx.fillStyle='#e0f1ce';ctx.fill();ctx.strokeStyle='#5aab86';ctx.lineWidth=1.3;ctx.stroke();ctx.restore();ctx.beginPath();ctx.arc(p.x,p.y,16,0,Math.PI*2);ctx.strokeStyle='#1b564d';ctx.lineWidth=1;ctx.stroke();}
   const ideal=70/camera.zoom,power=Math.pow(10,Math.floor(Math.log10(ideal))),unit=[1,2,5,10].map(n=>n*power).reduce((best,n)=>Math.abs(n-ideal)<Math.abs(best-ideal)?n:best,power);$('sv-atlas-scale-line').style.width=Math.round(unit*camera.zoom)+'px';$('sv-atlas-scale-text').textContent=meters(unit);
   $('sv-atlas-plus').disabled=camera.zoom>=camera.max*.999;$('sv-atlas-minus').disabled=camera.zoom<=camera.min*1.001;
  }
@@ -14571,7 +15115,7 @@ function install(){
  window.addEventListener('resize',syncViewport);window.visualViewport?.addEventListener('resize',syncViewport);for(const event of ['viewportChanged','safeAreaChanged','contentSafeAreaChanged'])window.Telegram?.WebApp?.onEvent?.(event,syncViewport);
  window.addEventListener('blur',()=>close(false));window.addEventListener('pagehide',()=>close(false));document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')close(false)});
  if(typeof ResizeObserver==='function')new ResizeObserver(()=>{if(!dialog.hidden)resize()}).observe(canvas.parentElement);
- window.ZonaSurvivalWorldMap={open,close,refresh(){if(!dialog.hidden){update();resize()}},get isOpen(){return !dialog.hidden},get view(){return {x:camera.x,y:camera.y,zoom:camera.zoom,width,height}}};
+ window.ZonaSurvivalWorldMap={open,close,refresh(){if(!dialog.hidden){update();resize()}},get isOpen(){return !dialog.hidden},get view(){return {x:camera.x,y:camera.y,zoom:camera.zoom,width,height}},get cartographyStats(){return {...atlasStats}}};
 }
 window.addEventListener('zona:ready',install);if(window.game?.survival)install();
 })();
