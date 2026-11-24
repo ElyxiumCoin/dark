@@ -13823,10 +13823,12 @@ function action(){if(entryTask||!visible||!run())return;const r=run(),t=target()
 // Survival threat tuning: tougher bodies, harder hits, faster reactions. Scales a little with sector level.
 const SV_POWER=Object.freeze({hp:1.6,dmg:1.35,speed:1.2,sense:1.35});
 function svScale(){const lv=Math.max(1,Number(loc()?.minLevel)||1);return{hp:SV_POWER.hp+Math.min(.7,lv*.012),dmg:SV_POWER.dmg+Math.min(.35,lv*.006)}}
+function svIsElite(e,r){let h=0;for(const ch of String(e.id+':'+r.seed))h=(h*31+ch.charCodeAt(0))>>>0;return h%100<14&&!/boss/.test(e.enemyId||'')}
 function enemyData(e){
  const r=run(),proto=DB.enemies[e.enemyId]||{},sc=svScale(),base=Math.max(18,Number(proto.maxHp||proto.hp)||30+Math.min(140,(loc().minLevel||1)*1.5)),st=r.enemyState[e.id];
- if(!st)return r.enemyState[e.id]={x:e.x,y:e.y,hp:base*sc.hp,maxHp:base*sc.hp,pw:1,cool:0,enemyId:e.enemyId};
+ if(!st){const el=svIsElite(e,r),k=el?1.7:1;return r.enemyState[e.id]={x:e.x,y:e.y,hp:base*sc.hp*k,maxHp:base*sc.hp*k,pw:1,elite:el?1:0,eliteSet:1,cool:0,enemyId:e.enemyId};}
  if(!st.pw){st.pw=1;st.maxHp=base*sc.hp;st.hp=Math.min(st.maxHp,(Number(st.hp)||base)*sc.hp)}
+ if(!st.eliteSet){st.eliteSet=1;if(svIsElite(e,r)){st.elite=1;st.maxHp*=1.7;st.hp*=1.7}}
  return st;
 }
 function npcData(p){
@@ -13904,13 +13906,13 @@ function stepPeople(dt,w){
   wanderActor(d,{x:d.homeX,y:d.homeY},w,'npc:'+p.id,dt,d.role==='guard'?35:28,r.room==null?105:60);
  }
 }
-function enemyDamage(proto){const lv=loc().minLevel||1,a=Array.isArray(proto.dmg)?proto.dmg:[7+lv*.18,10+lv*.26],r=run(),esc=1+Math.min(.3,((r&&r.worldTime)||0)/2400);return(a[0]+Math.random()*Math.max(0,(a[1]||a[0])-a[0]))*svScale().dmg*esc;}
+function enemyDamage(proto,st){const lv=loc().minLevel||1,a=Array.isArray(proto.dmg)?proto.dmg:[7+lv*.18,10+lv*.26],r=run(),esc=1+Math.min(.3,((r&&r.worldTime)||0)/2400);return(a[0]+Math.random()*Math.max(0,(a[1]||a[0])-a[0]))*svScale().dmg*esc*(st&&st.elite?1.3:1);}
 function hurtPlayer(amount,sourceX=null,sourceY=null){const current=run();if(current)current.hurtAt=current.worldTime||0;feedbackIncoming(sourceX,sourceY);g.state.hp=Math.max(0,g.state.hp-Math.max(1,Math.round(amount*100/(100+Math.max(0,g.getDefensePower())))));if(g.state.hp<=0){fail();return false;}return true;}
 function fireEnemy(d,e,profile,w){
  const r=run(),dx=d.aimX-d.x,dy=d.aimY-d.y,len=Math.hypot(dx,dy)||1;
  const bullets=r.enemyProjectiles||(r.enemyProjectiles=[]);if(bullets.length>=48)return;
  const spread=profile.burst===1?0:((d.burstLeft||0)-1)*.025,angle=Math.atan2(dy,dx)+spread;
- bullets.push({x:d.x,y:d.y,dx:Math.cos(angle)*profile.speed,dy:Math.sin(angle)*profile.speed,life:profile.range/profile.speed+.12,damage:enemyDamage(DB.enemies[e.enemyId]||{})/profile.burst,room:r.room,owner:e.id});
+ bullets.push({x:d.x,y:d.y,dx:Math.cos(angle)*profile.speed,dy:Math.sin(angle)*profile.speed,life:profile.range/profile.speed+.12,damage:enemyDamage(DB.enemies[e.enemyId]||{},d)/profile.burst,room:r.room,owner:e.id});
  d.flashUntil=(r.worldTime||0)+.10;d.attackUntil=(r.worldTime||0)+.22;
 }
 function stepEnemyProjectiles(dt,w){
@@ -13933,7 +13935,7 @@ function svAlert(e,d,r,w,time){
 function stepEnemies(dt,w){
  const r=run(),time=r.worldTime||0,SPD=SV_POWER.speed;
  for(const e of w.enemies){if(r.defeated.includes(e.id))continue;const d=enemyData(e),proto=DB.enemies[e.enemyId]||{},profile=svProfile(e.enemyId);
-  d.cool=Math.max(0,(d.cool||0)-dt);const dist=distance(r,d),rage=d.maxHp&&d.hp<d.maxHp*.4?1.22:1,visibleTarget=dist<(profile?profile.range+95:260*SV_POWER.sense)&&sight(d,r,w);
+  d.cool=Math.max(0,(d.cool||0)-dt);const dist=distance(r,d),rage=(d.maxHp&&d.hp<d.maxHp*.4?1.22:1)*(d.elite?1.1:1),visibleTarget=dist<(profile?profile.range+95:260*SV_POWER.sense)&&sight(d,r,w);
   if(!visibleTarget){
    if(d.meleeUntil){d.meleeUntil=0;d.cool=Math.max(d.cool,.3);}d.lungeUntil=0;d.aimUntil=0;d.burstLeft=0;
    if(d.lastSeen&&time-d.seenAt<9){d.searching=true;if(distance(d,d.lastSeen)>14)navigateActor(d,d.lastSeen,w,dt,(profile?50:60)*SPD*rage);else d.angle=(d.angle||0)+dt*.9;}
@@ -13962,7 +13964,7 @@ function stepEnemies(dt,w){
     if(time>=d.meleeUntil){
      d.meleeUntil=0;d.cool=.95/rage;d.attackUntil=time+.28;
      const targetAngle=Math.atan2(r.x-d.x,-(r.y-d.y)),delta=Math.atan2(Math.sin(targetAngle-d.meleeAngle),Math.cos(targetAngle-d.meleeAngle));
-     if(distance(r,d)<=40&&Math.abs(delta)<1.15&&sight(d,r,w)&&!hurtPlayer(enemyDamage(proto),d.x,d.y))return false;
+     if(distance(r,d)<=40&&Math.abs(delta)<1.15&&sight(d,r,w)&&!hurtPlayer(enemyDamage(proto,d),d.x,d.y))return false;
     }
    }else if(dist>27){
     if(fast&&dist>62&&dist<175&&time>=(d.lungeCd||0)&&d.cool<=0){d.lungeUntil=time+.3;d.lungeCd=time+2.8+Math.random()*1.6;continue;}
@@ -13986,15 +13988,15 @@ function attack(){
   const rMin=Array.isArray(proto.rubles)?proto.rubles[0]:Math.floor((Number(proto.rubles)||20)*.75);
   const rMax=Array.isArray(proto.rubles)?proto.rubles[1]:Math.floor((Number(proto.rubles)||20)*1.1);
   const rng=random(seedOf(r.seed+':'+e.id+':coins'));
-  const raw=Math.floor(rMin+rng()*(Math.max(rMin,rMax)-rMin+1));const rub=Math.max(5,Math.floor(raw*.70));r.rubles+=rub;
-  if(proto.exp)g.addExp(proto.exp);
+  const raw=Math.floor(rMin+rng()*(Math.max(rMin,rMax)-rMin+1));const rub=Math.max(5,Math.floor(raw*.70))*(d.elite?2:1);r.rubles+=rub;
+  if(proto.exp)g.addExp(d.elite?Math.round(proto.exp*1.8):proto.exp);
   if(g.state.tracker)g.state.tracker.kills=(g.state.tracker.kills||0)+1;
   for(const c of g.state.activeContracts||[])if(c.type==='kills'&&!c.completed)c.current=(c.current||0)+1;
   const reward=applyLootRoll('kill:'+String(r.room)+':'+e.id);
   const trophy=window.ZonaSurvivalTrophyRules?.roll?.(e.enemyId,random(seedOf(r.seed+':'+e.id+':trophy127')));
   if(trophy)survivalStoreLoot(trophy);
   g.updateBadges?.();
-  note((proto.name||e.name||'Противник')+' повержен. +'+rub+' ₽ · '+(proto.exp||0)+' XP · '+reward.name+(trophy?' · Трофей: '+DB.items[trophy]?.name:'')+(reward.gram?' · +'+reward.gram.toFixed(2)+' GRAM':'')+'.');
+  note((d.elite?'Элита: ':'')+(proto.name||e.name||'Противник')+' повержен. +'+rub+' ₽ · '+(proto.exp||0)+' XP · '+reward.name+(trophy?' · Трофей: '+DB.items[trophy]?.name:'')+(reward.gram?' · +'+reward.gram.toFixed(2)+' GRAM':'')+'.');
  }
  save();hud();
 }
@@ -14199,6 +14201,24 @@ c.globalCompositeOperation='source-over';
 // Smoke, embers and atmosphere use projected world positions, never gameplay state.
 const projected=(x,y,z)=>{const q=renderer3d?.project(x,y,z);return q?.visible?{x:q.x*w/Math.max(1,canvas.width),y:q.y*h/Math.max(1,canvas.height)}:null};
 drawSiteMotion(c,projected,map,r,t,eco);
+// Threat read-out: health bars, alert marks and elite auras for nearby hostiles.
+{const zone=r.room===null?map:map.rooms?.[r.room],clock=r.worldTime||0;
+ for(const e of zone?.enemies||[]){if(r.defeated.includes(e.id))continue;const d=enemyData(e),dist=Math.hypot(d.x-r.x,d.y-r.y);if(dist>520)continue;
+  const hunting=d.seenAt!==undefined&&clock-d.seenAt<1.2,searching=!hunting&&!!d.lastSeen&&d.seenAt!==undefined&&clock-d.seenAt<7,hurt=!!d.maxHp&&d.hp<d.maxHp-.5;
+  if(!hunting&&!searching&&!hurt&&!(d.elite&&dist<380))continue;
+  const top=projected(d.x,46,d.y),foot=projected(d.x,1,d.y);if(!top||!foot)continue;
+  const bw=Math.max(26,Math.min(50,Math.abs(foot.y-top.y)*(d.elite?1.05:.85))),bh=d.elite?5:4,x=top.x-bw/2,y=top.y-8;
+  if(d.elite&&!eco){c.save();c.globalCompositeOperation='lighter';const rad=bw*.85,g=c.createRadialGradient(foot.x,foot.y,0,foot.x,foot.y,rad),pulse=.75+.25*Math.sin(clock*4+d.x);g.addColorStop(0,'rgba(255,176,72,'+(.32*pulse)+')');g.addColorStop(.6,'rgba(222,72,42,'+(.15*pulse)+')');g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.beginPath();c.ellipse(foot.x,foot.y,rad,rad*.5,0,0,Math.PI*2);c.fill();c.restore()}
+  if(d.maxHp&&(hurt||d.elite||hunting)){
+   const f=Math.max(0,Math.min(1,d.hp/d.maxHp));
+   c.fillStyle='rgba(8,10,8,.8)';c.fillRect(x-1.5,y-1.5,bw+3,bh+3);
+   const g=c.createLinearGradient(x,y,x,y+bh);g.addColorStop(0,f>.5?'#e0a850':'#ee7050');g.addColorStop(1,f>.5?'#a8662b':'#9e3426');c.fillStyle=g;c.fillRect(x,y,bw*f,bh);
+   c.fillStyle='rgba(255,246,210,.22)';c.fillRect(x,y,bw*f,1);
+   if(d.elite){c.strokeStyle='#f0cf7a';c.lineWidth=1;c.strokeRect(x-1.5,y-1.5,bw+3,bh+3);c.fillStyle='#f0cf7a';c.beginPath();c.moveTo(x+bw+5,y+bh/2-3);c.lineTo(x+bw+9,y+bh/2);c.lineTo(x+bw+5,y+bh/2+3);c.lineTo(x+bw+1,y+bh/2);c.closePath();c.fill()}
+  }
+  if(hunting||searching){c.save();c.font='bold 12px Arial,sans-serif';c.textAlign='center';c.textBaseline='bottom';c.lineWidth=3;c.strokeStyle='rgba(10,14,10,.9)';c.fillStyle=hunting?'#ff7a5c':'#f0cf7a';const mark=hunting?'!':'?';c.strokeText(mark,top.x,y-3);c.fillText(mark,top.x,y-3);c.restore()}
+ }
+}
 // Soft translucent anomaly haze replaces the opaque animated cones.
 let anomalyVisualBudget=eco?1:3;
 if(r.room===null)for(const a of map.anomalies||[]){
@@ -15052,7 +15072,7 @@ function install(){
  const g=window.game,s=g?.survival,mini=document.getElementById('sv-minimap-3d'),screen=document.getElementById('sv-screen');
  if(!s||!mini||!screen||window.ZonaSurvivalWorldMap)return;
  const dialog=document.createElement('section');dialog.id='sv-world-atlas';dialog.hidden=true;dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-labelledby','sv-atlas-title');
- dialog.innerHTML='<header class="sv-atlas-header"><div class="sv-atlas-heading"><h2 id="sv-atlas-title">КАРТА ЗОНЫ</h2><p id="sv-atlas-subtitle">ОБЩАЯ КАРТА · 28 СЕКТОРОВ</p></div><button id="sv-atlas-close" type="button" aria-label="Закрыть карту и продолжить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><label class="sv-atlas-finder"><select id="sv-atlas-sector" aria-label="Найти локацию и поставить точку назначения"><option value="">Найти локацию…</option></select></label></header><div class="sv-atlas-stage"><canvas id="sv-atlas-canvas" tabindex="0" role="img" aria-label="Общая карта Зоны. Коснитесь карты, чтобы поставить точку назначения; двигайте двумя пальцами для масштаба."></canvas><div class="sv-atlas-compass" aria-hidden="true">С<i></i></div><div class="sv-atlas-tools"><button id="sv-atlas-plus" type="button" aria-label="Приблизить карту"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button><button id="sv-atlas-minus" type="button" aria-label="Отдалить карту"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button><button id="sv-atlas-player" type="button" aria-label="Показать моё положение"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button><button id="sv-atlas-fit" type="button" aria-label="Показать все локации"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><path d="m8 8-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/></svg></button></div><div class="sv-atlas-scale" aria-hidden="true"><span id="sv-atlas-scale-text"></span><b id="sv-atlas-scale-line"></b></div><div class="sv-atlas-legend" aria-hidden="true"><span><i></i>Вы</span><span><i></i>Цель</span></div></div><footer class="sv-atlas-footer"><p id="sv-atlas-status" role="status" aria-live="polite"></p><p id="sv-atlas-hint">Коснитесь места, чтобы поставить цель. Двигайте карту и меняйте масштаб двумя пальцами.</p><div class="sv-atlas-footer-actions"><button id="sv-atlas-clear" type="button">Убрать точку</button><button id="sv-atlas-continue" type="button">Продолжить путь</button></div></footer>';
+ dialog.innerHTML='<header class="sv-atlas-header"><div class="sv-atlas-heading"><h2 id="sv-atlas-title">КАРТА ЗОНЫ</h2><p id="sv-atlas-subtitle">ОБЩАЯ КАРТА · 28 СЕКТОРОВ</p></div><button id="sv-atlas-close" type="button" aria-label="Закрыть карту и продолжить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><label class="sv-atlas-finder"><select id="sv-atlas-sector" aria-label="Найти локацию и поставить точку назначения"><option value="">Найти локацию…</option></select></label></header><div class="sv-atlas-stage"><canvas id="sv-atlas-canvas" tabindex="0" role="img" aria-label="Общая карта Зоны. Коснитесь карты, чтобы поставить точку назначения; двигайте двумя пальцами для масштаба."></canvas><div class="sv-atlas-compass" aria-hidden="true">С<i></i></div><div class="sv-atlas-tools"><button id="sv-atlas-plus" type="button" aria-label="Приблизить карту"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button><button id="sv-atlas-minus" type="button" aria-label="Отдалить карту"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button><button id="sv-atlas-player" type="button" aria-label="Показать моё положение"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button><button id="sv-atlas-fit" type="button" aria-label="Показать все локации"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><path d="m8 8-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/></svg></button></div><div class="sv-atlas-scale" aria-hidden="true"><span id="sv-atlas-scale-text"></span><b id="sv-atlas-scale-line"></b></div><div class="sv-atlas-legend" aria-hidden="true"><span><i style="background:#8fd18a;border-color:#8fd18a"></i><i style="background:#d9d37c;border-color:#d9d37c;margin-left:-2px"></i><i style="background:#e8a25e;border-color:#e8a25e;margin-left:-2px"></i><i style="background:#e2705f;border-color:#e2705f;margin-left:-2px"></i>Опасность</span><span><i></i>Вы</span><span><i></i>Цель</span></div></div><footer class="sv-atlas-footer"><p id="sv-atlas-status" role="status" aria-live="polite"></p><p id="sv-atlas-hint">Коснитесь места, чтобы поставить цель. Двигайте карту и меняйте масштаб двумя пальцами.</p><div class="sv-atlas-footer-actions"><button id="sv-atlas-clear" type="button">Убрать точку</button><button id="sv-atlas-continue" type="button">Продолжить путь</button></div></footer>';
  document.body.append(dialog);
  const $=id=>document.getElementById(id),canvas=$('sv-atlas-canvas'),ctx=canvas.getContext('2d'),app=$('app'),select=$('sv-atlas-sector');
  let pausedRun=null,resumeOnClose=false,previousFocus=null,oldInert=false,oldOverflow='',poll=0,drawFrame=0,selectedId=null,knownSectors='',isFitted=true;
@@ -15181,7 +15201,7 @@ function install(){
   if(texture){if(texture.setTransform&&typeof DOMMatrix==='function'){const scale=camera.zoom*5000/256;texture.setTransform(new DOMMatrix([scale,0,0,scale,width/2-camera.x*camera.zoom,height/2-camera.y*camera.zoom]));}ctx.globalAlpha=.22;ctx.fillStyle=texture;ctx.fillRect(0,0,width,height);ctx.globalAlpha=1;}
   for(const a of t.shapes)if(localVisible(a.points))polygon(a.points,a.color);
   for(const a of t.forests)if(localVisible(a.points)){polygon(a.points,'#3b594d77','#52664c55',.7);if(camera.zoom>camera.min*1.5){const rnd=atlasRandom(a.seed);ctx.strokeStyle='#324b3c99';ctx.lineWidth=.65;for(let i=0;i<35;i++){const angle=rnd()*Math.PI*2,rad=Math.sqrt(rnd())*.83,p=screenPoint({x:a.x+Math.cos(angle)*a.rx*rad,y:a.y+Math.sin(angle)*a.ry*rad}),size=Math.min(4,Math.max(1.5,170*camera.zoom));ctx.beginPath();ctx.moveTo(p.x,p.y-size);ctx.lineTo(p.x-size*.65,p.y+size*.4);ctx.lineTo(p.x+size*.65,p.y+size*.4);ctx.closePath();ctx.stroke();}}}
-  for(const contour of t.contours)if(localVisible(contour))polygon(contour,null,'#5d624933',.65);
+  for(const contour of t.contours)if(localVisible(contour)){ctx.save();ctx.translate(-.9,-.9);polygon(contour,null,'#f4f1c81f',.8);ctx.restore();polygon(contour,null,'#3f4a3a40',.7)}
   for(const a of t.water)if(localVisible(a.points)){polygon(a.points,'#3a6469','#a1b9a088',1);const p=screenPoint({x:a.x,y:a.y}),rx=700*camera.zoom;ctx.strokeStyle='#d0d7b344';ctx.lineWidth=.7;for(let j=-1;j<=1;j++){ctx.beginPath();ctx.moveTo(p.x-rx*.6,p.y+j*7);ctx.quadraticCurveTo(p.x,p.y+j*7-3,p.x+rx*.6,p.y+j*7);ctx.stroke();}}
   const roads=atlasRoads(data);
   // A subdued drainage system ties the northern wetlands to the southern marsh.
@@ -15237,14 +15257,35 @@ function install(){
   }
  }
 
+ function dangerColor(lv){return lv<=12?'#8fd18a':lv<=28?'#d9d37c':lv<=46?'#e8a25e':'#e2705f'}
+ // Sector bounds tinted by the level the sector asks for: a heat map of how dangerous each district is.
+ function drawDanger(data){
+  ctx.save();const dashed=camera.zoom>camera.min*1.15;
+  for(const o of data.sectors){const lv=Number(o.minLevel)||1,col=dangerColor(lv),a=screenPoint({x:o.x,y:o.y}),w=o.w*camera.zoom,h=o.h*camera.zoom;
+   if(a.x+w<-4||a.y+h<-4||a.x>width+4||a.y>height+4)continue;
+   ctx.beginPath();ctx.roundRect(a.x+1,a.y+1,Math.max(1,w-2),Math.max(1,h-2),Math.min(9,w*.06));ctx.fillStyle=col+'17';ctx.fill();
+   if(dashed){ctx.strokeStyle=col+'66';ctx.lineWidth=1;ctx.setLineDash([6,4]);ctx.stroke();ctx.setLineDash([])}
+   const p=screenPoint(anchor(o));ctx.beginPath();ctx.arc(p.x,p.y,9.5,0,Math.PI*2);ctx.fillStyle=col+'2a';ctx.fill();ctx.strokeStyle=col+'d0';ctx.lineWidth=1.5;ctx.stroke();
+  }
+  ctx.restore();
+ }
+ function drawMapFrame(){
+  const g=ctx.createRadialGradient(width/2,height/2,Math.min(width,height)*.36,width/2,height/2,Math.hypot(width,height)*.6);g.addColorStop(0,'rgba(8,14,10,0)');g.addColorStop(1,'rgba(8,14,10,.5)');ctx.fillStyle=g;ctx.fillRect(0,0,width,height);
+  ctx.strokeStyle='#a98f5599';ctx.lineWidth=1.4;ctx.strokeRect(5.5,5.5,width-11,height-11);
+  ctx.strokeStyle='#d6c28a66';ctx.lineWidth=1;ctx.beginPath();
+  for(let x=29;x<width-10;x+=24){const long=((x-29)/24)%5===0;ctx.moveTo(x,6);ctx.lineTo(x,long?13:10);ctx.moveTo(x,height-6);ctx.lineTo(x,height-(long?13:10))}
+  for(let y=29;y<height-10;y+=24){const long=((y-29)/24)%5===0;ctx.moveTo(6,y);ctx.lineTo(long?13:10,y);ctx.moveTo(width-6,y);ctx.lineTo(width-(long?13:10),y)}
+  ctx.stroke();
+ }
  function draw(){
   if(dialog.hidden||!ctx)return;const data=snapshot();if(!data?.sectors.length)return;
   ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,width,height);drawTerrain(data);
+  drawDanger(data);
   const points=route(data);if(points.length>1){path(points,'#304630d9',5);path(points,'#f5dc8e',2.1,[7,5]);}
   drawLocationLabels(data);
   if(data.waypoint){const p=screenPoint(data.waypoint);ctx.strokeStyle='#19352b';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(p.x,p.y+3);ctx.lineTo(p.x,p.y-20);ctx.stroke();ctx.strokeStyle='#ffe1a0';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#ffda87';ctx.beginPath();ctx.moveTo(p.x+1,p.y-21);ctx.lineTo(p.x+15,p.y-17);ctx.lineTo(p.x+1,p.y-11);ctx.closePath();ctx.fill();ctx.strokeStyle='#f6df9f';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(p.x,p.y+4,7,3,0,0,Math.PI*2);ctx.stroke();}
   if(data.player){const p=screenPoint(data.player),angle=finite(data.player.angle,0);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.fillStyle='#173c31';ctx.strokeStyle='#173c31';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(7,8);ctx.lineTo(0,4);ctx.lineTo(-7,8);ctx.closePath();ctx.stroke();ctx.fillStyle='#e0f1ce';ctx.fill();ctx.strokeStyle='#5aab86';ctx.lineWidth=1.3;ctx.stroke();ctx.restore();ctx.beginPath();ctx.arc(p.x,p.y,16,0,Math.PI*2);ctx.strokeStyle='#1b564d';ctx.lineWidth=1;ctx.stroke();}
-  const ideal=70/camera.zoom,power=Math.pow(10,Math.floor(Math.log10(ideal))),unit=[1,2,5,10].map(n=>n*power).reduce((best,n)=>Math.abs(n-ideal)<Math.abs(best-ideal)?n:best,power);$('sv-atlas-scale-line').style.width=Math.round(unit*camera.zoom)+'px';$('sv-atlas-scale-text').textContent=meters(unit);
+  drawMapFrame();const ideal=70/camera.zoom,power=Math.pow(10,Math.floor(Math.log10(ideal))),unit=[1,2,5,10].map(n=>n*power).reduce((best,n)=>Math.abs(n-ideal)<Math.abs(best-ideal)?n:best,power);$('sv-atlas-scale-line').style.width=Math.round(unit*camera.zoom)+'px';$('sv-atlas-scale-text').textContent=meters(unit);
   $('sv-atlas-plus').disabled=camera.zoom>=camera.max*.999;$('sv-atlas-minus').disabled=camera.zoom<=camera.min*1.001;
  }
  function queueDraw(){if(dialog.hidden||drawFrame)return;drawFrame=requestAnimationFrame(()=>{drawFrame=0;draw()});}
